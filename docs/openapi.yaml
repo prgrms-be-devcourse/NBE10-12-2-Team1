@@ -2,23 +2,7 @@ openapi: 3.0.3
 info:
   title: NBE10-12-2-Team1 API
   description: |
-    맛집 SNS 서비스 REST API 문서입니다.
-
-    ## 공통 응답 규격
-
-    **성공 응답**
-    ```json
-    { "success": true, "data": { ... }, "message": "요청이 성공적으로 처리되었습니다." }
-    ```
-
-    **실패 응답**
-    ```json
-    { "success": false, "data": null, "error": { "code": "ERROR_CODE", "message": "상세한 에러 메시지 내용" } }
-    ```
-
-    ## 날짜/시간 포맷
-    - ISO 8601: `yyyy-MM-dd'T'HH:mm:ss`
-    - KST (UTC+9) 기준
+    오늘 뭐먹지 SNS 서비스 REST API 문서입니다.
 
     ## 인증
     인증이 필요한 API는 요청 헤더에 Bearer 토큰을 포함해야 합니다.
@@ -64,17 +48,17 @@ components:
 
 tags:
   - name: Auth
-    description: 인증/인가
+    description: 🔐 인증 및 토큰 관리
   - name: Users
-    description: 사용자 프로필
+    description: 👤 회원 관리
   - name: Follow
-    description: 팔로우/팔로워
+    description: 👥 관계 관리
   - name: Restaurants
-    description: 식당 검색 및 추천
+    description: 🍽️ 식당 관리 및 검색
   - name: Posts
-    description: 피드 글
+    description: 📝 피드 게시글 관리
   - name: Lists
-    description: 맛집 리스트
+    description: 📋 맛집 리스트
 
 paths:
 
