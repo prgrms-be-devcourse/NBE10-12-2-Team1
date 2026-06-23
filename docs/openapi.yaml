@@ -57,6 +57,8 @@ tags:
     description: 🍽️ 식당 관리 및 검색
   - name: Posts
     description: 📝 피드 게시글 관리
+  - name: Comments
+    description: 💬 댓글 관리
   - name: Lists
     description: 📋 맛집 리스트
 
@@ -102,26 +104,42 @@ paths:
           description: 인가 코드 없음 또는 형식 잘못됨 (INVALID_KAKAO_TOKEN)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_KAKAO_TOKEN"
+                  message: "유효하지 않은 카카오 토큰입니다."
         "401":
           description: 카카오 인가 코드 만료 / 카카오 인증 실패 (KAKAO_TOKEN_EXPIRED)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "KAKAO_TOKEN_EXPIRED"
+                  message: "카카오 인증에 실패했습니다. 다시 시도해주세요."
         "500":
           description: 서버 오류 / DB 오류 / JWT 발급 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         "502":
           description: 카카오 API 통신 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "BAD_GATEWAY"
+                  message: "카카오 서비스와의 통신에 실패했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/auth/reissue:
     post:
@@ -154,20 +172,32 @@ paths:
           description: Refresh Token이 요청에 없음
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "MISSING_REFRESH_TOKEN"
+                  message: "Refresh Token이 필요합니다."
         "401":
           description: Refresh Token 만료 / 위조 / 불일치 / 연결된 사용자 없음
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_REFRESH_TOKEN"
+                  message: "유효하지 않은 Refresh Token입니다. 다시 로그인해주세요."
         "500":
           description: 서버 오류 / Access Token 재발급 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   # ─────────────────────────────────────────────
   # Users
@@ -196,14 +226,22 @@ paths:
           description: 인증 토큰 없음 또는 만료
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "인증이 만료되었습니다. 다시 로그인해주세요."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   # ─────────────────────────────────────────────
   # Follow
@@ -247,20 +285,32 @@ paths:
           description: 존재하지 않는 유저 (USER_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "USER_NOT_FOUND"
+                  message: "존재하지 않는 사용자입니다."
         "409":
           description: 이미 팔로우 중 (ALREADY_FOLLOWING)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "ALREADY_FOLLOWING"
+                  message: "이미 팔로우 중인 사용자입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     delete:
       tags: [Follow]
@@ -286,20 +336,32 @@ paths:
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "404":
           description: 팔로우 관계가 존재하지 않음 (FOLLOW_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FOLLOW_NOT_FOUND"
+                  message: "팔로우 관계가 존재하지 않습니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/users/{id}/followings:
     get:
@@ -347,20 +409,32 @@ paths:
           description: userId 형식 오류 또는 page/size가 0 이하 (INVALID_INPUT_VALUE / INVALID_PAGE_SIZE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
         "404":
           description: 존재하지 않는 유저 (USER_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "USER_NOT_FOUND"
+                  message: "존재하지 않는 사용자입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/users/{id}/followers:
     get:
@@ -408,20 +482,32 @@ paths:
           description: userId 형식 오류 또는 page/size가 0 이하 (INVALID_INPUT_VALUE / INVALID_PAGE_SIZE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
         "404":
           description: 존재하지 않는 유저 (USER_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "USER_NOT_FOUND"
+                  message: "존재하지 않는 사용자입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   # ─────────────────────────────────────────────
   # Restaurants
@@ -488,20 +574,32 @@ paths:
           description: 필수 파라미터 query 누락 또는 radius 20000 초과
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_REQUEST"
+                  message: "검색어(query)는 필수입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         "502":
           description: 카카오맵 API 통신 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "BAD_GATEWAY"
+                  message: "카카오맵 서비스와의 통신에 실패했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/restaurants/recommend:
     get:
@@ -569,20 +667,32 @@ paths:
           description: 필수 파라미터 누락 / 좌표 범위 초과 / sort 값 오류 (MISSING_REQUIRED_PARAM / INVALID_COORDINATES / INVALID_SORT_VALUE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "MISSING_REQUIRED_PARAM"
+                  message: "필수 파라미터(lat, lng, sort)가 누락되었습니다."
         "404":
           description: 조건에 맞는 식당 없음 (NO_RECOMMENDATIONS_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "NO_RECOMMENDATIONS_FOUND"
+                  message: "조건에 맞는 맛집을 찾을 수 없습니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   # ─────────────────────────────────────────────
   # Posts
@@ -629,26 +739,42 @@ paths:
           description: content 없음 또는 1000자 초과
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "내용을 입력해주세요. (최대 1000자)"
         "401":
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "404":
           description: 존재하지 않는 식당 (RESTAURANT_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "RESTAURANT_NOT_FOUND"
+                  message: "존재하지 않는 식당입니다."
         "500":
           description: 저장 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     get:
       tags: [Posts]
@@ -716,14 +842,22 @@ paths:
           description: restaurantId/userId 형식 오류 또는 page/size가 0 이하 (INVALID_INPUT_VALUE / INVALID_PAGE_SIZE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/posts/{id}:
     put:
@@ -768,32 +902,52 @@ paths:
           description: content 1000자 초과
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "내용은 1000자를 초과할 수 없습니다."
         "401":
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 타인 글 수정 시도 (FORBIDDEN_POST_UPDATE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN_POST_UPDATE"
+                  message: "본인의 글만 수정할 수 있습니다."
         "404":
           description: 존재하지 않는 글 (POST_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     delete:
       tags: [Posts]
@@ -820,26 +974,42 @@ paths:
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 타인 글 삭제 시도 (FORBIDDEN_POST_DELETE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN_POST_DELETE"
+                  message: "본인의 글만 삭제할 수 있습니다."
         "404":
           description: 존재하지 않는 글 (POST_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/posts/{id}/like:
     post:
@@ -870,26 +1040,42 @@ paths:
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "404":
           description: 존재하지 않는 글 (POST_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
         "409":
           description: 이미 좋아요 누름 (ALREADY_LIKED)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "ALREADY_LIKED"
+                  message: "이미 좋아요를 누른 게시글입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     delete:
       tags: [Posts]
@@ -919,26 +1105,271 @@ paths:
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 본인 좋아요가 아님
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN"
+                  message: "본인의 좋아요만 취소할 수 있습니다."
         "404":
           description: 존재하지 않는 글 (POST_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+  # ─────────────────────────────────────────────
+  # Comments
+  # ─────────────────────────────────────────────
+  /api/v1/posts/{id}/comments:
+    post:
+      tags: [Comments]
+      summary: 댓글 작성
+      description: 피드 글에 댓글을 작성합니다.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 글 ID
+          schema:
+            type: integer
+            example: 45
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 500
+                  example: "저도 여기 자주 가요! 냉면도 맛있어요."
+      responses:
+        "201":
+          description: 댓글 작성 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  commentId: 101
+                  postId: 45
+                  userId: 2
+                  nickname: "서교동김푸디"
+                  profileImage: "https://k.kakaocdn.net/.../profile2.jpg"
+                  content: "저도 여기 자주 가요! 냉면도 맛있어요."
+                  createdAt: "2026-06-18T18:10:00"
+                message: "댓글이 작성되었습니다."
+        "400":
+          description: content 없음 또는 500자 초과
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "댓글 내용을 입력해주세요. (최대 500자)"
+        "401":
+          description: 로그인하지 않은 사용자
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
+        "404":
+          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
+        "500":
+          description: 저장 실패
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+    get:
+      tags: [Comments]
+      summary: 댓글 목록 조회
+      description: 피드 글의 댓글 목록을 페이지네이션으로 조회합니다. 댓글이 없으면 빈 배열을 반환합니다.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 글 ID
+          schema:
+            type: integer
+            example: 45
+        - name: page
+          in: query
+          required: false
+          description: 페이지 번호 (기본값 0)
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          description: 페이지 크기 (기본값 20)
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 댓글 목록 조회 성공 (댓글 없을 시 빈 배열 반환)
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  comments:
+                    - commentId: 101
+                      userId: 2
+                      nickname: "서교동김푸디"
+                      profileImage: "https://k.kakaocdn.net/.../profile2.jpg"
+                      content: "저도 여기 자주 가요! 냉면도 맛있어요."
+                      createdAt: "2026-06-18T18:10:00"
+                  totalPages: 1
+                  totalElements: 3
+        "400":
+          description: page/size가 0 이하 (INVALID_PAGE_SIZE)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_PAGE_SIZE"
+                  message: "페이지 번호와 크기는 0보다 커야 합니다."
+        "404":
+          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "POST_NOT_FOUND"
+                  message: "존재하지 않는 게시글입니다."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+  /api/v1/posts/{id}/comments/{commentId}:
+    delete:
+      tags: [Comments]
+      summary: 댓글 삭제
+      description: 댓글을 삭제합니다. 본인만 가능합니다.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 글 ID
+          schema:
+            type: integer
+            example: 45
+        - name: commentId
+          in: path
+          required: true
+          description: 댓글 ID
+          schema:
+            type: integer
+            example: 101
+      responses:
+        "200":
+          description: 댓글 삭제 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data: null
+                message: "댓글이 삭제되었습니다."
+        "401":
+          description: 로그인하지 않은 사용자
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
+        "403":
+          description: 타인 댓글 삭제 시도 (FORBIDDEN_COMMENT_DELETE)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN_COMMENT_DELETE"
+                  message: "본인의 댓글만 삭제할 수 있습니다."
+        "404":
+          description: 존재하지 않는 댓글 (COMMENT_NOT_FOUND)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "COMMENT_NOT_FOUND"
+                  message: "존재하지 않는 댓글입니다."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   # ─────────────────────────────────────────────
   # Restaurant Lists
@@ -987,20 +1418,32 @@ paths:
           description: title 비어있음 / 길이 초과 / moodTag 허용값 아님 (INVALID_MOOD_TAG)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_MOOD_TAG"
+                  message: "허용되지 않는 분위기 태그입니다. (데이트 / 혼밥 / 회식 / 야식)"
         "401":
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "500":
           description: 리스트 저장 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     get:
       tags: [Lists]
@@ -1065,14 +1508,22 @@ paths:
           description: userId 형식 오류 또는 page/size가 0 이하 (INVALID_INPUT_VALUE / INVALID_PAGE_SIZE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/lists/{id}:
     get:
@@ -1114,20 +1565,32 @@ paths:
           description: listId 형식 오류 (INVALID_INPUT_VALUE)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
         "404":
           description: 존재하지 않는 리스트 (LIST_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "LIST_NOT_FOUND"
+                  message: "존재하지 않는 맛집 리스트입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/lists/{id}/items:
     post:
@@ -1175,38 +1638,62 @@ paths:
           description: restaurantId 없음 / memo 200자 초과 / 아이템 5000개 초과 (LIST_ITEM_LIMIT_EXCEEDED)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "LIST_ITEM_LIMIT_EXCEEDED"
+                  message: "리스트에 추가할 수 있는 식당은 최대 5,000개입니다."
         "401":
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 리스트 작성자가 아님
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN"
+                  message: "리스트 작성자만 식당을 추가할 수 있습니다."
         "404":
           description: 리스트 또는 식당이 존재하지 않음 (LIST_NOT_FOUND / RESTAURANT_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "LIST_NOT_FOUND"
+                  message: "존재하지 않는 맛집 리스트입니다."
         "409":
           description: 이미 해당 리스트에 같은 식당 존재 (DUPLICATE_LIST_ITEM)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "DUPLICATE_LIST_ITEM"
+                  message: "이미 리스트에 추가된 식당입니다."
         "500":
           description: 리스트 아이템 저장 실패
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
   /api/v1/lists/{id}/items/{itemId}:
     put:
@@ -1258,32 +1745,52 @@ paths:
           description: memo 200자 초과
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "메모는 200자를 초과할 수 없습니다."
         "401":
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 리스트 작성자가 아님
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN"
+                  message: "리스트 작성자만 수정할 수 있습니다."
         "404":
           description: 존재하지 않는 아이템 (LIST_ITEM_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "LIST_ITEM_NOT_FOUND"
+                  message: "존재하지 않는 리스트 아이템입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
     delete:
       tags: [Lists]
@@ -1317,23 +1824,39 @@ paths:
           description: 로그인하지 않은 사용자
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "로그인 후 이용해주세요."
         "403":
           description: 리스트 작성자가 아님
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "FORBIDDEN"
+                  message: "리스트 작성자만 삭제할 수 있습니다."
         "404":
           description: 존재하지 않는 아이템 (LIST_ITEM_NOT_FOUND)
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "LIST_ITEM_NOT_FOUND"
+                  message: "존재하지 않는 리스트 아이템입니다."
         "500":
           description: 서버 오류
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
