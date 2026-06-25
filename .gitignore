@@ -41,7 +41,7 @@ Backend/build/
 /Backend/schema_2to5.sql
 /schema.sql
 
-#### yaml ###
+### yaml ###
 /Backend/src/main/resources/application.yaml
 
 ### 기획아카이빙/기능정의서/erd img ###
@@ -69,4 +69,4 @@ Backend/build/
 /.DS_Store
 /Backend/.DS_Store
 /frontend/.DS_Store
-/API\353\252\205\354\204\270\354\204\234.md
+/API명세서.md
