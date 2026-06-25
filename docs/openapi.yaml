@@ -762,7 +762,6 @@ paths:
                       phone: "02-123-4567"
                       lat: 37.5665
                       lng: 126.9780
-                      avgRating: 4.5
                       postCount: 12
         "400":
           description: 필수 파라미터 query 누락 또는 radius 20000 초과
