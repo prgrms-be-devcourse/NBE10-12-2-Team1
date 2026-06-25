@@ -199,6 +199,200 @@ paths:
                   code: "INTERNAL_SERVER_ERROR"
                   message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: 일반 회원가입
+      description: 이메일과 비밀번호로 회원가입합니다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, nickname]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "foodie@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "password123!"
+                nickname:
+                  type: string
+                  maxLength: 20
+                  example: "푸디보이"
+      responses:
+        "201":
+          description: 회원가입 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  userId: 1
+                  email: "foodie@example.com"
+                  nickname: "푸디보이"
+                  role: "USER"
+                message: "회원가입이 완료되었습니다."
+        "400":
+          description: 필수 필드 누락 / 이메일 형식 오류 / 비밀번호 8자 미만 / 닉네임 20자 초과
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
+        "409":
+          description: 이미 사용 중인 이메일 (DUPLICATE_EMAIL)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "DUPLICATE_EMAIL"
+                  message: "이미 사용 중인 이메일입니다."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: 일반 로그인
+      description: 이메일과 비밀번호로 로그인합니다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "foodie@example.com"
+                password:
+                  type: string
+                  example: "password123!"
+      responses:
+        "200":
+          description: 로그인 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  userId: 1
+                  nickname: "푸디보이"
+                  profileImage: null
+                  email: "foodie@example.com"
+                  role: "USER"
+                  accessToken: "eyJhbGciOi..."
+                  refreshToken: "eyJhbGciOi..."
+                message: "로그인에 성공했습니다."
+        "400":
+          description: 필수 필드 누락 / 이메일 형식 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
+        "401":
+          description: 이메일 또는 비밀번호 불일치 (INVALID_CREDENTIALS)
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_CREDENTIALS"
+                  message: "이메일 또는 비밀번호가 올바르지 않습니다."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: 로그아웃
+      description: Refresh Token을 무효화하여 로그아웃합니다. 카카오 및 일반 로그인 공통으로 사용합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "existing_refresh_token"
+      responses:
+        "200":
+          description: 로그아웃 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data: null
+                message: "로그아웃되었습니다."
+        "400":
+          description: Refresh Token 누락
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "MISSING_REFRESH_TOKEN"
+                  message: "Refresh Token이 필요합니다."
+        "401":
+          description: 유효하지 않은 Refresh Token
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_REFRESH_TOKEN"
+                  message: "유효하지 않은 Refresh Token입니다. 다시 로그인해주세요."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
   # ─────────────────────────────────────────────
   # Users
   # ─────────────────────────────────────────────
