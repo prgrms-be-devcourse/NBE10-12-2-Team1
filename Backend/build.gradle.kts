@@ -10,7 +10,7 @@ description = "WhatToEat"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(26)
     }
 }
 
@@ -36,6 +36,10 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
+
+    // OpenAPI // Swagger
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
+
 }
 
 tasks.withType<Test> {
