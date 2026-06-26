@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "restaurant_list_items",
+@Table(name = "restaurant_list_item",
     uniqueConstraints = {
       @UniqueConstraint(
               name = "uk_restaurant_list_item_list_restaurant",
