@@ -61,6 +61,6 @@ public class JwtUtil {
         return Long.parseLong(parseClaims(token).getSubject());
     }
     public String getRole(String token) {
-        return parseClaims(token).get("role". String.class);
+        return parseClaims(token).get("role", String.class);
     }
 }
