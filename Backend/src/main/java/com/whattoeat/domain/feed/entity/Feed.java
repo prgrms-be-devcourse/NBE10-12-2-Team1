@@ -1,5 +1,6 @@
 package com.whattoeat.domain.feed.entity;
 
+import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -7,8 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 
@@ -16,11 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "feeds")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Feed {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Feed extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -33,11 +29,7 @@ public class Feed {
     @Column(length = 1000, nullable = false)
     private String content;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
+    @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
