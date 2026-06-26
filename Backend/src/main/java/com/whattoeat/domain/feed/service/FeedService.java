@@ -2,7 +2,6 @@ package com.whattoeat.domain.feed.service;
 
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
-import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
