@@ -19,6 +19,9 @@ if [ $STATUS -ne 0 ]; then
         echo "   아래 명령어로 자동 수정 후 다시 커밋하세요."
         echo ""
         echo "   ./Backend/gradlew -p Backend spotlessApply"
+    elif echo "$OUTPUT" | grep -q "lints"; then
+        echo "❌ Java 문법 오류가 있습니다. 코드를 직접 수정하세요."
+        echo "$OUTPUT" | grep "src/" | sed 's/^/   📄 /'
     else
         echo "❌ 코드 스타일 검사 실행 중 오류가 발생했습니다."
         echo ""
