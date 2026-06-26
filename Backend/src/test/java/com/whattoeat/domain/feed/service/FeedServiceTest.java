@@ -39,12 +39,11 @@ public class FeedServiceTest {
                         .user(user)
                         .content(feedCreateRequest.content())
                         .build();
-        ReflectionTestUtils.setField(feedService, "feedRepository", 1L);
 
         given(feedRepository.save(any())).willReturn(savedFeed);
 
         FeedDetailResponse result = feedService.createFeed(user,feedCreateRequest);
 
-        assertThat(result.content()).isEqualTo("맛집이네요!");
+        assertThat(result.content()).isEqualTo("맛집이네요");
     }
 }
