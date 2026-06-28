@@ -7,11 +7,14 @@ fi
 
 echo "🔍 코드 스타일 검사 중..."
 
+
 OUTPUT=$(./Backend/gradlew -p Backend spotlessCheck --daemon 2>&1)
+
 STATUS=$?
 
 if [ $STATUS -ne 0 ]; then
     echo ""
+
     if echo "$OUTPUT" | grep -q "format violations"; then
         echo "❌ 코드 스타일 위반 파일이 있습니다."
         echo "$OUTPUT" | grep -A 999 "format violations" | grep "src/" | sed 's/^/   📄 /'
