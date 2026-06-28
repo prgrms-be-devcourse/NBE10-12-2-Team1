@@ -51,4 +51,11 @@ public class User extends BaseEntity {
         this.role = role != null ? role : Role.USER;
         this.provider = provider;
     }
+
+    public void updateProfile(String nickname, String profileImage) {
+        this.nickname = nickname;
+        if (profileImage != null) {
+            this.profileImage = profileImage;
+        }
+    }
 }
