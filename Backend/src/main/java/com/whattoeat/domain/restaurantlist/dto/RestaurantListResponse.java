@@ -2,6 +2,7 @@ package com.whattoeat.domain.restaurantlist.dto;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 
 import java.time.LocalDateTime;
 
@@ -35,7 +36,7 @@ public class RestaurantListResponse {
     // 단건조회용
     public record RestaurantListDetail(
             Long listId,
-            long userId,
+            Long userId,
             String nickname,
             String title,
             String description,
@@ -59,4 +60,23 @@ public class RestaurantListResponse {
     }
 
     // 단건 상세 안의 식당 아이템
+    public record RestaurantListItemRes(
+            Long id,
+            Long listId,
+            Long restaurantId,
+            String restaurantName,
+            String memo,
+            Integer orderIndex
+    ) {
+        public RestaurantListItemRes(RestaurantListItem item) {
+            this(
+                    item.getId(),
+                    item.getRestaurantList().getId(),
+                    item.getRestaurant().getId(),
+                    item.getRestaurant().getName(),
+                    item.getMemo(),
+                    item.getOrderIndex()
+            );
+        }
+    }
 }
