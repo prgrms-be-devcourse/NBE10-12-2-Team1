@@ -2,7 +2,6 @@ package com.whattoeat.global.jwt;
 
 import com.whattoeat.domain.user.entity.User;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -39,28 +38,17 @@ public class JwtUtil {
                 .signWith(key)
                 .compact();
     }
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
+    public Claims parseToken(String token) {
+         return Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (JwtException| IllegalArgumentException e) {
-            return false;
-        }
-    }
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                    .parseSignedClaims(token)
+                    .getPayload();
     }
     public Long getUserId(String token) {
-        return Long.parseLong(parseClaims(token).getSubject());
+        return Long.parseLong(parseToken(token).getSubject());
     }
     public String getRole(String token) {
-        return parseClaims(token).get("role", String.class);
+        return parseToken(token).get("role", String.class);
     }
 }
