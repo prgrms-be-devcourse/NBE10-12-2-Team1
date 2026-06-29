@@ -87,9 +87,9 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 수정 실패 - 존재하지 않는 필드")
     public void updateFeed_notFound() {
-        FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용",null);
+        FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
-        assertThatThrownBy(() -> feedService.updateFeed(999L,req))
+        assertThatThrownBy(() -> feedService.updateFeed(999L, req))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("피드를 찾을 수 없습니다.");
 
@@ -98,7 +98,13 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 수정 성공")
     public void updateFeed_success() {
-        PageRequest pageable = PageRequest.of(0, 10);
-    }
+        User user = User.builder().nickname("test").build();
+        Feed feed = Feed.builder().user(user).content("원본 내용").build();
+        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null);
+        given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+        given(feedRepository.save(any())).willReturn(feed);
 
+        FeedDetailResponse result = feedService.updateFeed(1L, request);
+        assertThat(result.content()).isEqualTo("수정된 내용");
+    }
 }
