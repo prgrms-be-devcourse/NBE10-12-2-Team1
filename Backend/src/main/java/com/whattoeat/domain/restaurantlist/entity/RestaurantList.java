@@ -1,5 +1,6 @@
 package com.whattoeat.domain.restaurantlist.entity;
 
+import com.whattoeat.domain.restaurant.entity.MoodTag;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -33,21 +34,21 @@ public class RestaurantList extends BaseEntity {
 
     // 분위기 태그
     @Column(name = "mood_tag", length = 50)
-    private String moodTag;
+    private MoodTag moodTag;
 
     // 수정일
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public RestaurantList(User user, String title, String description, String moodTag, LocalDateTime updatedAt) {
+    public RestaurantList(User user, String title, String description, MoodTag moodTag) {
         this.user = user;
         this.title = title;
         this.description = description;
         this.moodTag = moodTag;
     }
 
-    public void update(String title, String description, String moodTag) {
+    public void update(String title, String description, MoodTag moodTag) {
         this.title = title;
         this.description = description;
         this.moodTag = moodTag;
