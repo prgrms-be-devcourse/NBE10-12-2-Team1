@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 public class FeedServiceTest {
@@ -107,4 +108,24 @@ public class FeedServiceTest {
         FeedDetailResponse result = feedService.updateFeed(1L, request);
         assertThat(result.content()).isEqualTo("수정된 내용");
     }
+
+    @Test
+    @DisplayName("피드 삭제 실패 - 존재하지 않는 필드")
+    public void deleteFeed_notFound() {
+        given(feedRepository.findById(999L)).willReturn(Optional.empty());
+        assertThatThrownBy(()-> feedService.deleteFeed(999L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("피드를 찾을 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("피드 삭제 성공")
+    public void deleteFeed_success() {
+        User user = User.builder().nickname("test").build();
+        Feed feed = Feed.builder().user(user).content("맛집이네요").build();
+        given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+        feedService.deleteFee가d(1L);
+        verify(feedRepository).delete(feed);
+    }
+
 }
