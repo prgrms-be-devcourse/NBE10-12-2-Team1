@@ -55,4 +55,11 @@ public class FeedService {
 
         return FeedDetailResponse.from(feedRepository.save(feed));
     }
+
+    @Transactional
+    public void deleteFeed(Long feedId) {
+        Feed feed = feedRepository.findById(feedId)
+                .orElseThrow(()-> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+        feedRepository.delete(feed);
+    }
 }

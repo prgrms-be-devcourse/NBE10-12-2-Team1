@@ -35,5 +35,9 @@ public class FeedController {
         return feedService.updateFeed(id, feedUpdateRequest);
     }
 
+    @DeleteMapping("/{id}")
+    public void deleteFeed(@PathVariable Long id){
+        feedService.deleteFeed(id);
+    }
 
 }
