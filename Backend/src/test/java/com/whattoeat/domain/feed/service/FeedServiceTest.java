@@ -2,6 +2,7 @@ package com.whattoeat.domain.feed.service;
 
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
+import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
@@ -10,7 +11,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -44,5 +48,20 @@ public class FeedServiceTest {
         FeedDetailResponse result = feedService.createFeed(user,feedCreateRequest);
 
         assertThat(result.content()).isEqualTo("맛집이네요");
+    }
+
+    @Test
+    @DisplayName("피드 목록 조회 성공")
+    public void getFeed_success() {
+        User user = User.builder().nickname("test").build();
+        Feed feed1 = Feed.builder().user(user).content("맛집1").build();
+        Feed feed2 = Feed.builder().user(user).content("맛집2").build();
+        PageRequest pageable = PageRequest.of(0, 10);
+        given(feedRepository.findAll(pageable))
+                .willReturn(Page.empty(pageable));
+        Page<FeedListResponse> restlt = feedService.getFeeds(null,null,pageable);
+
+        assertThat(restlt.getContent().isEmpty());
+        assertThat(restlt.getTotalElements()).isZero();
     }
 }

@@ -7,21 +7,24 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import com.whattoeat.domain.feed.service.FeedService;
-import com.whattoeat.global.response.RsData;
-import com.whattoeat.domain.user.service.UserService;
+//import com.whattoeat.domain.user.service.UserService;
 
 @RestController
 @RequestMapping("/api/v1/feeds")
 @RequiredArgsConstructor
 public class FeedController {
     private final FeedService feedService;
-    private final UserService userService;
+//    private final UserService userService;
 
     @PostMapping
-    public RsData<FeedDetailResponse> createFeed(
+    public FeedDetailResponse createFeed(
             @Valid @RequestBody FeedCreateRequest feedCreateRequest){
-        User user = userService.findById(1L).orElseThrow();
-        FeedDetailResponse feedDetailResponse = feedService.createFeed(user, feedCreateRequest);
-        return RsData.of(feedDetailResponse);
+        User user = User.builder()
+                .nickname("dummy")
+                .profileImage(null)
+                .build(); // 더미 나중에 연결할때 제거
+        return feedService.createFeed(user, feedCreateRequest);
     }
+
+
 }
