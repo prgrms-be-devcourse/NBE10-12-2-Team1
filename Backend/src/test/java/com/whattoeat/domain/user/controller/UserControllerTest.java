@@ -69,7 +69,8 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(content().string("User not found: 999"));
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("User not found: 999"));
     }
 
     @Test
