@@ -1,0 +1,78 @@
+package com.whattoeat.domain.restaurantlist.controller;
+
+import com.whattoeat.domain.restaurantlist.dto.RestaurantListRequest;
+import com.whattoeat.domain.restaurantlist.dto.RestaurantListResponse;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
+import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
+import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.rsData.RsData;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/lists")
+@RequiredArgsConstructor
+public class RestaurantListController {
+    private final UserRepository userRepository;
+    private final RestaurantListService restaurantListService;
+
+    // 맛집 리스트 등록
+    @PostMapping
+    public RsData<RestaurantListResponse.RestaurantLists> createRestaurantList(
+            @RequestBody RestaurantListRequest req
+    ) {
+        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
+        Long userId = 1L;
+
+        RestaurantList restaurantList = restaurantListService.create(
+                userId,
+                req.title(),
+                req.description(),
+                req.moodTag()
+        );
+
+        return new RsData<>(
+                "201-1",
+                "맛집 리스트가 생성되었습니다.",
+                new RestaurantListResponse.RestaurantLists(restaurantList)
+        );
+    }
+
+    // 맛집 리스트 다건 조회
+    @GetMapping
+    @Operation(summary = "맛집 리스트 다건 조회")
+    public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists() {
+        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
+        Long userId = 1L;
+
+        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAllByUserId(userId)
+                .stream()
+                .map(RestaurantListResponse.RestaurantLists::new)
+                .toList();
+
+        return new RsData<>(
+                "200-1",
+                "맛집 리스트 목록 조회가 완료되었습니다.",
+                restaurantLists
+        );
+    }
+
+    // 맛집 리스트 단건 조회
+    @GetMapping("/{id}")
+    @Operation(summary = "맛집 리스트 단건 조회")
+    public RsData<RestaurantListResponse.RestaurantListDetail> getRestaurantList(@PathVariable Long id) {
+        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
+        Long userId = 1L;
+
+        RestaurantList restaurantList = restaurantListService.findByIdAndUserId(id, userId);
+
+        return new RsData<>(
+                "200-1",
+                "맛집 리스트 조회가 완료되었습니다.",
+                new RestaurantListResponse.RestaurantListDetail(restaurantList)
+        );
+    }
+}
