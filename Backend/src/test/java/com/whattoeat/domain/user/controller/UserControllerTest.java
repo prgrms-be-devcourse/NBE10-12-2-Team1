@@ -44,6 +44,7 @@ class UserControllerTest {
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
+
     private UserProfileResponse createResponse(Long id, String nickname, String profileImage) {
         return new UserProfileResponse(
                 id, nickname, profileImage, "test@example.com", Provider.LOCAL, LocalDateTime.now());
