@@ -5,6 +5,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.jsonwebtoken.JwtException;
+
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.security.CustomUserDetails;
@@ -50,7 +52,6 @@ class JwtAuthenticationFilterTest {
         when(mockUser.getRole()).thenReturn(Role.USER);
         CustomUserDetails customUserDetails = new CustomUserDetails(mockUser);
 
-        given(jwtUtil.validateToken(VALID_TOKEN)).willReturn(true);
         given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
         given(customUserDetailsService.loadUserByUsername("1")).willReturn(customUserDetails);
 
@@ -65,15 +66,17 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("유효하지 않은 토큰이면 SecurityContext에 인증 정보 없음")
+    @DisplayName("위변조된 토큰이면 401 응답 반환")
     void v2() throws Exception {
-        given(jwtUtil.validateToken(INVALID_TOKEN)).willReturn(false);
+        given(jwtUtil.getUserId(INVALID_TOKEN)).willThrow(new JwtException("invalid token"));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + INVALID_TOKEN);
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-        jwtAuthenticationFilter.doFilter(request, new MockHttpServletResponse(), mock(FilterChain.class));
+        jwtAuthenticationFilter.doFilter(request, response, mock(FilterChain.class));
 
+        assertThat(response.getStatus()).isEqualTo(401);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
