@@ -14,6 +14,8 @@ import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.service.UserService;
 import com.whattoeat.global.exception.UserNotFoundException;
+import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetailsService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,12 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
 
     private UserProfileResponse createResponse(Long id, String nickname, String profileImage) {
         return new UserProfileResponse(
