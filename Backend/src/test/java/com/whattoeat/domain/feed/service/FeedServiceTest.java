@@ -1,6 +1,7 @@
 package com.whattoeat.domain.feed.service;
 
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
+import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
@@ -18,7 +19,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 
 import java.util.List;
+import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,13 +45,13 @@ public class FeedServiceTest {
         FeedCreateRequest feedCreateRequest = new FeedCreateRequest("맛집이네요", null);
 
         Feed savedFeed = Feed.builder()
-                        .user(user)
-                        .content(feedCreateRequest.content())
-                        .build();
+                .user(user)
+                .content(feedCreateRequest.content())
+                .build();
 
         given(feedRepository.save(any())).willReturn(savedFeed);
 
-        FeedDetailResponse result = feedService.createFeed(user,feedCreateRequest);
+        FeedDetailResponse result = feedService.createFeed(user, feedCreateRequest);
 
         assertThat(result.content()).isEqualTo("맛집이네요");
     }
@@ -63,7 +66,7 @@ public class FeedServiceTest {
         given(feedRepository.findAll(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
 
-        Page<FeedListResponse> restlt = feedService.getFeeds(null,null,pageable);
+        Page<FeedListResponse> restlt = feedService.getFeeds(null, null, pageable);
 
         assertThat(restlt.getContent()).hasSize(2);
         assertThat(restlt.getContent().get(0).content()).isEqualTo("맛집1");
@@ -76,14 +79,25 @@ public class FeedServiceTest {
         given(feedRepository.findAll(pageable))
                 .willReturn(Page.empty(pageable));
 
-        Page<FeedListResponse> restlt = feedService.getFeeds(null,null,pageable);
+        Page<FeedListResponse> restlt = feedService.getFeeds(null, null, pageable);
         assertThat(restlt.getContent().isEmpty());
         assertThat(restlt.getTotalElements()).isZero();
     }
 
     @Test
+    @DisplayName("피드 수정 실패 - 존재하지 않는 필드")
+    public void updateFeed_notFound() {
+        FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용",null);
+        given(feedRepository.findById(999L)).willReturn(Optional.empty());
+        assertThatThrownBy(() -> feedService.updateFeed(999L,req))
+                .isInstanceOf(IllegalAccessError.class)
+                .hasMessageContaining("피드를 찾을 수 없습니다.");
+
+    }
+
+    @Test
     @DisplayName("피드 수정 성공")
-    public void getFeed_success_empty() {
+    public void updateFeed_success() {
         PageRequest pageable = PageRequest.of(0, 10);
     }
 
