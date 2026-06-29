@@ -124,7 +124,7 @@ public class FeedServiceTest {
         User user = User.builder().nickname("test").build();
         Feed feed = Feed.builder().user(user).content("맛집이네요").build();
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
-        feedService.deleteFee가d(1L);
+        feedService.deleteFeed(1L);
         verify(feedRepository).delete(feed);
     }
 
