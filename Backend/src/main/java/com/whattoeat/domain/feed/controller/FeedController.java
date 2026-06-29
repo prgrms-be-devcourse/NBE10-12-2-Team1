@@ -6,6 +6,7 @@ import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+//import com.whattoeat.global.rsdata.*;
 import org.springframework.web.bind.annotation.*;
 import com.whattoeat.domain.feed.service.FeedService;
 //import com.whattoeat.domain.user.service.UserService;
@@ -39,5 +40,10 @@ public class FeedController {
     public void deleteFeed(@PathVariable Long id){
         feedService.deleteFeed(id);
     }
+
+//    @ExceptionHandler(IllegalArgumentException.class)
+//    public RsData<Void> handleNotFound(IllegalArgumentException e) {
+//        return RsData.fail("POST_NOT_FOUND", e.getMessage());
+//    }
 
 }
