@@ -12,9 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -58,10 +61,30 @@ public class FeedServiceTest {
         Feed feed2 = Feed.builder().user(user).content("맛집2").build();
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAll(pageable))
-                .willReturn(Page.empty(pageable));
+                .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
+
         Page<FeedListResponse> restlt = feedService.getFeeds(null,null,pageable);
 
+        assertThat(restlt.getContent()).hasSize(2);
+        assertThat(restlt.getContent().get(0).content()).isEqualTo("맛집1");
+    }
+
+    @Test
+    @DisplayName("피드 목록 조회 - 빈 결과")
+    public void getFeed_empty() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        given(feedRepository.findAll(pageable))
+                .willReturn(Page.empty(pageable));
+
+        Page<FeedListResponse> restlt = feedService.getFeeds(null,null,pageable);
         assertThat(restlt.getContent().isEmpty());
         assertThat(restlt.getTotalElements()).isZero();
     }
+
+    @Test
+    @DisplayName("피드 수정 성공")
+    public void getFeed_success_empty() {
+        PageRequest pageable = PageRequest.of(0, 10);
+    }
+
 }
