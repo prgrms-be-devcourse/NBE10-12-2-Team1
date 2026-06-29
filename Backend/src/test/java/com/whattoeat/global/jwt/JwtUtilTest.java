@@ -8,8 +8,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 
 @DisplayName("JwtUtil 테스트")
 class JwtUtilTest {
@@ -44,26 +49,28 @@ class JwtUtilTest {
     }
 
     @Test
-    @DisplayName("유효한 토큰을 검증하면 true를 반환")
-    void validateToken_valid() {
+    @DisplayName("유효한 토큰을 파싱하면 예외 없이 Claims를 반환")
+    void parseToken_valid() {
         String token = jwtUtil.generateToken(mockUser);
 
-        assertThat(jwtUtil.validateToken(token)).isTrue();
+        assertThatCode(() -> jwtUtil.parseToken(token)).doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("만료된 토큰을 검증하면 false를 반환")
-    void validateToken_expired() {
+    @DisplayName("만료된 토큰을 파싱하면 ExpiredJwtException 발생")
+    void parseToken_expired() {
         ReflectionTestUtils.setField(jwtUtil, "expiration", -1L);
         String expiredToken = jwtUtil.generateToken(mockUser);
 
-        assertThat(jwtUtil.validateToken(expiredToken)).isFalse();
+        assertThatThrownBy(() -> jwtUtil.parseToken(expiredToken))
+                .isInstanceOf(ExpiredJwtException.class);
     }
 
     @Test
-    @DisplayName("잘못된 형식의 토큰을 검증하면 false를 반환")
-    void validateToken_invalid() {
-        assertThat(jwtUtil.validateToken("invalid.token.value")).isFalse();
+    @DisplayName("잘못된 형식의 토큰을 파싱하면 JwtException 발생")
+    void parseToken_invalid() {
+        assertThatThrownBy(() -> jwtUtil.parseToken("invalid.token.value"))
+                .isInstanceOf(JwtException.class);
     }
 
     @Test

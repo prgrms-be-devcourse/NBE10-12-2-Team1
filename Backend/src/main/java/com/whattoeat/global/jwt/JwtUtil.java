@@ -2,7 +2,6 @@ package com.whattoeat.global.jwt;
 
 import com.whattoeat.domain.user.entity.User;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
