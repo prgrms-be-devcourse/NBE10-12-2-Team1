@@ -90,7 +90,7 @@ public class FeedServiceTest {
         FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용",null);
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(() -> feedService.updateFeed(999L,req))
-                .isInstanceOf(IllegalAccessError.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("피드를 찾을 수 없습니다.");
 
     }
