@@ -1,26 +1,27 @@
 package com.whattoeat.global.rsData;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record RsData<T>(
-        String resultCode,
-        @JsonIgnore int statusCode,
-        String msg,
-        T data
+        boolean success,
+        T data,
+        String message
 ) {
-    public RsData(String resultCode, String msg) {
-        this(resultCode, msg, null);
+    // 성공 응답 - message 있음
+    public static <T> RsData<T> success(T data, String message) {
+        return new RsData<>(
+                true,
+                data,
+                message
+        );
     }
-
-    public RsData(String resultCode, String msg, T data) {
-        this(resultCode, Integer.parseInt(resultCode.split("-", 2)[0]), msg, data);
-    }
-
-    public boolean isSuccess() {
-        return statusCode < 400;
-    }
-
-    public boolean isFail() {
-        return !isSuccess();
+    // 성공 응답 - message 없음
+    public static <T> RsData<T> success(T data) {
+        return new RsData<>(
+                true,
+                data,
+                null
+        );
     }
 }

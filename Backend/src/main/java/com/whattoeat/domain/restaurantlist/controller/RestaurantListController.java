@@ -34,10 +34,9 @@ public class RestaurantListController {
                 req.moodTag()
         );
 
-        return new RsData<>(
-                "201-1",
-                "맛집 리스트가 생성되었습니다.",
-                new RestaurantListResponse.RestaurantLists(restaurantList)
+        return RsData.success(
+                new RestaurantListResponse.RestaurantLists(restaurantList),
+                "맛집 리스트가 생성되었습니다."
         );
     }
 
@@ -53,10 +52,9 @@ public class RestaurantListController {
                 .map(RestaurantListResponse.RestaurantLists::new)
                 .toList();
 
-        return new RsData<>(
-                "200-1",
-                "맛집 리스트 목록 조회가 완료되었습니다.",
-                restaurantLists
+        return RsData.success(
+                restaurantLists,
+                "맛집 리스트 목록 조회가 완료되었습니다."
         );
     }
 
@@ -69,10 +67,9 @@ public class RestaurantListController {
 
         RestaurantList restaurantList = restaurantListService.findByIdAndUserId(id, userId);
 
-        return new RsData<>(
-                "200-1",
-                "맛집 리스트 조회가 완료되었습니다.",
-                new RestaurantListResponse.RestaurantListDetail(restaurantList)
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListDetail(restaurantList),
+        "맛집 리스트 조회가 완료되었습니다."
         );
     }
 }
