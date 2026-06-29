@@ -1,23 +1,17 @@
 package com.whattoeat.domain.user.entity;
 
+import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class User extends BaseEntity {
 
     @Column(name = "login_id", length = 50, unique = true)
     private String loginId;
@@ -41,10 +35,6 @@ public class User {
     @Column(length = 20, nullable = false)
     private Role role = Role.USER;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     private Provider provider;
@@ -60,5 +50,12 @@ public class User {
         this.email = email;
         this.role = role != null ? role : Role.USER;
         this.provider = provider;
+    }
+
+    public void updateProfile(String nickname, String profileImage) {
+        this.nickname = nickname;
+        if (profileImage != null) {
+            this.profileImage = profileImage;
+        }
     }
 }
