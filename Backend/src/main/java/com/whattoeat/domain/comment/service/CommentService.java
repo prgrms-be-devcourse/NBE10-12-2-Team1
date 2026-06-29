@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +49,7 @@ public class CommentService {
     public void deleteComment(Long feedId, Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentNotFoundException(commentId));
-        if (!comment.getFeed().getId().equals(feedId)) {
+        if (!Objects.equals(comment.getFeed().getId(), feedId)) {
             throw new IllegalArgumentException("해당 피드의 댓글이 아닙니다.");
         }
         commentRepository.delete(comment);

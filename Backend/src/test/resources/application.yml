@@ -10,3 +10,7 @@ spring:
   redis:
     host: localhost
     port: 6379
+
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLW9ubHktMTIzNDU2Nzg=
+  expiration: 3600000
