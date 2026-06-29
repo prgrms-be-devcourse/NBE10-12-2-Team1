@@ -2,10 +2,7 @@ package com.whattoeat.domain.feed.entity;
 
 import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -22,10 +19,12 @@ public class Feed extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Setter(AccessLevel.PUBLIC)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
 
+    @Setter(AccessLevel.PUBLIC)
     @Column(length = 1000, nullable = false)
     private String content;
 
