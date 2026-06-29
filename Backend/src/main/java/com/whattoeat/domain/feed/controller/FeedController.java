@@ -1,6 +1,7 @@
 package com.whattoeat.domain.feed.controller;
 
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
+import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.user.entity.User;
 import jakarta.validation.Valid;
@@ -24,6 +25,14 @@ public class FeedController {
                 .profileImage(null)
                 .build(); // 더미 나중에 연결할때 제거
         return feedService.createFeed(user, feedCreateRequest);
+    }
+
+    @PutMapping("/{id}")
+    public FeedDetailResponse updateFeed(
+            @PathVariable Long id,
+            @Valid @RequestBody FeedUpdateRequest feedUpdateRequest
+    ){
+        return feedService.updateFeed(id, feedUpdateRequest);
     }
 
 

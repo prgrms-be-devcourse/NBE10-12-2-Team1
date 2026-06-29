@@ -1,6 +1,7 @@
 package com.whattoeat.domain.feed.service;
 
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
+import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
@@ -32,15 +33,26 @@ public class FeedService {
     @Transactional(readOnly = true)
     public Page<FeedListResponse> getFeeds(Long userId, Long restaurantId, Pageable pageable) {
         Page<Feed> feeds;
-        if(userId != null) {
+        if (userId != null) {
             feeds = feedRepository.findByUserId(userId, pageable);
-        }
-        else if(restaurantId != null) {
+        } else if (restaurantId != null) {
             feeds = feedRepository.findByRestaurantId(restaurantId, pageable);
-        }
-        else {
+        } else {
             feeds = feedRepository.findAll(pageable);
         }
         return feeds.map(FeedListResponse::from);
+    }
+
+    @Transactional
+    public FeedDetailResponse updateFeed(Long feedId, FeedUpdateRequest request) {
+        Feed feed = feedRepository.findById(feedId)
+                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+        Restaurant restaurant = request.restaurantId() != null
+                ? restaurantRepository.findById(request.restaurantId()).orElse(null)
+                : null;
+        feed.setContent(request.content());
+        feed.setRestaurant(restaurant);
+
+        return FeedDetailResponse.from(feedRepository.save(feed));
     }
 }
