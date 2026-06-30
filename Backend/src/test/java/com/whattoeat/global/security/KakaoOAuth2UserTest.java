@@ -22,7 +22,7 @@ class KakaoOAuth2UserTest {
                 .kakaoId("123456789")
                 .nickname("nickname")
                 .profileImage("http://kakao.com/profile.jpg")
-                .email("hong@example.com")
+                .email("test@test.com")
                 .provider(Provider.KAKAO)
                 .role(Role.USER)
                 .build();
