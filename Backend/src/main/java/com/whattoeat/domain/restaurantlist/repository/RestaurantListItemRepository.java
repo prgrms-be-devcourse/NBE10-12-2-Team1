@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 
 public interface RestaurantListItemRepository extends JpaRepository<RestaurantListItem, Long> {
+    int countByRestaurantListId(Long restaurantListId);
 }

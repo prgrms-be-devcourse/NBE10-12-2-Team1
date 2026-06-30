@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "restaurant_list",
@@ -40,6 +42,9 @@ public class RestaurantList extends BaseEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "restaurantList")
+    private List<RestaurantListItem> items = new ArrayList<>();
 
     public RestaurantList(User user, String title, String description, MoodTag moodTag) {
         this.user = user;

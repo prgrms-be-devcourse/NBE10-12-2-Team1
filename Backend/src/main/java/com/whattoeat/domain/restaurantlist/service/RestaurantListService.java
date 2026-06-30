@@ -11,6 +11,7 @@ import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.ListNotFoundException;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
+import com.whattoeat.global.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +27,7 @@ public class RestaurantListService {
 
     public RestaurantList create(Long userId, String title, String description, MoodTag moodTag) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
         RestaurantList restaurantList = new RestaurantList(
                 user,
@@ -47,7 +48,7 @@ public class RestaurantListService {
     // 맛집 리스트 단건 조회
     public RestaurantList findByIdAndUserId(Long id, Long userId) {
         return restaurantListRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 맛집 리스트입니다."));
+                .orElseThrow(() -> new ListNotFoundException(id));
     }
 
     public RestaurantListItem addItem(

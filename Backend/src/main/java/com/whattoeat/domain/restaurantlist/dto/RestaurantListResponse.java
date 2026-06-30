@@ -5,8 +5,16 @@ import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class RestaurantListResponse {
+    // 목록 조회 전체 응답
+    public record RestaurantListsResponse(
+            List<RestaurantLists> lists,
+            int totalPages,
+            long totalElements
+    ) {
+    }
 
     // 다건 조회용
     public record RestaurantLists(
@@ -27,7 +35,7 @@ public class RestaurantListResponse {
                     restaurantList.getTitle(),
                     restaurantList.getDescription(),
                     restaurantList.getMoodTag(),
-                    0, // ListItem 연결후 itemCount로 변경예정
+                    restaurantList.getItems().size(), // ListItem 연결후 itemCount로 변경예정
                     restaurantList.getCreatedAt()
             );
         }

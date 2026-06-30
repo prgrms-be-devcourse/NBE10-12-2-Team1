@@ -98,4 +98,12 @@ public class RestaurantListController {
                 "맛집 리스트에 식당이 추가되었습니다."
         );
     }
+
+//    @DeleteMapping("/{id}")
+//    @Operation(summary = "맛집 리스트 아이템 삭제")
+//    public RsData<Void> deleteRestaurantListItem(@PathVariable Long listId) {
+//        Long userId = 1L;
+//
+//        // 나중에 인증 추가 사용자일 경우에만 삭제가능하도록 수정
+//    }
 }
