@@ -41,15 +41,15 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
                                                  HttpServletRequest request) {
         if (authRequest == null) return null;
 
-        // 요청 파라미터에서 redirectUrl 가져오기
-        String redirectUrl = request.getParameter("redirectUrl");
-        if (redirectUrl == null || redirectUrl.isBlank()) redirectUrl = "http://localhost:3000";
+        // 요청 파라미터에서 redirectUri 가져오기
+        String redirectUri = request.getParameter("redirectUri");
+        if (redirectUri == null || redirectUri.isBlank()) redirectUri = "http://localhost:3000";
 
         //CSRF 방지용 nonce 추가
         String originState = UUID.randomUUID().toString();
 
-        // redirectUrl#originState 결합
-        String rawState = redirectUrl + "#" + originState;
+        // redirectUri#originState 결합
+        String rawState = redirectUri + "#" + originState;
 
         // Base64 URL-safe 인코딩
         String encodeState = Base64.getUrlEncoder().

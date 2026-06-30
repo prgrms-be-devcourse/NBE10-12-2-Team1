@@ -36,7 +36,7 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         String accessToken = jwtUtil.generateToken(user);
         rq.setCookie("accessToken", accessToken);
 
-        String redirectUrl = frontendUrl;
+        String redirectUri = frontendUrl;
 
         String stateParam = request.getParameter("state");
         if (stateParam != null && !stateParam.isBlank()) {
@@ -46,8 +46,8 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                     StandardCharsets.UTF_8
             );
 
-            redirectUrl = decodeState.split("#", 2)[0];
+            redirectUri = decodeState.split("#", 2)[0];
         }
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect(redirectUri);
     }
 }
