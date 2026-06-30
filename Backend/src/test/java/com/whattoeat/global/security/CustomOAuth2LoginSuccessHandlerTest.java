@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 
 import java.lang.reflect.Field;
+import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -36,16 +37,18 @@ public class CustomOAuth2LoginSuccessHandlerTest {
     @InjectMocks
     private CustomOAuth2LoginSuccessHandler handler;
 
+    private MockHttpServletRequest req;
+    private MockHttpServletResponse res;
+
     @BeforeEach
     void setUp() throws Exception {
         Field field = CustomOAuth2LoginSuccessHandler.class.getDeclaredField("frontendUrl");
         field.setAccessible(true);
         field.set(handler, "http://localhost:3000");
-    }
 
-    @Test
-    @DisplayName("로그인 성공")
-    void success() throws Exception{
+        req = new MockHttpServletRequest();
+        res = new MockHttpServletResponse();
+
         User user = User.builder()
                 .kakaoId("123456789")
                 .nickname("nickname")
@@ -58,12 +61,25 @@ public class CustomOAuth2LoginSuccessHandlerTest {
         given(authentication.getPrincipal()).willReturn(principal);
         given(jwtUtil.generateToken(user)).willReturn("token-value");
 
-        MockHttpServletRequest req = new MockHttpServletRequest();
-        MockHttpServletResponse res = new MockHttpServletResponse();
+    }
 
+    @Test
+    @DisplayName("로그인 성공")
+    void success() throws Exception{
         handler.onAuthenticationSuccess(req,res,authentication);
 
         then(rq).should().setCookie("accessToken","token-value");
         assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000");
+    }
+
+    @Test
+    @DisplayName("state로 redirectUri 복원")
+    void state_redirect_uri() throws Exception{
+        String state= Base64.getUrlEncoder().encodeToString(
+                ("http://localhost:3000/mypage#uuid").getBytes()
+        );
+        req.setParameter("state",state);
+        handler.onAuthenticationSuccess(req,res,authentication);
+        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage");
     }
 }
