@@ -7,10 +7,7 @@ import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
-import com.whattoeat.global.exception.DuplicateEmailException;
-import com.whattoeat.global.exception.DuplicateLoginIdException;
-import com.whattoeat.global.exception.DuplicateNicknameException;
-import com.whattoeat.global.exception.InvalidCredentialsException;
+import com.whattoeat.global.exception.*;
 import com.whattoeat.global.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +31,9 @@ public class AuthService {
         }
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new DuplicateEmailException("이미 사용 중인 이메일입니다.");
+        }
+        if (!request.password().equals(request.passwordConfirm())) {
+            throw new PasswordMismatchException("비밀번호가 일치하지 않습니다.");
         }
         User user = User.builder()
                 .loginId(request.loginId())
