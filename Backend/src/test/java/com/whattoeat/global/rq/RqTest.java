@@ -1,6 +1,7 @@
 package com.whattoeat.global.rq;
 
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -9,15 +10,22 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RqTest {
+    private MockHttpServletRequest req;
+    private MockHttpServletResponse res;
+    private Rq rq;
+
+    @BeforeEach
+    void setUp() {
+        req = new MockHttpServletRequest();
+        res = new MockHttpServletResponse();
+        rq = new Rq(req, res);
+    }
 
     @Test
     @DisplayName("쿠키 생성")
     void cookieCreate(){
-        var req = new MockHttpServletRequest();
-        var res = new MockHttpServletResponse();
-        var rq = new Rq(req,res);
-
         rq.setCookie("at","val");
+
         Cookie c = res.getCookie("at");
         assertThat(c).isNotNull();
         assertThat(c.getValue()).isEqualTo("val");
@@ -26,13 +34,21 @@ public class RqTest {
     @Test
     @DisplayName("보안 설정")
     void setCookie_secure(){
-        MockHttpServletRequest req = new MockHttpServletRequest();
-        MockHttpServletResponse res = new MockHttpServletResponse();
-        var rq = new Rq(req,res);
+        rq.setCookie("at","val");
 
-        rq .setCookie("at","val");
         Cookie c = res.getCookie("at");
         assertThat(c.isHttpOnly()).isTrue();
         assertThat(c.getPath()).isEqualTo("/");
+    }
+
+    @Test
+    @DisplayName("쿠키 조회")
+    void setCookie_get(){
+        req.setCookies(new Cookie("at","val"));
+
+        String v = rq.getCookieValue("at");
+
+        assertThat(v).isEqualTo("val");
+
     }
 }
