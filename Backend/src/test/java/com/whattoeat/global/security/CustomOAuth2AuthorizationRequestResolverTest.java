@@ -11,6 +11,9 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class CustomOAuth2AuthorizationRequestResolverTest {
@@ -43,5 +46,18 @@ public class CustomOAuth2AuthorizationRequestResolverTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getClientId()).isEqualTo("test-cid");
+    }
+
+    @Test
+    @DisplayName("state redirectUri 인코딩")
+    void state_redirectUri(){
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("redirectUri", "https://localhost:3000/mypage");
+        OAuth2AuthorizationRequest result = resolver.resolve(request, "kakao");
+        String decode = new String(
+                Base64.getUrlDecoder().decode(result.getState()),
+                StandardCharsets.UTF_8
+        );
+        assertThat(decode.split("#",2)[0]).isEqualTo("https://localhost:3000/mypage");
     }
 }
