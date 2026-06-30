@@ -1,0 +1,47 @@
+package com.whattoeat.global.security;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class CustomOAuth2AuthorizationRequestResolverTest {
+    private CustomOAuth2AuthorizationRequestResolver resolver;
+
+    @BeforeEach
+    void setUp() {
+        ClientRegistration kakao = ClientRegistration.withRegistrationId("kakao")
+                .clientId("test-cid")
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/{action}/oauth2/code/{registrationId}")
+                .scope("profile_nickname","profile_image","account_email")
+                .authorizationUri("https://kauth.kakao.com/oauth/authorize")
+                .tokenUri("https://kauth.kakao.com/oauth/token")
+                .userNameAttributeName("id")
+                .clientName("kakao").build();
+
+        ClientRegistrationRepository repo = new InMemoryClientRegistrationRepository(kakao);
+        resolver = new CustomOAuth2AuthorizationRequestResolver(repo);
+    }
+
+    @Test
+    @DisplayName("요청 생성")
+    void resolve(){
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("redirectUri", "https://localhost:3000/mypage");
+
+        OAuth2AuthorizationRequest result = resolver.resolve(request, "kakao");
+
+        assertThat(result).isNotNull();
+        assertThat(result.getClientId()).isEqualTo("test-cid");
+    }
+}
