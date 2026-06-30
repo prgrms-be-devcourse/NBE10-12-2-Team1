@@ -58,4 +58,16 @@ public class RqTest {
         String v = rq.getCookieValue("at","def");
         assertThat(v).isEqualTo("def");
     }
+
+    @Test
+    @DisplayName("쿠키 삭제")
+    void delete(){
+        rq.delCookie("at");
+
+        Cookie c = res.getCookie("at");
+        assertThat(c).isNotNull();
+
+        //delCookie가 setCookie 호출하고 그 안에서 value.isBlank() ? 0 : MaxAge 처리하므로 getMaxAge 사용
+        assertThat(c.getMaxAge()).isEqualTo(0);
+    }
 }
