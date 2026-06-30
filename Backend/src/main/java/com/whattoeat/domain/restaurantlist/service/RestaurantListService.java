@@ -15,11 +15,13 @@ import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class RestaurantListService {
     private final RestaurantListRepository restaurantListRepository;
     private final UserRepository userRepository;
@@ -41,12 +43,14 @@ public class RestaurantListService {
     }
 
     // 맛집 리스트 다건 조회
+    @Transactional(readOnly = true)
     public List<RestaurantList> findAllByUserId(Long userId) {
         return restaurantListRepository.findByUserIdOrderByIdDesc(userId);
     }
 
 
     // 맛집 리스트 단건 조회
+    @Transactional(readOnly = true)
     public RestaurantList findByIdAndUserId(Long id, Long userId) {
         return restaurantListRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ListNotFoundException(id));
@@ -82,7 +86,7 @@ public class RestaurantListService {
             Integer orderIndex,
             String memo
     ) {
-        // 레스토랑 있는지 확인
+        // 식당 있는지 확인
         restaurantListRepository.findById(listId)
                 .orElseThrow(() -> new ListNotFoundException(listId));
 
@@ -92,5 +96,27 @@ public class RestaurantListService {
         item.updateListItem(orderIndex, memo);
 
         return item;
+    }
+
+    // 식당 리스트 아이템 삭제
+    public void deleteItem(Long listId, Long itemId, Long userId) {
+        RestaurantListItem item = restaurantListItemRepository.findListItem(itemId, listId, userId)
+                .orElseThrow(() -> new RestaurantListItemNotFoundException(itemId));
+
+        restaurantListItemRepository.delete(item);
+    }
+
+    // ============================== 전체 조회 =================================
+    // 전체 맛집 리스트 다건 조회
+    @Transactional(readOnly = true)
+    public List<RestaurantList> findAll() {
+        return restaurantListRepository.findAll();
+    }
+
+    // 전체 식당 리스트 단건 조회
+    @Transactional(readOnly = true)
+    public RestaurantList findById(Long id) {
+        return restaurantListRepository.findById(id)
+                .orElseThrow(() -> new ListNotFoundException(id));
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RestaurantListRepository extends JpaRepository<RestaurantList, Long> {
+    // 내 리스트 조회 : 최신 생성 리스트가 위로 오게 id 내림차순
     List<RestaurantList> findByUserIdOrderByIdDesc(Long userId);
 
     Optional<RestaurantList> findByIdAndUserId(Long id, Long userId);
