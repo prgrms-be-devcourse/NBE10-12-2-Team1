@@ -1,5 +1,6 @@
 package com.whattoeat.domain.restaurantlist.dto;
 
+import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.MoodTag;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
@@ -48,8 +49,9 @@ public class RestaurantListResponse {
             String nickname,
             String title,
             String description,
-            MoodTag moodTag//,
-//            List<RestaurantListItem> items
+            MoodTag moodTag,
+            List<RestaurantListItemDetail> items,
+            LocalDateTime createdAt
     ) {
         public RestaurantListDetail(RestaurantList restaurantList) {
             this(
@@ -58,32 +60,37 @@ public class RestaurantListResponse {
                     restaurantList.getUser().getNickname(),
                     restaurantList.getTitle(),
                     restaurantList.getDescription(),
-                    restaurantList.getMoodTag()//,
-//                    restaurantList.getItems()
-//                            .stream()
-//                            .map(RestaurantListItem::new)
-//                            .toList()
+                    restaurantList.getMoodTag(),
+                    restaurantList.getItems()
+                            .stream()
+                            .map(RestaurantListItemDetail::new)
+                            .toList(),
+                    restaurantList.getCreatedAt()
             );
         }
     }
 
     // 단건 상세 안의 식당 아이템
-    public record RestaurantListItemRes(
-            Long id,
+    public record RestaurantListItemDetail(
+            Long id, // itemId
             Long listId,
             Long restaurantId,
             String restaurantName,
+            Category category,
+            Integer orderIndex,
             String memo,
-            Integer orderIndex
+            LocalDateTime createdAt
     ) {
-        public RestaurantListItemRes(RestaurantListItem item) {
+        public RestaurantListItemDetail(RestaurantListItem item) {
             this(
                     item.getId(),
                     item.getRestaurantList().getId(),
                     item.getRestaurant().getId(),
                     item.getRestaurant().getName(),
+                    item.getRestaurant().getCategory(),
+                    item.getOrderIndex(),
                     item.getMemo(),
-                    item.getOrderIndex()
+                    item.getCreatedAt()
             );
         }
     }

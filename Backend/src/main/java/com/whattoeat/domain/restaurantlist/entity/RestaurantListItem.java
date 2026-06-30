@@ -46,4 +46,9 @@ public class RestaurantListItem extends BaseEntity {
         this.memo = memo;
         this.orderIndex = orderIndex;
     }
+
+    public void updateListItem(Integer orderIndex, String memo) {
+        this.orderIndex = orderIndex;
+        this.memo = memo;
+    }
 }

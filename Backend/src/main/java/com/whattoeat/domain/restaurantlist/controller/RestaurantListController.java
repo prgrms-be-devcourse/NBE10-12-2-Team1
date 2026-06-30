@@ -78,7 +78,7 @@ public class RestaurantListController {
     // 맛집 리스트 아이템 등록
     @PostMapping("/{id}/Items")
     @Operation(summary = "맛집 리스트 아이템 등록")
-    public RsData<RestaurantListResponse.RestaurantListItemRes> createRestaurantListItem(
+    public RsData<RestaurantListResponse.RestaurantListItemDetail> createRestaurantListItem(
             @PathVariable("id") Long listId,
             @RequestBody RestaurantListRequest.RestaurantListItem req
     ) {
@@ -89,13 +89,37 @@ public class RestaurantListController {
                 userId,
                 listId,
                 req.restaurantId(),
-                req.comment(),
+                req.memo(),
                 req.orderIndex()
         );
 
         return RsData.success(
-                new RestaurantListResponse.RestaurantListItemRes(item),
+                new RestaurantListResponse.RestaurantListItemDetail(item),
                 "맛집 리스트에 식당이 추가되었습니다."
+        );
+    }
+
+    @PutMapping("/{id}/items/{itemId}")
+    @Operation(summary = "식당 리스트 아이템 수정(순서/메모)")
+    public RsData<RestaurantListResponse.RestaurantListItemDetail> updateRestaurantListItem(
+            @PathVariable Long id,
+            @PathVariable Long itemId,
+            @RequestBody RestaurantListRequest.RestaurantListItem req
+    ) {
+        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
+        Long userId = 1L;
+
+        RestaurantListItem item = restaurantListService.updateItem(
+                id, // listId
+                itemId,
+                userId,
+                req.orderIndex(),
+                req.memo()
+        );
+
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListItemDetail(item),
+                "리스트 아이템 정보가 변경되었습니다."
         );
     }
 

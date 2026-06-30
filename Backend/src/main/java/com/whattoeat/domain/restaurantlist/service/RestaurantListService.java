@@ -10,6 +10,7 @@ import com.whattoeat.domain.restaurantlist.repository.RestaurantListRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.ListNotFoundException;
+import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -72,5 +73,24 @@ public class RestaurantListService {
         );
 
         return restaurantListItemRepository.save(restaurantListItem);
+    }
+
+    public RestaurantListItem updateItem(
+            Long listId,
+            Long itemId,
+            Long userId,
+            Integer orderIndex,
+            String memo
+    ) {
+        // 레스토랑 있는지 확인
+        restaurantListRepository.findById(listId)
+                .orElseThrow(() -> new ListNotFoundException(listId));
+
+        RestaurantListItem item =  restaurantListItemRepository.findListItem(itemId, listId, userId)
+                .orElseThrow(() -> new RestaurantListItemNotFoundException(itemId));
+
+        item.updateListItem(orderIndex, memo);
+
+        return item;
     }
 }

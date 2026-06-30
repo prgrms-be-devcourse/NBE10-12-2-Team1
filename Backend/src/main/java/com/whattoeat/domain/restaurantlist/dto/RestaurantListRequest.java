@@ -18,7 +18,7 @@ public class RestaurantListRequest {
         Long restaurantId,
 
         @NotBlank
-        String comment,
+        String memo,
 
         @NotNull
         Integer orderIndex
