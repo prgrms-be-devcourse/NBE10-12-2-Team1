@@ -1,10 +1,17 @@
 package com.whattoeat.domain.restaurantlist.service;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
+import com.whattoeat.domain.restaurant.entity.Restaurant;
+import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
+import com.whattoeat.domain.restaurantlist.repository.RestaurantListItemRepository;
 import com.whattoeat.domain.restaurantlist.repository.RestaurantListRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.exception.ListNotFoundException;
+import com.whattoeat.global.exception.RestaurantNotFoundException;
+import com.whattoeat.global.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +22,12 @@ import java.util.List;
 public class RestaurantListService {
     private final RestaurantListRepository restaurantListRepository;
     private final UserRepository userRepository;
+    private final RestaurantListItemRepository restaurantListItemRepository;
+    private final RestaurantRepository restaurantRepository;
 
     public RestaurantList create(Long userId, String title, String description, MoodTag moodTag) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
         RestaurantList restaurantList = new RestaurantList(
                 user,
@@ -39,6 +48,29 @@ public class RestaurantListService {
     // 맛집 리스트 단건 조회
     public RestaurantList findByIdAndUserId(Long id, Long userId) {
         return restaurantListRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 맛집 리스트입니다."));
+                .orElseThrow(() -> new ListNotFoundException(id));
+    }
+
+    public RestaurantListItem addItem(
+            Long userId,
+            Long listId,
+            Long restaurantId,
+            String memo,
+            Integer orderIndex
+    ) {
+        RestaurantList restaurantList = restaurantListRepository.findByIdAndUserId(listId, userId)
+                .orElseThrow(() -> new ListNotFoundException(listId));
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new RestaurantNotFoundException(restaurantId));
+
+        RestaurantListItem restaurantListItem = new RestaurantListItem(
+                restaurantList,
+                restaurant,
+                memo,
+                orderIndex
+        );
+
+        return restaurantListItemRepository.save(restaurantListItem);
     }
 }

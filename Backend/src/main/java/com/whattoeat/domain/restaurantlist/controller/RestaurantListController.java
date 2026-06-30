@@ -3,8 +3,8 @@ package com.whattoeat.domain.restaurantlist.controller;
 import com.whattoeat.domain.restaurantlist.dto.RestaurantListRequest;
 import com.whattoeat.domain.restaurantlist.dto.RestaurantListResponse;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
-import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +16,12 @@ import java.util.List;
 @RequestMapping("/api/v1/lists")
 @RequiredArgsConstructor
 public class RestaurantListController {
-    private final UserRepository userRepository;
     private final RestaurantListService restaurantListService;
 
     // 맛집 리스트 등록
     @PostMapping
     public RsData<RestaurantListResponse.RestaurantLists> createRestaurantList(
-            @RequestBody RestaurantListRequest req
+            @RequestBody RestaurantListRequest.RestaurantList req
     ) {
         // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
         Long userId = 1L;
@@ -72,4 +71,39 @@ public class RestaurantListController {
         "맛집 리스트 조회가 완료되었습니다."
         );
     }
+
+
+    // ----------- RestaurantListItem -------------
+
+    // 맛집 리스트 아이템 등록
+    @PostMapping("/{id}/Items")
+    @Operation(summary = "맛집 리스트 아이템 등록")
+    public RsData<RestaurantListResponse.RestaurantListItemRes> createRestaurantListItem(
+            @PathVariable("id") Long listId,
+            @RequestBody RestaurantListRequest.RestaurantListItem req
+    ) {
+        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
+        Long userId = 1L;
+
+        RestaurantListItem item = restaurantListService.addItem(
+                userId,
+                listId,
+                req.restaurantId(),
+                req.comment(),
+                req.orderIndex()
+        );
+
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListItemRes(item),
+                "맛집 리스트에 식당이 추가되었습니다."
+        );
+    }
+
+//    @DeleteMapping("/{id}")
+//    @Operation(summary = "맛집 리스트 아이템 삭제")
+//    public RsData<Void> deleteRestaurantListItem(@PathVariable Long listId) {
+//        Long userId = 1L;
+//
+//        // 나중에 인증 추가 사용자일 경우에만 삭제가능하도록 수정
+//    }
 }
