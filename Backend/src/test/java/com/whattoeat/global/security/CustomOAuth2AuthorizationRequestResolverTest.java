@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CustomOAuth2AuthorizationRequestResolverTest {
     private CustomOAuth2AuthorizationRequestResolver resolver;
+    private MockHttpServletRequest request;
 
     @BeforeEach
     void setUp() {
@@ -34,12 +35,15 @@ public class CustomOAuth2AuthorizationRequestResolverTest {
 
         ClientRegistrationRepository repo = new InMemoryClientRegistrationRepository(kakao);
         resolver = new CustomOAuth2AuthorizationRequestResolver(repo);
+        request = new MockHttpServletRequest();
+        request.setServerName("localhost");
+        request.setServerPort(8080);
+        request.setScheme("http");
     }
 
     @Test
     @DisplayName("요청 생성")
     void resolve(){
-        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setParameter("redirectUri", "https://localhost:3000/mypage");
 
         OAuth2AuthorizationRequest result = resolver.resolve(request, "kakao");
@@ -51,13 +55,25 @@ public class CustomOAuth2AuthorizationRequestResolverTest {
     @Test
     @DisplayName("state redirectUri 인코딩")
     void state_redirectUri(){
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setParameter("redirectUri", "https://localhost:3000/mypage");
+        String customRedirectUri = "http://localhost:5173/feed/123";
+        request.setParameter("redirectUri", customRedirectUri);
         OAuth2AuthorizationRequest result = resolver.resolve(request, "kakao");
         String decode = new String(
                 Base64.getUrlDecoder().decode(result.getState()),
                 StandardCharsets.UTF_8
         );
-        assertThat(decode.split("#",2)[0]).isEqualTo("https://localhost:3000/mypage");
+        assertThat(decode.split("#",2)[0]).isEqualTo(customRedirectUri);
+    }
+
+    @Test
+    @DisplayName("redirectUri 없으면 기본값으로")
+    void default_redirectUri(){
+        OAuth2AuthorizationRequest result = resolver.resolve(request, "kakao");
+        String decode = new String(
+                Base64.getUrlDecoder().decode(result.getState()),
+                StandardCharsets.UTF_8
+        );
+        assertThat(decode.split("#",2)[0]).isEqualTo("http://localhost:3000");
+
     }
 }
