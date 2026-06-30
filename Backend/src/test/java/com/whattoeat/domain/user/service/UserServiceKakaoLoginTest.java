@@ -28,7 +28,7 @@ public class UserServiceKakaoLoginTest {
     @Captor
     private ArgumentCaptor<User> captor;
 
-    private final String KAKAO_ID="123456789";
+    private final String KAKAO_ID = "123456789";
     private final String nickname = "nickname";
     private final String profileImg = "img.jpg";
     private final String email = "test@test.com";
@@ -50,7 +50,7 @@ public class UserServiceKakaoLoginTest {
 
     @Test
     @DisplayName("신규 회원가입")
-    void kakaoLoginOrSignUp_newUser(){
+    void kakaoLoginOrSignUp_newUser() {
         given(userRepository.findByKakaoId(KAKAO_ID)).willReturn(Optional.empty());
 
         userService.kakaoLoginOrSignUp(KAKAO_ID, nickname, profileImg, email);
@@ -60,5 +60,15 @@ public class UserServiceKakaoLoginTest {
         assertThat(savedUser.getKakaoId()).isEqualTo(KAKAO_ID);
         assertThat(savedUser.getProvider()).isEqualTo(Provider.KAKAO);
         assertThat(savedUser.getNickname()).isEqualTo(nickname);
+    }
+
+    @Test
+    @DisplayName("기존 회원 정보 수정")
+    void kakaoLoginOrSignUp_existingUser_updateProfile() {
+        given(userRepository.findByKakaoId(KAKAO_ID)).willReturn(Optional.of(existuser));
+
+        userService.kakaoLoginOrSignUp(KAKAO_ID, "new_nickname", "new.jpg", email);
+        assertThat(existuser.getNickname()).isEqualTo("new_nickname");
+        assertThat(existuser.getProfileImage()).isEqualTo("new.jpg");
     }
 }
