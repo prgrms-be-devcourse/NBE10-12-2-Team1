@@ -22,7 +22,7 @@ public class Restaurant extends BaseEntity {
 
     // 카테고리 : 한식/일식/양식 등
     @Column(name = "category", nullable = false, length = 100)
-    private String category;
+    private Category category;
 
     // 지번 주소
     @Column(name = "address", nullable = false, length = 300)
@@ -55,5 +55,31 @@ public class Restaurant extends BaseEntity {
     // 경도
     @Column(name = "lng", nullable = false)
     private double lng;
+
+    public Restaurant(
+            String kakaoPlaceId,
+            String name,
+            Category category,
+            String address,
+            String roadAddress,
+            String region1,
+            String region2,
+            String region3,
+            String phone,
+            double lat,
+            double lng
+    ) {
+        this.kakaoPlaceId = kakaoPlaceId;
+        this.name = name;
+        this.category = category;
+        this.address = address;
+        this.roadAddress = roadAddress;
+        this.region1 = region1;
+        this.region2 = region2;
+        this.region3 = region3;
+        this.phone = phone;
+        this.lat = lat;
+        this.lng = lng;
+    }
 
 }

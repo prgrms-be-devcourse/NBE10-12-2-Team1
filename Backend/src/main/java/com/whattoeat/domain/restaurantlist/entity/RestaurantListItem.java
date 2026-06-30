@@ -34,10 +34,16 @@ public class RestaurantListItem extends BaseEntity {
 
     // 순서
     @Column(name = "order_index", nullable = false, length = 500)
-    private String orderIndex;
+    private Integer orderIndex;
 
     // 한줄평
     @Column(name = "memo", length = 200)
     private String memo;
 
+    public RestaurantListItem(RestaurantList restaurantList, Restaurant restaurant, String memo, Integer orderIndex) {
+        this.restaurantList = restaurantList;
+        this.restaurant = restaurant;
+        this.memo = memo;
+        this.orderIndex = orderIndex;
+    }
 }

@@ -44,6 +44,7 @@ class UserControllerTest {
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
+
     private UserProfileResponse createResponse(Long id, String nickname, String profileImage) {
         return new UserProfileResponse(
                 id, nickname, profileImage, "test@example.com", Provider.LOCAL, LocalDateTime.now());
@@ -68,7 +69,8 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(content().string("User not found: 999"));
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("User not found: 999"));
     }
 
     @Test
