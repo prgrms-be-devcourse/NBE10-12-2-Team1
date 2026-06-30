@@ -7,6 +7,7 @@ import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.exception.DuplicateEmailException;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
@@ -30,6 +31,9 @@ public class AuthService {
         }
         if (userRepository.existsByNickname(request.nickname())) {
             throw new DuplicateNicknameException("이미 사용 중인 닉네임입니다.");
+        }
+        if (userRepository.findByEmail(request.email()).isPresent()) {
+            throw new DuplicateEmailException("이미 사용 중인 이메일입니다.");
         }
         User user = User.builder()
                 .loginId(request.loginId())
