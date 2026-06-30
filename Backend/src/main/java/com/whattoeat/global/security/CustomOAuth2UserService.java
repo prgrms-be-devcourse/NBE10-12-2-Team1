@@ -1,5 +1,6 @@
 package com.whattoeat.global.security;
 
+import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String profileImg = "";
         String email = "";
 
-        switch (providerType) {
+        User user = switch (providerType) {
             case "KAKAO" -> {
                 Map<String, Object> attributes = oAuth2User.getAttributes();
                 Map<String, Object> attributesProperties = (Map<String, Object>) attributes.get("properties");
@@ -40,7 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 profileImg = (String) attributesProperties.get("profile_image");
                 email = (String) kakaoAccount.get("email");
 
-                yield findOrCreateKakaoUser(oauthUserId,nickname,profileImg,email);
+                yield userService.kakaoLoginOrSignUp(oauthUserId, nickname, profileImg, email);
             }
             default -> throw new OAuth2AuthenticationException("지원하지 않는 소셜 로그인입니다: " + providerType);
         };
