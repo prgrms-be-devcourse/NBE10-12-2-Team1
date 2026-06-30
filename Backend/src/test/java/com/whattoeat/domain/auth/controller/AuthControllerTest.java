@@ -51,7 +51,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("정상 입력으로 회원가입 성공 시 200 반환")
     void signupSuccess() throws Exception {
-        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "testnick", "test@test.com");
+        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
         willDoNothing().given(authService).signup(any());
 
         mockMvc.perform(post("/api/v1/auth/signup")
@@ -65,7 +65,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("아이디 중복 시 409 반환")
     void signupFailDuplicateLoginId() throws Exception {
-        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "testnick", "test@test.com");
+        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
         willThrow(new DuplicateLoginIdException("이미 사용 중인 아이디입니다.")).given(authService).signup(any());
 
         mockMvc.perform(post("/api/v1/auth/signup")
@@ -78,7 +78,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("닉네임 중복 시 409 반환")
     void signupFailDuplicateNickname() throws Exception {
-        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "testnick", "test@test.com");
+        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
         willThrow(new DuplicateNicknameException("이미 사용 중인 닉네임입니다.")).given(authService).signup(any());
 
         mockMvc.perform(post("/api/v1/auth/signup")
@@ -91,7 +91,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("아이디 빈 값으로 회원가입 시 400 반환")
     void signupFailBlankLoginId() throws Exception {
-        SignUpRequest request = new SignUpRequest("", "pass1234", "testnick", "test@test.com");
+        SignUpRequest request = new SignUpRequest("", "pass1234", "pass1234", "testnick", "test@test.com");
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,7 +103,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("비밀번호 4자 미만으로 회원가입 시 400 반환")
     void signupFailShortPassword() throws Exception {
-        SignUpRequest request = new SignUpRequest("testuser", "abc", "testnick", "test@test.com");
+        SignUpRequest request = new SignUpRequest("testuser", "abc", "abc", "testnick", "test@test.com");
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -115,7 +115,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("이메일 형식이 아닌 값으로 회원가입 시 400 반환")
     void signupFailInvalidEmail() throws Exception {
-        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "testnick", "invalid-email");
+        SignUpRequest request = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "invalid-email");
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)

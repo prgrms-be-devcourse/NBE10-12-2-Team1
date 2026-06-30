@@ -18,6 +18,7 @@ import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
+import com.whattoeat.global.exception.PasswordMismatchException;
 import com.whattoeat.global.jwt.JwtUtil;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        signUpRequest = new SignUpRequest("testuser", "pass1234", "testnick", "test@test.com");
+        signUpRequest = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
         loginRequest = new LoginRequest("testuser", "pass1234");
         user = User.builder()
                 .loginId("testuser")
@@ -93,6 +94,16 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.signup(signUpRequest))
                 .isInstanceOf(DuplicateNicknameException.class)
                 .hasMessageContaining("닉네임");
+    }
+
+    @Test
+    @DisplayName("비밀번호 확인 불일치 시 PasswordMismatchException 발생")
+    void signupFailPasswordMismatch() {
+        SignUpRequest mismatchRequest = new SignUpRequest("testuser", "pass1234", "different", "testnick", "test@test.com");
+
+        assertThatThrownBy(() -> authService.signup(mismatchRequest))
+                .isInstanceOf(PasswordMismatchException.class)
+                .hasMessageContaining("비밀번호");
     }
 
     // ========== login ==========
