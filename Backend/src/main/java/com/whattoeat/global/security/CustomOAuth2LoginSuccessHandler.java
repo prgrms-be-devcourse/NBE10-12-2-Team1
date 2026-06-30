@@ -22,7 +22,8 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private final JwtUtil jwtUtil;
     private final Rq rq;
 
-    @Value("${app.frontend.url}")
+    //application.yaml 파일에 app: fonrtend: url: 없으면 localhost:3000 동작
+    @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
     @Override
