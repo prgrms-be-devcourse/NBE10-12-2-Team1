@@ -51,4 +51,11 @@ public class RqTest {
         assertThat(v).isEqualTo("val");
 
     }
+
+    @Test
+    @DisplayName("기본값조회")
+    void getDefault(){
+        String v = rq.getCookieValue("at","def");
+        assertThat(v).isEqualTo("def");
+    }
 }
