@@ -22,4 +22,17 @@ public class RqTest {
         assertThat(c).isNotNull();
         assertThat(c.getValue()).isEqualTo("val");
     }
+
+    @Test
+    @DisplayName("보안 설정")
+    void setCookie_secure(){
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        var rq = new Rq(req,res);
+
+        rq .setCookie("at","val");
+        Cookie c = res.getCookie("at");
+        assertThat(c.isHttpOnly()).isTrue();
+        assertThat(c.getPath()).isEqualTo("/");
+    }
 }
