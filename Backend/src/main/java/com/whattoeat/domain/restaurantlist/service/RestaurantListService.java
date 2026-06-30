@@ -9,10 +9,7 @@ import com.whattoeat.domain.restaurantlist.repository.RestaurantListItemReposito
 import com.whattoeat.domain.restaurantlist.repository.RestaurantListRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
-import com.whattoeat.global.exception.ListNotFoundException;
-import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
-import com.whattoeat.global.exception.RestaurantNotFoundException;
-import com.whattoeat.global.exception.UserNotFoundException;
+import com.whattoeat.global.exception.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +65,11 @@ public class RestaurantListService {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RestaurantNotFoundException(restaurantId));
+
+        // 식당리스트아이템에 식당 중복으로 넣는지 체크 / 수정때는 메모, 순서만 바꾸기 때문에 삭제 후 다시 추가해야함
+        if(restaurantListItemRepository.existsByRestaurantListIdAndRestaurantId(listId, restaurantId)) {
+            throw new DuplicateRestaurantListItemException(restaurantId);
+        }
 
         RestaurantListItem restaurantListItem = new RestaurantListItem(
                 restaurantList,

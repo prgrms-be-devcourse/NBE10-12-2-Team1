@@ -18,4 +18,6 @@ public interface RestaurantListItemRepository extends JpaRepository<RestaurantLi
            and item.restaurantList.user.id = :userId
     """)
     Optional<RestaurantListItem> findListItem(Long itemId, Long listId, Long userId);
+
+    boolean existsByRestaurantListIdAndRestaurantId(Long listId, Long restaurantListId);
 }
