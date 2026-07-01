@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
@@ -28,6 +27,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +42,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private StringRedisTemplate stringRedisTemplate;
 
     @InjectMocks
     private AuthService authService;
@@ -113,11 +117,15 @@ class AuthServiceTest {
     void loginSuccess() {
         given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(true);
-        given(jwtUtil.generateAccessToken(user)).willReturn("mocked-token");
+        given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
+        given(jwtUtil.generateRefreshToken(user)).willReturn("mocked-refresh-token");
+
+        given(stringRedisTemplate.opsForValue()).willReturn(mock(ValueOperations.class));
 
         LoginResponse response = authService.login(loginRequest);
 
-        assertThat(response.accessToken()).isEqualTo("mocked-token");
+        assertThat(response.accessToken()).isEqualTo("mocked-access-token");
+        assertThat(response.refreshToken()).isEqualTo("mocked-refresh-token");
         assertThat(response.nickname()).isEqualTo("testnick");
     }
 

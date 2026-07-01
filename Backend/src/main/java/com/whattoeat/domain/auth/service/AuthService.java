@@ -10,9 +10,13 @@ import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.*;
 import com.whattoeat.global.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     @Transactional
     public void signup(SignUpRequest request){
@@ -45,6 +51,15 @@ public class AuthService {
                 .build();
         userRepository.save(user);
     }
+
+    public void saveRefreshToken(Long userId, String refreshToken) {
+        redisTemplate.opsForValue().set(
+                "refresh:" + userId,
+                refreshToken,
+                Duration.ofDays(7)
+        );
+    }
+
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request){
         User user = userRepository.findByLoginId(request.loginId())
@@ -52,7 +67,9 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다.");
         }
-        String token =jwtUtil.generateAccessToken(user);
-        return new LoginResponse(token, user.getNickname(), user.getProfileImage());
+        String accessToken =jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+        saveRefreshToken(user.getId(), refreshToken);
+        return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
     }
 }
