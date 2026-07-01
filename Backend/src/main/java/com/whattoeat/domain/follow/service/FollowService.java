@@ -1,5 +1,8 @@
 package com.whattoeat.domain.follow.service;
 
+import com.whattoeat.global.exception.AlreadyFollowingException;
+import com.whattoeat.global.exception.FollowNotFoundException;
+import com.whattoeat.global.exception.SelfFollowNotAllowedException;
 import com.whattoeat.domain.follow.entity.Follow;
 import com.whattoeat.domain.follow.repository.FollowRepository;
 import com.whattoeat.domain.user.entity.User;
@@ -25,7 +28,7 @@ public class FollowService {
         User following = getUser(followingId);
 
         if (followRepository.existsByFollower_IdAndFollowing_Id(followerId, followingId)) {
-            throw new IllegalStateException("이미 팔로우 중인 사용자입니다.");
+            throw new AlreadyFollowingException();
         }
 
         return followRepository.save(Follow.of(follower, following));
@@ -37,7 +40,7 @@ public class FollowService {
         getUser(followingId);
 
         Follow follow = followRepository.findByFollower_IdAndFollowing_Id(followerId, followingId)
-                .orElseThrow(() -> new IllegalArgumentException("팔로우 관계가 존재하지 않습니다."));
+                .orElseThrow(FollowNotFoundException::new);
 
         followRepository.delete(follow);
     }
@@ -54,9 +57,14 @@ public class FollowService {
         return followRepository.findByFollowing_Id(userId, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public boolean isFollowing(Long followerId, Long followingId) {
+        return followRepository.existsByFollower_IdAndFollowing_Id(followerId, followingId);
+    }
+
     private void validateSelfFollow(Long followerId, Long followingId) {
         if (followerId.equals(followingId)) {
-            throw new IllegalArgumentException("자기 자신을 팔로우할 수 없습니다.");
+            throw new SelfFollowNotAllowedException();
         }
     }
 
