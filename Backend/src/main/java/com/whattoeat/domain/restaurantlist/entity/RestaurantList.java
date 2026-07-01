@@ -43,7 +43,7 @@ public class RestaurantList extends BaseEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "restaurantList")
+    @OneToMany(mappedBy = "restaurantList", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RestaurantListItem> items = new ArrayList<>();
 
     public RestaurantList(User user, String title, String description, MoodTag moodTag) {

@@ -7,6 +7,7 @@ import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
+import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +25,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -39,6 +39,15 @@ public class FeedServiceTest {
 
     @Autowired
     FeedService feedService;
+
+    private User createTestUser() {
+        return User.builder()
+                .nickname("test")
+                .email("test@test.com")
+                .provider(Provider.LOCAL)
+                .build();
+
+    }
 
     @Test
     @DisplayName("피드 생성 성공")
@@ -61,7 +70,7 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 목록 조회 성공")
     public void getFeed_success() {
-        User user = User.builder().nickname("test").build();
+        User user = createTestUser();
         Feed feed1 = Feed.builder().user(user).content("맛집1").build();
         Feed feed2 = Feed.builder().user(user).content("맛집2").build();
         PageRequest pageable = PageRequest.of(0, 10);
@@ -79,7 +88,7 @@ public class FeedServiceTest {
     public void getFeed_empty() {
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAll(pageable))
-                .willReturn(Page.empty(pageable));
+                .willReturn(new PageImpl<>(List.of(), pageable, 0));
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
         assertThat(result.getContent().isEmpty());
@@ -92,15 +101,14 @@ public class FeedServiceTest {
         FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(() -> feedService.updateFeed(999L, req))
-                .isInstanceOf(FeedNotFoundException.class)
-                .hasMessageContaining("Feed not found");
-
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("피드를 찾을 수 없습니다.");
     }
 
     @Test
     @DisplayName("피드 수정 성공")
     public void updateFeed_success() {
-        User user = User.builder().nickname("test").build();
+        User user = createTestUser();
         Feed feed = Feed.builder().user(user).content("원본 내용").build();
         FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
@@ -114,15 +122,15 @@ public class FeedServiceTest {
     @DisplayName("피드 삭제 실패 - 존재하지 않는 필드")
     public void deleteFeed_notFound() {
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
-        assertThatThrownBy(()-> feedService.deleteFeed(999L))
-                .isInstanceOf(FeedNotFoundException.class)
-                .hasMessageContaining("Feed not found");
+        assertThatThrownBy(() -> feedService.deleteFeed(999L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("피드를 찾을 수 없습니다.");
     }
 
     @Test
     @DisplayName("피드 삭제 성공")
     public void deleteFeed_success() {
-        User user = User.builder().nickname("test").build();
+        User user = createTestUser();
         Feed feed = Feed.builder().user(user).content("맛집이네요").build();
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
         feedService.deleteFeed(1L);
