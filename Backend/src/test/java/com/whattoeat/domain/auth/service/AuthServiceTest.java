@@ -171,10 +171,25 @@ class AuthServiceTest {
     @Test
     @DisplayName("Redis 저장된 refreshToken 없을 때 예외 발생")
     void refreshFailNotFound() {
-        String refreshToken = "mocked-refresh-token";
+        String refreshToken = "unknown-refresh-token";
         given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(valueOperations.get("refresh:1")).willReturn(null);
+
+        assertThatThrownBy(() -> authService.refresh(refreshToken))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessageContaining("refreshToken");
+    }
+
+    @Test
+    @DisplayName("저장된 refreshToken, 요청받은 refreshToken 다를 시 예외 발생")
+    void refreshDismatch() {
+        String refreshToken = "my-refresh-token";
+        String storedRefreshToken = "different-token";
+
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(storedRefreshToken);
 
         assertThatThrownBy(() -> authService.refresh(refreshToken))
                 .isInstanceOf(InvalidCredentialsException.class)
