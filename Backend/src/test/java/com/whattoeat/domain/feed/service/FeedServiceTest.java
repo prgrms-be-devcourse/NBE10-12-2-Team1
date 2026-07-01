@@ -93,7 +93,7 @@ public class FeedServiceTest {
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(() -> feedService.updateFeed(999L, req))
                 .isInstanceOf(FeedNotFoundException.class)
-                .hasMessageContaining("피드를 찾을 수 없습니다.");
+                .hasMessageContaining("Feed not found");
 
     }
 
@@ -116,7 +116,7 @@ public class FeedServiceTest {
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(()-> feedService.deleteFeed(999L))
                 .isInstanceOf(FeedNotFoundException.class)
-                .hasMessageContaining("피드를 찾을 수 없습니다.");
+                .hasMessageContaining("Feed not found");
     }
 
     @Test
