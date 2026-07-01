@@ -71,4 +71,15 @@ public class UserServiceKakaoLoginTest {
         assertThat(existuser.getNickname()).isEqualTo("new_nickname");
         assertThat(existuser.getProfileImage()).isEqualTo("new.jpg");
     }
+
+    @Test
+    @DisplayName("프로필 이미지 null일 경우 기존 이미지 사용")
+    void kakaoLoginOrSignUp_nullUser_keepProfileImg() {
+        given(userRepository.findByKakaoId(KAKAO_ID)).willReturn(Optional.of(existuser));
+
+        userService.kakaoLoginOrSignUp(KAKAO_ID, "new_nickname", null, email);
+
+        assertThat(existuser.getNickname()).isEqualTo("new_nickname");
+        assertThat(existuser.getProfileImage()).isEqualTo("old.jpg");
+    }
 }
