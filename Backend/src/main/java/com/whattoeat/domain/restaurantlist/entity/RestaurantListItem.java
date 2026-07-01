@@ -3,7 +3,6 @@ package com.whattoeat.domain.restaurantlist.entity;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
