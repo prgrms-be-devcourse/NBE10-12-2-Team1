@@ -104,7 +104,7 @@ class JwtUtilTest {
 
     @Test
     @DisplayName("refreshToken에서 userId 추출 시 accessToken과 동일")
-    void getuserIdFromRefreshToken() {
+    void getUserIdFromRefreshToken() {
         String accessToken = jwtUtil.generateAccessToken(mockUser);
         String refreshToken = jwtUtil.generateRefreshToken(mockUser);
         assertThat(jwtUtil.getUserId(refreshToken)).isEqualTo(jwtUtil.getUserId(accessToken));
