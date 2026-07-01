@@ -1,4 +1,4 @@
-package com.whattoeat.domain.restaurant.dto;
+package com.whattoeat.external.kakao.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
@@ -21,4 +21,8 @@ public class KakaoPlaceDocument {
     private Double y;
     @JsonProperty("category_name")
     private String categoryName;
+    @JsonProperty("place_name")
+    private String placeName;
+    @JsonProperty("distance")
+    private String distance;
 }

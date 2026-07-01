@@ -16,6 +16,16 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  redis:
-    host: localhost
-    port: 6379
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret: "dGVzdFNlY3JldEtleUZvckp3dFRlc3RpbmdQdXJwb3Nl"
+  expiration: 86400000
+  # 1000(밀리초) × 60(초) × 60(분) × 24(시간) = 24시간
+
+kakao:
+  map:
+    rest-api-key: ${KAKAO_MAP_REST_API_KEY}

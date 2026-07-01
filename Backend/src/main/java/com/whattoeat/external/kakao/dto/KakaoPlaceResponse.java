@@ -1,4 +1,4 @@
-package com.whattoeat.domain.restaurant.dto;
+package com.whattoeat.external.kakao.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;

@@ -1,21 +1,22 @@
-package com.whattoeat.domain.restaurant.client;
+package com.whattoeat.external.kakao.client;
 
-import com.whattoeat.domain.restaurant.dto.KakaoPlaceResponse;
-import lombok.RequiredArgsConstructor;
+import com.whattoeat.external.kakao.dto.KakaoPlaceResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
-@RequiredArgsConstructor
 public class KakaoMapApiClient {
-
-    @Qualifier("kakaoMapWebClient")
     private final WebClient kakaoMapWebClient;
 
     @Value("${kakao.map.rest-api-key}")
     private String restApiKey;
+
+    public KakaoMapApiClient(@Qualifier("kakaoMapWebClient") WebClient kakaoMapWebClient) {
+        this.kakaoMapWebClient = kakaoMapWebClient;
+    }
+
 
     public KakaoPlaceResponse searchByKeyword(String query, double x, double y, int radius, int page){
         return kakaoMapWebClient.get()
