@@ -3,7 +3,9 @@ package com.whattoeat.domain.auth.controller;
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.auth.service.AuthService;
+import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.rsData.RsData;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 
 @RestController
@@ -31,6 +35,13 @@ public class AuthController {
         return ResponseEntity.ok(RsData.success(response, "로그인 성공"));
     }
 
-    //@PostMapping("/reissue")
-    //public ResponseEntity<RsData<Void>> reissue(@Valid @RequestBody Map<String, String> request){}
+    @PostMapping("/reissue")
+    public ResponseEntity<RsData<TokenResponse>> reissue(@RequestBody Map<String, String> request){
+        String refreshToken = request.get("refreshToken");
+        if(refreshToken == null|| refreshToken.isBlank()){
+            throw new InvalidCredentialsException("Refresh Token이 필요합니다.");
+        }
+        TokenResponse res = authService.reissue(refreshToken);
+        return ResponseEntity.ok(RsData.success(res,"토큰이 갱신되었습니다."));
+    }
 }
