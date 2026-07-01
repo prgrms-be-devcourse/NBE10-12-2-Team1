@@ -9,6 +9,7 @@ import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.global.exception.FeedNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
