@@ -143,7 +143,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.accessToken").value("mocked-token"))
+                .andExpect(jsonPath("$.data.accessToken").value("mocked-access-token"))
                 .andExpect(jsonPath("$.data.refreshToken").value("mocked-refresh-token"))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
