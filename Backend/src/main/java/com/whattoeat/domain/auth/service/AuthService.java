@@ -26,7 +26,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate stringRedisTemplate;
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional
     public void signup(SignUpRequest request) {
@@ -64,7 +64,7 @@ public class AuthService {
     @Transactional
     public TokenResponse reissue(String refreshToken) {
         Long userId = jwtUtil.getUserId(refreshToken);
-        String savedRefreshToken = (String) redisTemplate.opsForValue().get("refresh:" + userId);
+        String savedRefreshToken = redisTemplate.opsForValue().get("refresh:" + userId);
         if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
             throw new InvalidCredentialsException("유효하지 않은 refreshToken입니다.");
         }

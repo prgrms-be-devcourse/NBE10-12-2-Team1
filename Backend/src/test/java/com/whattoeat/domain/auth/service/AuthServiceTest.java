@@ -47,10 +47,10 @@ class AuthServiceTest {
     private JwtUtil jwtUtil;
 
     @Mock
-    private RedisTemplate<Object, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
 
     @Mock
-    private ValueOperations<Object, Object> valueOperations;
+    private ValueOperations<String, String> valueOperations;
 
     @InjectMocks
     private AuthService authService;
