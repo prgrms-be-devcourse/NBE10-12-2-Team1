@@ -28,8 +28,8 @@ public class AuthService {
     private final RedisTemplate<Object, Object> redisTemplate;
 
     @Transactional
-    public void signup(SignUpRequest request){
-        if(userRepository.existsByLoginId(request.loginId())) {
+    public void signup(SignUpRequest request) {
+        if (userRepository.existsByLoginId(request.loginId())) {
             throw new DuplicateLoginIdException("이미 사용 중인 아이디입니다.");
         }
         if (userRepository.existsByNickname(request.nickname())) {
@@ -60,14 +60,27 @@ public class AuthService {
         );
     }
 
+    @Transactional
+    public String refresh(String refreshToken) {
+        Long userId = jwtUtil.getUserId(refreshToken);
+        String savedRefreshToken = (String) redisTemplate.opsForValue().get("refresh:" + userId);
+        if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
+            throw new InvalidCredentialsException("유효하지 않은 refreshToken입니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(()->new InvalidCredentialsException("유효하지 않은 refreshToken입니다."));
+        return  jwtUtil.generateAccessToken(user);
+    }
+
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request){
+    public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByLoginId(request.loginId())
-                .orElseThrow(()-> new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다."));
+                .orElseThrow(() -> new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다."));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다.");
         }
-        String accessToken =jwtUtil.generateAccessToken(user);
+        String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
         return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());

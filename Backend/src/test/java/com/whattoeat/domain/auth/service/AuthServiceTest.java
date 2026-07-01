@@ -27,7 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -44,7 +44,10 @@ class AuthServiceTest {
     private JwtUtil jwtUtil;
 
     @Mock
-    private StringRedisTemplate stringRedisTemplate;
+    private RedisTemplate<Object, Object> redisTemplate;
+
+    @Mock
+    private ValueOperations<Object, Object> valueOperations;
 
     @InjectMocks
     private AuthService authService;
@@ -120,7 +123,7 @@ class AuthServiceTest {
         given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
         given(jwtUtil.generateRefreshToken(user)).willReturn("mocked-refresh-token");
 
-        given(stringRedisTemplate.opsForValue()).willReturn(mock(ValueOperations.class));
+        given(redisTemplate.opsForValue()).willReturn(mock(ValueOperations.class));
 
         LoginResponse response = authService.login(loginRequest);
 
@@ -147,4 +150,22 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
+
+    @Test
+    @DisplayName("refreshToken으로 새 accessToken 발급")
+    void refreshTokenSuccess() {
+        String refreshToken = "mocked-refresh-token";
+        String newAccessToken = "mocked-access-token";
+
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(refreshToken);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtil.generateAccessToken(user)).willReturn(newAccessToken);
+
+        String result = authService.refresh(refreshToken);
+
+        assertThat(result).isEqualTo(newAccessToken);
+    }
+
 }
