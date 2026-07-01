@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 @DataJpaTest
 @Import(JpaConfig.class)
@@ -56,11 +58,21 @@ class RestaurantListRepositoryTest {
         createAndSaveRestaurantList(user, "리스트1");
         createAndSaveRestaurantList(user, "리스트2");
 
-        List<RestaurantList> result = restaurantListRepository.findByUserIdOrderByIdDesc(user.getId());
+        Page<RestaurantList> result =
+                restaurantListRepository.findByUserIdOrderByIdDesc(
+                        user.getId(),
+                        PageRequest.of(0, 10)
+                );
 
-        assertThat(result).hasSize(2);
-        assertThat(result).extracting("title")
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent())
+                .extracting("title")
                 .containsExactly("리스트2", "리스트1");
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getNumber()).isEqualTo(0);
+        assertThat(result.getSize()).isEqualTo(10);
     }
 
     @Test
@@ -71,10 +83,17 @@ class RestaurantListRepositoryTest {
         createAndSaveRestaurantList(user1, "user1 리스트");
         createAndSaveRestaurantList(user2, "user2 리스트");
 
-        List<RestaurantList> result = restaurantListRepository.findByUserIdOrderByIdDesc(user1.getId());
+        Page<RestaurantList> result =
+                restaurantListRepository.findByUserIdOrderByIdDesc(
+                        user1.getId(),
+                        PageRequest.of(0, 10)
+                );
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getTitle()).isEqualTo("user1 리스트");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("user1 리스트");
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getTotalPages()).isEqualTo(1);
     }
 
     @Test

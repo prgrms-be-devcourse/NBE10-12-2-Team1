@@ -1,6 +1,7 @@
 package com.whattoeat.domain.restaurantlist.dto;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -18,7 +19,7 @@ public class RestaurantListRequest {
 
         String memo,
 
-        @NotNull(message = "순서는 필수입니다.")
+        @Min(value = 1, message = "순서는 1 이상이어야 합니다.")
         Integer orderIndex
     ) {}
 }

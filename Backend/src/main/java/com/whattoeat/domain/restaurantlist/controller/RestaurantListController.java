@@ -9,6 +9,8 @@ import com.whattoeat.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,11 +46,16 @@ public class RestaurantListController {
     // 맛집 리스트 다건 조회
     @GetMapping
     @Operation(summary = "맛집 리스트 다건 조회")
-    public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists() {
+    public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int size
+    ) {
         // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
         Long userId = 1L;
 
-        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAllByUserId(userId)
+        Pageable pageable = PageRequest.of(page, size);
+
+        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAllByUserId(userId, pageable)
                 .stream()
                 .map(RestaurantListResponse.RestaurantLists::new)
                 .toList();
@@ -147,8 +154,13 @@ public class RestaurantListController {
     // 전체 맛집 리스트 다건 조회
     @GetMapping("/all")
     @Operation(summary = "전체 맛집 리스트 다건 조회")
-    public RsData<List<RestaurantListResponse.RestaurantLists>> getAllRestaurantLists() {
-        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAll()
+    public RsData<List<RestaurantListResponse.RestaurantLists>> getAllRestaurantLists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAll(pageable)
                         .stream()
                 .map(RestaurantListResponse.RestaurantLists::new)
                 .toList();

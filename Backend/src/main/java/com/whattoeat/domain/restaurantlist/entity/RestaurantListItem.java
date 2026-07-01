@@ -3,6 +3,7 @@ package com.whattoeat.domain.restaurantlist.entity;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,7 +34,7 @@ public class RestaurantListItem extends BaseEntity {
     private Restaurant restaurant;
 
     // 순서
-    @Column(name = "order_index", nullable = false, length = 500)
+    @Column(name = "order_index", nullable = false)
     private Integer orderIndex;
 
     // 한줄평

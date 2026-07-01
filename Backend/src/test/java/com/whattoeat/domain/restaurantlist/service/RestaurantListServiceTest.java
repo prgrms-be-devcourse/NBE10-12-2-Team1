@@ -3,6 +3,7 @@ package com.whattoeat.domain.restaurantlist.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
@@ -26,6 +27,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -139,14 +144,21 @@ class RestaurantListServiceTest {
         RestaurantList list1 = createRestaurantList(1L, user);
         RestaurantList list2 = createRestaurantList(2L, user);
 
-        given(restaurantListRepository.findByUserIdOrderByIdDesc(1L))
-                .willReturn(List.of(list2, list1));
+        Pageable pageable = PageRequest.of(0, 10);
 
-        List<RestaurantList> result = restaurantListService.findAllByUserId(1L);
+        given(restaurantListRepository.findByUserIdOrderByIdDesc(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(list2, list1), pageable, 2));
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getId()).isEqualTo(2L);
-        assertThat(result.get(1).getId()).isEqualTo(1L);
+        Page<RestaurantList> result = restaurantListService.findAllByUserId(1L, pageable);
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(2L);
+        assertThat(result.getContent().get(1).getId()).isEqualTo(1L);
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getNumber()).isEqualTo(0);
+        assertThat(result.getSize()).isEqualTo(10);
     }
 
     @Test

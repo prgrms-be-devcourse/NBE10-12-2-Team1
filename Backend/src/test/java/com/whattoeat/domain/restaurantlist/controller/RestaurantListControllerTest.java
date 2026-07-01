@@ -1,5 +1,6 @@
 package com.whattoeat.domain.restaurantlist.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +27,9 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -184,12 +188,15 @@ class RestaurantListControllerTest {
                 MoodTag.SOLO
         );
 
-        given(restaurantListService.findAllByUserId(1L))
-                .willReturn(List.of(list2, list1));
+        given(restaurantListService.findAllByUserId(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(list2, list1)));
 
-        mockMvc.perform(get("/api/v1/lists"))
+        mockMvc.perform(get("/api/v1/lists")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+
                 .andExpect(jsonPath("$.data.length()").value(2))
 
                 .andExpect(jsonPath("$.data[0].id").value(2))
@@ -206,6 +213,7 @@ class RestaurantListControllerTest {
                 .andExpect(jsonPath("$.data[1].moodTag").value("DATE"))
                 .andExpect(jsonPath("$.data[1].itemCount").value(0))
                 .andExpect(jsonPath("$.data[1].createdAt").exists())
+
                 .andExpect(jsonPath("$.message").value("맛집 리스트 목록 조회가 완료되었습니다."));
     }
 
@@ -282,19 +290,37 @@ class RestaurantListControllerTest {
                 MoodTag.SOLO
         );
 
-        given(restaurantListService.findAll())
-                .willReturn(List.of(list2, list1));
+        Pageable pageable = PageRequest.of(0, 10);
 
-        mockMvc.perform(get("/api/v1/lists/all"))
+        given(restaurantListService.findAll(any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(list2, list1), pageable, 2));
+
+        mockMvc.perform(get("/api/v1/lists/all")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+
                 .andExpect(jsonPath("$.data.length()").value(2))
+
                 .andExpect(jsonPath("$.data[0].id").value(2))
+                .andExpect(jsonPath("$.data[0].userId").value(1))
+                .andExpect(jsonPath("$.data[0].nickname").value("user1"))
                 .andExpect(jsonPath("$.data[0].title").value("혼밥 맛집"))
+                .andExpect(jsonPath("$.data[0].description").value("혼자 먹기 좋은 곳"))
                 .andExpect(jsonPath("$.data[0].moodTag").value("SOLO"))
+                .andExpect(jsonPath("$.data[0].itemCount").value(0))
+                .andExpect(jsonPath("$.data[0].createdAt").exists())
+
                 .andExpect(jsonPath("$.data[1].id").value(1))
+                .andExpect(jsonPath("$.data[1].userId").value(1))
+                .andExpect(jsonPath("$.data[1].nickname").value("user1"))
                 .andExpect(jsonPath("$.data[1].title").value("데이트 맛집"))
+                .andExpect(jsonPath("$.data[1].description").value("분위기 좋은 곳"))
                 .andExpect(jsonPath("$.data[1].moodTag").value("DATE"))
+                .andExpect(jsonPath("$.data[1].itemCount").value(0))
+                .andExpect(jsonPath("$.data[1].createdAt").exists())
+
                 .andExpect(jsonPath("$.message").value("전체 맛집 리스트 목록 조회가 완료되었습니다."));
     }
 

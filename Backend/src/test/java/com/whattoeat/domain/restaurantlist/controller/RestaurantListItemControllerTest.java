@@ -1,6 +1,7 @@
 package com.whattoeat.domain.restaurantlist.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -222,7 +223,7 @@ class RestaurantListItemControllerTest {
     }
 
     @Test
-    void 맛집리스트_아이템_추가_orderIndex_null이면_400() throws Exception {
+    void 맛집리스트_아이템_추가_orderIndex_null이면_맨뒤에_추가() throws Exception {
         RestaurantListRequest.RestaurantListItem request =
                 new RestaurantListRequest.RestaurantListItem(
                         10L,
@@ -230,9 +231,43 @@ class RestaurantListItemControllerTest {
                         null
                 );
 
+        Restaurant restaurant = mockRestaurant(
+                10L,
+                "초밥집",
+                Category.JAPANESE
+        );
+
+        RestaurantList restaurantList = createRestaurantList(1L);
+
+        RestaurantListItem item = createRestaurantListItem(
+                100L,
+                restaurantList,
+                restaurant,
+                "한줄평",
+                1
+        );
+
+        given(restaurantListService.addItem(
+                eq(1L),
+                eq(1L),
+                eq(10L),
+                eq("한줄평"),
+                isNull()
+        )).willReturn(item);
+
         mockMvc.perform(post("/api/v1/lists/1/items")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(100))
+                .andExpect(jsonPath("$.data.listId").value(1))
+                .andExpect(jsonPath("$.data.restaurantId").value(10))
+                .andExpect(jsonPath("$.data.restaurantName").value("초밥집"))
+                .andExpect(jsonPath("$.data.category").value("JAPANESE"))
+                .andExpect(jsonPath("$.data.orderIndex").value(1))
+                .andExpect(jsonPath("$.data.memo").value("한줄평"))
+                .andExpect(jsonPath("$.data.createdAt").exists())
+                .andExpect(jsonPath("$.message").value("맛집 리스트에 식당이 추가되었습니다."));
     }
 }

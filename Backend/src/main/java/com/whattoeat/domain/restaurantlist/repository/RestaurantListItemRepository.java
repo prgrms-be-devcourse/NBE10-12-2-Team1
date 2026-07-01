@@ -20,4 +20,19 @@ public interface RestaurantListItemRepository extends JpaRepository<RestaurantLi
     Optional<RestaurantListItem> findListItem(Long itemId, Long listId, Long userId);
 
     boolean existsByRestaurantListIdAndRestaurantId(Long listId, Long restaurantListId);
+
+    @Query("""
+        select max(i.orderIndex)
+          from RestaurantListItem i
+         where i.restaurantList.id = :listId
+    """)
+    Integer findMaxOrderIndexByListId(Long listId);
+
+    @Query("""
+        update RestaurantListItem i
+            set i.orderIndex = i.orderIndex + 1
+          where i.restaurantList.id = :listId
+            and i.orderIndex >= :orderIndex
+    """)
+    void incOrderIndex(Long listId, int orderIndex);
 }

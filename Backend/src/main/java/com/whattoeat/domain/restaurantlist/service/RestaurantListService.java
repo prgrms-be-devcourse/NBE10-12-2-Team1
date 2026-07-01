@@ -11,6 +11,8 @@ import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,8 +43,8 @@ public class RestaurantListService {
 
     // 맛집 리스트 다건 조회
     @Transactional(readOnly = true)
-    public List<RestaurantList> findAllByUserId(Long userId) {
-        return restaurantListRepository.findByUserIdOrderByIdDesc(userId);
+    public Page<RestaurantList> findAllByUserId(Long userId, Pageable pageable) {
+        return restaurantListRepository.findByUserIdOrderByIdDesc(userId, pageable);
     }
 
 
@@ -71,11 +73,25 @@ public class RestaurantListService {
             throw new DuplicateRestaurantListItemException(restaurantId);
         }
 
+        int nextOrderIndex;
+
+        if(orderIndex == null) {
+            Integer maxOrderIndex = restaurantListItemRepository.findMaxOrderIndexByListId(listId);
+            nextOrderIndex = maxOrderIndex == null ? 1 : maxOrderIndex + 1;
+        } else {
+            nextOrderIndex = orderIndex;
+
+            restaurantListItemRepository.incOrderIndex(
+                    listId,
+                    nextOrderIndex
+            );
+        }
+
         RestaurantListItem restaurantListItem = new RestaurantListItem(
                 restaurantList,
                 restaurant,
                 memo,
-                orderIndex
+                nextOrderIndex
         );
 
         return restaurantListItemRepository.save(restaurantListItem);
@@ -111,8 +127,8 @@ public class RestaurantListService {
     // ============================== 전체 조회 =================================
     // 전체 맛집 리스트 다건 조회
     @Transactional(readOnly = true)
-    public List<RestaurantList> findAll() {
-        return restaurantListRepository.findAll();
+    public Page<RestaurantList> findAll(Pageable pageable) {
+        return restaurantListRepository.findAll(pageable);
     }
 
     // 전체 식당 리스트 단건 조회
