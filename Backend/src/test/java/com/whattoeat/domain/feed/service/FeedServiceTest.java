@@ -8,6 +8,7 @@ import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.global.exception.FeedNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,10 +68,10 @@ public class FeedServiceTest {
         given(feedRepository.findAll(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
 
-        Page<FeedListResponse> restlt = feedService.getFeeds(null, null, pageable);
+        Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
 
-        assertThat(restlt.getContent()).hasSize(2);
-        assertThat(restlt.getContent().get(0).content()).isEqualTo("맛집1");
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).content()).isEqualTo("맛집1");
     }
 
     @Test
@@ -80,9 +81,9 @@ public class FeedServiceTest {
         given(feedRepository.findAll(pageable))
                 .willReturn(Page.empty(pageable));
 
-        Page<FeedListResponse> restlt = feedService.getFeeds(null, null, pageable);
-        assertThat(restlt.getContent().isEmpty());
-        assertThat(restlt.getTotalElements()).isZero();
+        Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
+        assertThat(result.getContent().isEmpty());
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -91,7 +92,7 @@ public class FeedServiceTest {
         FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(() -> feedService.updateFeed(999L, req))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(FeedNotFoundException.class)
                 .hasMessageContaining("피드를 찾을 수 없습니다.");
 
     }
@@ -114,7 +115,7 @@ public class FeedServiceTest {
     public void deleteFeed_notFound() {
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
         assertThatThrownBy(()-> feedService.deleteFeed(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(FeedNotFoundException.class)
                 .hasMessageContaining("피드를 찾을 수 없습니다.");
     }
 

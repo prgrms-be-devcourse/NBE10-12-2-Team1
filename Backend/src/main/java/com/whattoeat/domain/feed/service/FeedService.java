@@ -9,6 +9,7 @@ import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.global.exception.FeedNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,7 +47,7 @@ public class FeedService {
     @Transactional
     public FeedDetailResponse updateFeed(Long feedId, FeedUpdateRequest request) {
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new FeedNotFoundException(feedId));
         Restaurant restaurant = request.restaurantId() != null
                 ? restaurantRepository.findById(request.restaurantId()).orElse(null)
                 : null;
@@ -59,7 +60,7 @@ public class FeedService {
     @Transactional
     public void deleteFeed(Long feedId) {
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(()-> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(()-> new FeedNotFoundException(feedId));
         feedRepository.delete(feed);
     }
 }
