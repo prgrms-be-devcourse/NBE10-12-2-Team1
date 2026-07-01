@@ -16,7 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.Duration;
+
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -88,5 +91,11 @@ public class AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
         return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
+    }
+    public void logout(String token){
+        long remaining = jwtUtil.getRemainingExpiration(token);
+        if (remaining > 0) {
+            redisTemplate.opsForValue().set("blacklist:" + token, "logout", remaining, TimeUnit.MILLISECONDS);
+        }
     }
 }

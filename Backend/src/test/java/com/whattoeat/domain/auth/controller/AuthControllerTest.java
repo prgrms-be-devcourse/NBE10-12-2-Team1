@@ -1,6 +1,7 @@
 package com.whattoeat.domain.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
@@ -25,7 +26,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,9 +40,26 @@ import java.util.Map;
 
 @WebMvcTest(
         controllers = AuthController.class,
-        excludeAutoConfiguration = SecurityAutoConfiguration.class)
+        excludeAutoConfiguration = SecurityAutoConfiguration.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = {
+                    com.whattoeat.global.jwt.JwtAuthenticationFilter.class,
+                    com.whattoeat.global.config.SecurityConfig.class
+                }))
 @AutoConfigureMockMvc(addFilters = false)
+
 class AuthControllerTest {
+
+    @TestConfiguration
+    static class TestSecurityConfig {
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+            http.csrf(c -> c.disable())
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll());
+            return http.build();
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -50,6 +74,7 @@ class AuthControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
 
     // ========== POST /api/v1/auth/signup ==========
 
@@ -193,4 +218,25 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
     }
 
+    // ========== POST /api/v1/auth/logout ==========
+
+    @Test
+    @DisplayName("토큰과 함께 로그아웃 요청 시 200 반환")
+    void logoutSuccess() throws Exception {
+        willDoNothing().given(authService).logout(anyString());
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer valid.token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("로그아웃 되었습니다."));
+    }
+
+    @Test
+    @DisplayName("토큰 없이 로그아웃 요청 시 서비스 호출 없이 200 반환")
+    void logoutWithoutToken() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
 }

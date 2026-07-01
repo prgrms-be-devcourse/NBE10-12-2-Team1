@@ -7,6 +7,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
@@ -22,7 +26,9 @@ import com.whattoeat.global.exception.PasswordMismatchException;
 import com.whattoeat.global.jwt.JwtUtil;
 import java.util.Optional;
 
+
 import io.jsonwebtoken.JwtException;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -225,6 +231,34 @@ class AuthServiceTest {
         String invalidToken = "fake.jwt.token";
         given(jwtUtil.getUserId(invalidToken)).willThrow(new JwtException("위변조된 토큰입니다."));
         assertThatThrownBy(() -> authService.reissue(invalidToken))
-        .isInstanceOf(JwtException.class);
+                .isInstanceOf(JwtException.class);
+    }
+    // ========== logout ==========
+
+    @Test
+    @DisplayName("로그아웃 시 Redis 블랙리스트에 토큰 저장")
+    void logoutSuccess() {
+        String token = "valid.jwt.token";
+        long remaining = 3600000L;
+
+        given(jwtUtil.getRemainingExpiration(token)).willReturn(remaining);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+
+        authService.logout(token);
+
+        verify(valueOperations, times(1))
+                .set("blacklist:" + token, "logout", remaining, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    @DisplayName("만료된 토큰으로 로그아웃 시 Redis에 저장하지 않음")
+    void logoutWithExpiredToken() {
+        String token = "expired.jwt.token";
+
+        given(jwtUtil.getRemainingExpiration(token)).willReturn(-1L);
+
+        authService.logout(token);
+
+        verify(redisTemplate, never()).opsForValue();
     }
 }
