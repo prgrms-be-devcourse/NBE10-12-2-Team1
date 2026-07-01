@@ -168,4 +168,16 @@ class AuthServiceTest {
         assertThat(result).isEqualTo(newAccessToken);
     }
 
+    @Test
+    @DisplayName("Redis 저장된 refreshToken 없을 때 예외 발생")
+    void refreshFailNotFound() {
+        String refreshToken = "mocked-refresh-token";
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(null);
+
+        assertThatThrownBy(() -> authService.refresh(refreshToken))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessageContaining("refreshToken");
+    }
 }
