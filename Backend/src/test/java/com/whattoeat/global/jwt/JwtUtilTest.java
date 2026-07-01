@@ -111,7 +111,7 @@ class JwtUtilTest {
     }
 
     @Test
-    @DisplayName("refreshToken 만료 시 ExpiredJwtExeption 발생")
+    @DisplayName("refreshToken 만료 시 ExpiredJwtException 발생")
     void parseRefreshToken_expired() {
         ReflectionTestUtils.setField(jwtUtil, "refreshExpiration", -1L);
         String expiredToken = jwtUtil.generateRefreshToken(mockUser);
