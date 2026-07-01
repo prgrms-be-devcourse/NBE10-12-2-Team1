@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
@@ -21,4 +22,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
             @Param("region2") String region2,
             @Param("region3") String region3
     );
+
+    Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId);
 }
