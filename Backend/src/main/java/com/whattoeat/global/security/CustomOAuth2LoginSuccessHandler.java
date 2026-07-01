@@ -33,7 +33,7 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         KakaoOAuth2User kakaoUser = (KakaoOAuth2User) authentication.getPrincipal();
         User user = kakaoUser.getUser();
 
-        String accessToken = jwtUtil.generateToken(user);
+        String accessToken = jwtUtil.generateAccessToken(user);
         rq.setCookie("accessToken", accessToken);
 
         String redirectUri = frontendUrl;

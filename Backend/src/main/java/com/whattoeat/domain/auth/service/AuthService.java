@@ -52,7 +52,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다.");
         }
-        String token =jwtUtil.generateToken(user);
+        String token =jwtUtil.generateAccessToken(user);
         return new LoginResponse(token, user.getNickname(), user.getProfileImage());
     }
 }
