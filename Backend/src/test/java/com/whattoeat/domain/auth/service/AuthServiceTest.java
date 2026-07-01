@@ -113,7 +113,7 @@ class AuthServiceTest {
     void loginSuccess() {
         given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(true);
-        given(jwtUtil.generateToken(user)).willReturn("mocked-token");
+        given(jwtUtil.generateAccessToken(user)).willReturn("mocked-token");
 
         LoginResponse response = authService.login(loginRequest);
 
