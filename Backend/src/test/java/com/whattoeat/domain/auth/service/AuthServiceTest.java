@@ -20,6 +20,8 @@ import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.exception.PasswordMismatchException;
 import com.whattoeat.global.jwt.JwtUtil;
 import java.util.Optional;
+
+import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -194,5 +196,14 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.refresh(refreshToken))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessageContaining("refreshToken");
+    }
+
+    @Test
+    @DisplayName("위변조된 refreshToken일 시 JwtException 발생")
+    void refreshFailJwtException() {
+        String invalidToken = "fake.jwt.token";
+        given(jwtUtil.getUserId(invalidToken)).willThrow(new JwtException("위변조된 토큰입니다."));
+        assertThatThrownBy(() -> authService.refresh(invalidToken))
+        .isInstanceOf(JwtException.class);
     }
 }
