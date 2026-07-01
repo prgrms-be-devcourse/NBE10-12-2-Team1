@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
         controllers = RestaurantListController.class,
         excludeAutoConfiguration = SecurityAutoConfiguration.class
 )
+@AutoConfigureMockMvc(addFilters = false)
 class RestaurantListControllerTest {
 
     @Autowired
