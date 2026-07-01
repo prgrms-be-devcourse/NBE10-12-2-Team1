@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -165,9 +166,29 @@ class AuthServiceTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(jwtUtil.generateAccessToken(user)).willReturn(newAccessToken);
 
-        String result = authService.refresh(refreshToken);
+        TokenResponse response = authService.reissue(refreshToken);
 
-        assertThat(result).isEqualTo(newAccessToken);
+        assertThat(response.accessToken()).isEqualTo(newAccessToken);
+    }
+
+    @Test
+    @DisplayName("refreshToken으로 accessToken+refreshToken 재발급")
+    void refreshSuccess() {
+        String oldrefreshToken = "valid-refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+
+        given(jwtUtil.getUserId(oldrefreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(oldrefreshToken);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtil.generateAccessToken(user)).willReturn(newAccessToken);
+        given(jwtUtil.generateRefreshToken(user)).willReturn(newRefreshToken);
+
+        TokenResponse response = authService.reissue(oldrefreshToken);
+
+        assertThat(response.accessToken()).isEqualTo(newAccessToken);
+        assertThat(response.refreshToken()).isEqualTo(newRefreshToken);
     }
 
     @Test
@@ -178,7 +199,7 @@ class AuthServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(valueOperations.get("refresh:1")).willReturn(null);
 
-        assertThatThrownBy(() -> authService.refresh(refreshToken))
+        assertThatThrownBy(() -> authService.reissue(refreshToken))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessageContaining("refreshToken");
     }
@@ -193,7 +214,7 @@ class AuthServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(valueOperations.get("refresh:1")).willReturn(storedRefreshToken);
 
-        assertThatThrownBy(() -> authService.refresh(refreshToken))
+        assertThatThrownBy(() -> authService.reissue(refreshToken))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessageContaining("refreshToken");
     }
@@ -203,7 +224,7 @@ class AuthServiceTest {
     void refreshFailJwtException() {
         String invalidToken = "fake.jwt.token";
         given(jwtUtil.getUserId(invalidToken)).willThrow(new JwtException("위변조된 토큰입니다."));
-        assertThatThrownBy(() -> authService.refresh(invalidToken))
+        assertThatThrownBy(() -> authService.reissue(invalidToken))
         .isInstanceOf(JwtException.class);
     }
 }

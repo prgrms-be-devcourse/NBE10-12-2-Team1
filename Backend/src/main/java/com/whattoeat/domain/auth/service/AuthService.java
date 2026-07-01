@@ -3,6 +3,7 @@ package com.whattoeat.domain.auth.service;
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -61,7 +62,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String refresh(String refreshToken) {
+    public TokenResponse reissue(String refreshToken) {
         Long userId = jwtUtil.getUserId(refreshToken);
         String savedRefreshToken = (String) redisTemplate.opsForValue().get("refresh:" + userId);
         if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
@@ -70,7 +71,13 @@ public class AuthService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(()->new InvalidCredentialsException("유효하지 않은 refreshToken입니다."));
-        return  jwtUtil.generateAccessToken(user);
+
+        String newAccessToken = jwtUtil.generateAccessToken(user);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user);
+
+        deleteRefreshToken(userId);
+        saveRefreshToken(userId, newRefreshToken);
+        return  new TokenResponse(newAccessToken, newRefreshToken);
     }
 
     @Transactional(readOnly = true)
@@ -84,5 +91,9 @@ public class AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
         return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
+    }
+
+    private void deleteRefreshToken(Long userId) {
+        redisTemplate.delete("refresh:" + userId);
     }
 }
