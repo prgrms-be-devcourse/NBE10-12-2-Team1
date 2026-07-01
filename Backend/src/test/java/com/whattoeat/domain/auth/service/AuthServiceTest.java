@@ -1,0 +1,142 @@
+package com.whattoeat.domain.auth.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import com.whattoeat.domain.auth.dto.LoginRequest;
+import com.whattoeat.domain.auth.dto.LoginResponse;
+import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.user.entity.Provider;
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.exception.DuplicateLoginIdException;
+import com.whattoeat.global.exception.DuplicateNicknameException;
+import com.whattoeat.global.exception.InvalidCredentialsException;
+import com.whattoeat.global.exception.PasswordMismatchException;
+import com.whattoeat.global.jwt.JwtUtil;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @InjectMocks
+    private AuthService authService;
+
+    private SignUpRequest signUpRequest;
+    private LoginRequest loginRequest;
+    private User user;
+
+    @BeforeEach
+    void setUp() {
+        signUpRequest = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
+        loginRequest = new LoginRequest("testuser", "pass1234");
+        user = User.builder()
+                .loginId("testuser")
+                .password("encodedPassword")
+                .nickname("testnick")
+                .email("test@test.com")
+                .provider(Provider.LOCAL)
+                .role(Role.USER)
+                .build();
+    }
+
+    // ========== signup ==========
+
+    @Test
+    @DisplayName("정상 입력으로 회원가입 성공")
+    void signupSuccess() {
+        given(userRepository.existsByLoginId("testuser")).willReturn(false);
+        given(userRepository.existsByNickname("testnick")).willReturn(false);
+
+        assertThatNoException().isThrownBy(() -> authService.signup(signUpRequest));
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("아이디 중복 시 DuplicateLoginIdException 발생")
+    void signupFailDuplicateLoginId() {
+        given(userRepository.existsByLoginId("testuser")).willReturn(true);
+
+        assertThatThrownBy(() -> authService.signup(signUpRequest))
+                .isInstanceOf(DuplicateLoginIdException.class)
+                .hasMessageContaining("아이디");
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 시 DuplicateNicknameException 발생")
+    void signupFailDuplicateNickname() {
+        given(userRepository.existsByLoginId("testuser")).willReturn(false);
+        given(userRepository.existsByNickname("testnick")).willReturn(true);
+
+        assertThatThrownBy(() -> authService.signup(signUpRequest))
+                .isInstanceOf(DuplicateNicknameException.class)
+                .hasMessageContaining("닉네임");
+    }
+
+    @Test
+    @DisplayName("비밀번호 확인 불일치 시 PasswordMismatchException 발생")
+    void signupFailPasswordMismatch() {
+        SignUpRequest mismatchRequest = new SignUpRequest("testuser", "pass1234", "different", "testnick", "test@test.com");
+
+        assertThatThrownBy(() -> authService.signup(mismatchRequest))
+                .isInstanceOf(PasswordMismatchException.class)
+                .hasMessageContaining("비밀번호");
+    }
+
+    // ========== login ==========
+
+    @Test
+    @DisplayName("정상 아이디/비밀번호로 로그인 성공 후 토큰 반환")
+    void loginSuccess() {
+        given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(true);
+        given(jwtUtil.generateToken(user)).willReturn("mocked-token");
+
+        LoginResponse response = authService.login(loginRequest);
+
+        assertThat(response.accessToken()).isEqualTo("mocked-token");
+        assertThat(response.nickname()).isEqualTo("testnick");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 아이디로 로그인 시 InvalidCredentialsException 발생")
+    void loginFailUserNotFound() {
+        given(userRepository.findByLoginId("testuser")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    @DisplayName("비밀번호 불일치 시 InvalidCredentialsException 발생")
+    void loginFailWrongPassword() {
+        given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(false);
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(InvalidCredentialsException.class);
+    }
+}
