@@ -38,6 +38,20 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
     }
 
+    // 식당을 찾지 못한 경우 404 반환
+    @ExceptionHandler(RestaurantNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRestaurantNotFound(RestaurantNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
+    // 맛집 리스트를 찾지 못한 경우 404 반환
+    @ExceptionHandler(ListNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleListNotFound(ListNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
     // @Valid 검증 실패 시 첫 번째 필드 오류 메시지를 400으로 반환
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
