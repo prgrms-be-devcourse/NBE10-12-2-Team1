@@ -130,7 +130,7 @@ class AuthControllerTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 시 200과 토큰 반환")
     void loginSuccess() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "pass1234");
-        LoginResponse response = new LoginResponse("mocked-token", "testnick", null);
+        LoginResponse response = new LoginResponse("mocked-access-token", "mocked-refresh-token","testnick", null);
         given(authService.login(any())).willReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -139,6 +139,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.accessToken").value("mocked-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("mocked-refresh-token"))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
     }
