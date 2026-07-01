@@ -1,6 +1,10 @@
 package com.whattoeat.global.config;
 
 import com.whattoeat.global.jwt.JwtAuthenticationFilter;
+import com.whattoeat.global.security.CustomOAuth2AuthorizationRequestResolver;
+import com.whattoeat.global.security.CustomOAuth2AuthorizationRequestResolver;
+import com.whattoeat.global.security.CustomOAuth2LoginSuccessHandler;
+import com.whattoeat.global.security.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,12 +28,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2LoginSuccessHandler customOAuth2LoginSuccessHandler;
+    private final CustomOAuth2AuthorizationRequestResolver customOAuth2AuthorizationRequestResolver;
 
     @Bean
     @Profile("dev")
     public SecurityFilterChain devSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth2 -> oauth2.
+                        userInfoEndpoint(userinfo -> userinfo.userService(customOAuth2UserService))
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(customOAuth2AuthorizationRequestResolver))
+                        .successHandler(customOAuth2LoginSuccessHandler))
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
                 );
@@ -45,9 +60,21 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/signup", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/api/v1/auth/signup",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
+                        .permitAll()
                         .requestMatchers("/api/v1/auth/logout").authenticated()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userinfo -> userinfo.userService(customOAuth2UserService))
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestResolver(customOAuth2AuthorizationRequestResolver))
+                        .successHandler(customOAuth2LoginSuccessHandler)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
