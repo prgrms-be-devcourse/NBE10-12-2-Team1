@@ -40,6 +40,7 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // JJWT
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
