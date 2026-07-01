@@ -2,7 +2,6 @@ package com.whattoeat.global.config;
 
 import com.whattoeat.global.jwt.JwtAuthenticationFilter;
 import com.whattoeat.global.security.CustomOAuth2AuthorizationRequestResolver;
-import com.whattoeat.global.security.CustomOAuth2AuthorizationRequestResolver;
 import com.whattoeat.global.security.CustomOAuth2LoginSuccessHandler;
 import com.whattoeat.global.security.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
