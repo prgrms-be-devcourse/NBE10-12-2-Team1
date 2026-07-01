@@ -123,4 +123,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, e.getMessage()));
     }
+    @ExceptionHandler(KakaoApiException.class)
+    public ResponseEntity<ErrorResponse> handleKakaoApiException(KakaoApiException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ErrorResponse.of(HttpStatus.BAD_GATEWAY, e.getMessage()));
+    }
 }

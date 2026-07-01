@@ -1,10 +1,13 @@
 package com.whattoeat.external.kakao.client;
 
 import com.whattoeat.external.kakao.dto.KakaoPlaceResponse;
+import com.whattoeat.global.exception.KakaoApiException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Component
 public class KakaoMapApiClient {
@@ -32,6 +35,8 @@ public class KakaoMapApiClient {
                         .build())
                 .header("Authorization", "KakaoAK " + restApiKey)
                 .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> Mono.error(new KakaoApiException("카카오 API 요청 오류 :" + clientResponse.statusCode())))
+                .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> Mono.error(new KakaoApiException("카카오 API 서버 오류")))
                 .bodyToMono(KakaoPlaceResponse.class)
                 .block();
     }
@@ -47,6 +52,8 @@ public class KakaoMapApiClient {
                         .build())
                 .header("Authorization", "KakaoAK " + restApiKey)
                 .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> Mono.error(new KakaoApiException("카카오 API 요청 오류 :" + clientResponse.statusCode())))
+                .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> Mono.error(new KakaoApiException("카카오 API 서버 오류")))
                 .bodyToMono(KakaoPlaceResponse.class)
                 .block();
     }
