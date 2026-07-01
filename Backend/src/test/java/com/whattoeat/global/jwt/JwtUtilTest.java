@@ -32,8 +32,8 @@ class JwtUtilTest {
     void setUp() {
         jwtUtil = new JwtUtil();
         ReflectionTestUtils.setField(jwtUtil, "secret", TEST_SECRET);
-        ReflectionTestUtils.setField(jwtUtil, "access_exp", TEST_ACCESS_EXPIRATION);
-        ReflectionTestUtils.setField(jwtUtil, "refresh_exp", TEST_REFRESH_EXPIRATION);
+        ReflectionTestUtils.setField(jwtUtil, "accessExpiration", TEST_ACCESS_EXPIRATION);
+        ReflectionTestUtils.setField(jwtUtil, "refreshExpiration", TEST_REFRESH_EXPIRATION);
         jwtUtil.init();
 
         mockUser = mock(User.class);
@@ -72,7 +72,7 @@ class JwtUtilTest {
     @Test
     @DisplayName("만료된 토큰을 파싱하면 ExpiredJwtException 발생")
     void parseToken_expired() {
-        ReflectionTestUtils.setField(jwtUtil, "expiration", -1L);
+        ReflectionTestUtils.setField(jwtUtil, "accessExpiration", -1L);
         String expiredToken = jwtUtil.generateAccessToken(mockUser);
 
         assertThatThrownBy(() -> jwtUtil.parseToken(expiredToken))
@@ -100,5 +100,23 @@ class JwtUtilTest {
         String token = jwtUtil.generateAccessToken(mockUser);
 
         assertThat(jwtUtil.getRole(token)).isEqualTo("USER");
+    }
+
+    @Test
+    @DisplayName("refreshToken에서 userId 추출 시 accessToken과 동일")
+    void getuserIdFromRefreshToken() {
+        String accessToken = jwtUtil.generateAccessToken(mockUser);
+        String refreshToken = jwtUtil.generateRefreshToken(mockUser);
+        assertThat(jwtUtil.getUserId(refreshToken)).isEqualTo(jwtUtil.getUserId(accessToken));
+    }
+
+    @Test
+    @DisplayName("refreshToken 만료 시 ExpiredJwtExeption 발생")
+    void parseRefreshToken_expired() {
+        ReflectionTestUtils.setField(jwtUtil, "refreshExpiration", -1L);
+        String expiredToken = jwtUtil.generateRefreshToken(mockUser);
+
+        assertThatThrownBy(() -> jwtUtil.parseToken(expiredToken))
+                .isInstanceOf(ExpiredJwtException.class);
     }
 }
