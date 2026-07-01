@@ -206,7 +206,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("저장된 refreshToken, 요청받은 refreshToken 다를 시 예외 발생")
-    void refreshDismatch() {
+    void refreshMismatch() {
         String refreshToken = "my-refresh-token";
         String storedRefreshToken = "different-token";
 
