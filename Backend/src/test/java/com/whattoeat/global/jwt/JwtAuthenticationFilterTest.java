@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 
 import com.whattoeat.domain.user.entity.Role;
@@ -52,6 +53,9 @@ class JwtAuthenticationFilterTest {
         when(mockUser.getRole()).thenReturn(Role.USER);
         CustomUserDetails customUserDetails = new CustomUserDetails(mockUser);
 
+        Claims claims = mock(Claims.class);
+        given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
+        given(claims.get("tokenType",String.class)).willReturn("access");
         given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
         given(customUserDetailsService.loadUserByUsername("1")).willReturn(customUserDetails);
 
@@ -68,7 +72,7 @@ class JwtAuthenticationFilterTest {
     @Test
     @DisplayName("위변조된 토큰이면 401 응답 반환")
     void v2() throws Exception {
-        given(jwtUtil.getUserId(INVALID_TOKEN)).willThrow(new JwtException("invalid token"));
+        given(jwtUtil.parseToken(INVALID_TOKEN)).willThrow(new JwtException("invalid token"));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + INVALID_TOKEN);
