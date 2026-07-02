@@ -22,7 +22,8 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
         "spring.security.oauth2.client.provider.kakao.user-info-uri=https://kauth.kakao.com/v2/user/me",
         "spring.security.oauth2.client.provider.kakao.user-name-attribute=id",
         "jwt.secret=dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLW9ubHktMTIzNDU2Nzg=",
-        "jwt.expiration=3600000"
+        "jwt.access-expiration=3600000",
+        "jwt.refresh-expiration=604800000"
 })
 public class SecurityConfigTest {
     @Autowired
