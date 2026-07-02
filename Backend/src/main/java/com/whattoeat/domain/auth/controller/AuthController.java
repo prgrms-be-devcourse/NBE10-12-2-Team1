@@ -1,9 +1,6 @@
 package com.whattoeat.domain.auth.controller;
 
-import com.whattoeat.domain.auth.dto.LoginRequest;
-import com.whattoeat.domain.auth.dto.LoginResponse;
-import com.whattoeat.domain.auth.dto.SignUpRequest;
-import com.whattoeat.domain.auth.dto.TokenResponse;
+import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.rq.Rq;
@@ -33,15 +30,16 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<RsData<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
-        rq.setCookie("accessToken", response.accessToken(), 60 * 60);
-        rq.setCookie("refreshToken", response.refreshToken(), 60 * 60 * 24 * 7);
+        AuthResult result = authService.login(request);
+        rq.setCookie("accessToken", result.accessToken(), 60 * 60);
+        rq.setCookie("refreshToken", result.refreshToken(), 60 * 60 * 24 * 7);
 
+        LoginResponse response = new LoginResponse(result.nickname(), result.profileImage());
         return ResponseEntity.ok(RsData.success(response, "로그인 성공"));
     }
 
     @PostMapping("/reissue")
-    public ResponseEntity<RsData<TokenResponse>> reissue() {
+    public ResponseEntity<RsData<Void>> reissue() {
         String refreshToken = rq.getCookieValue("refreshToken");
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new InvalidCredentialsException("Refresh Token이 필요합니다.");
@@ -55,11 +53,14 @@ public class AuthController {
     }
     @PostMapping("/logout")
     public RsData<Void> logout(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            authService.logout(token);
+        String accessToken = rq.getCookieValue("accessToken");
+        if (accessToken != null && !accessToken.isBlank()) {
+            authService.logout(accessToken);
         }
+
+        rq.delCookie("accessToken");
+        rq.delCookie("refreshToken");
+
         return RsData.success(null, "로그아웃 되었습니다.");
     }
 }

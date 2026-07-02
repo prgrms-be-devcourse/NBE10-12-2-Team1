@@ -1,9 +1,6 @@
 package com.whattoeat.domain.auth.service;
 
-import com.whattoeat.domain.auth.dto.LoginRequest;
-import com.whattoeat.domain.auth.dto.LoginResponse;
-import com.whattoeat.domain.auth.dto.SignUpRequest;
-import com.whattoeat.domain.auth.dto.TokenResponse;
+import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -81,7 +78,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    public AuthResult login(LoginRequest request) {
         User user = userRepository.findByLoginId(request.loginId())
                 .orElseThrow(() -> new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다."));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -90,7 +87,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
-        return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
+        return new AuthResult(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
     }
     public void logout(String token){
         long remaining = jwtUtil.getRemainingExpiration(token);
