@@ -24,6 +24,7 @@ public class RestaurantListController {
     // ============================== 내 정보 조회 =================================
     // 맛집 리스트 등록
     @PostMapping
+    @Operation(summary = "맛집 리스트 등록")
     public RsData<RestaurantListResponse.RestaurantLists> createRestaurantList(
            @Valid @RequestBody RestaurantListRequest.RestaurantList req
     ) {
@@ -48,7 +49,7 @@ public class RestaurantListController {
     @Operation(summary = "맛집 리스트 다건 조회")
     public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "0") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
         Long userId = 1L;
@@ -156,7 +157,7 @@ public class RestaurantListController {
     @Operation(summary = "전체 맛집 리스트 다건 조회")
     public RsData<List<RestaurantListResponse.RestaurantLists>> getAllRestaurantLists(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "0") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
 
@@ -182,6 +183,24 @@ public class RestaurantListController {
         return RsData.success(
                 new RestaurantListResponse.RestaurantListDetail(restaurantList),
                 "전체 맛집 리스트 조회가 완료되었습니다."
+        );
+    }
+
+    // ================= 리스트 저장 ====================
+
+    // ================= 리스트 복사 ====================
+    @PostMapping("/{id}/copy")
+    @Operation(summary = "맛집 리스트 복사")
+    public RsData<RestaurantListResponse.RestaurantListDetail> copyRestaurantList(
+            @PathVariable Long id
+    ) {
+        // 임시 사용자 id : 복사본 리스트의 소유자로 사용
+        Long userId = 1L;
+        RestaurantList copyList = restaurantListService.copyList(userId, id);
+
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListDetail(copyList),
+                "맛집 리스트가 복사되었습니다."
         );
     }
 
