@@ -6,6 +6,10 @@ import com.whattoeat.domain.feedlike.entity.FeedLike;
 import com.whattoeat.domain.feedlike.repository.FeedLikeRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.exception.AlreadyLikedFeedException;
+import com.whattoeat.global.exception.FeedLikeNotFoundException;
+import com.whattoeat.global.exception.FeedNotFoundException;
+import com.whattoeat.global.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +28,7 @@ public class FeedLikeService {
         Feed feed = getFeed(feedId);
 
         if (feedLikeRepository.existsByFeed_IdAndUser_Id(feedId, userId)) {
-            throw new IllegalStateException("이미 좋아요한 피드입니다.");
+            throw new AlreadyLikedFeedException();
         }
 
         return feedLikeRepository.save(FeedLike.of(feed, user));
@@ -36,23 +40,25 @@ public class FeedLikeService {
         getFeed(feedId);
 
         FeedLike feedLike = feedLikeRepository.findByFeed_IdAndUser_Id(feedId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("좋아요 관계가 존재하지 않습니다."));
+                .orElseThrow(FeedLikeNotFoundException::new);
 
         feedLikeRepository.delete(feedLike);
     }
 
     @Transactional(readOnly = true)
     public boolean isLiked(Long userId, Long feedId) {
+        getUser(userId);
+        getFeed(feedId);
         return feedLikeRepository.existsByFeed_IdAndUser_Id(feedId, userId);
     }
 
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 
     private Feed getFeed(Long feedId) {
         return feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 피드입니다."));
+                .orElseThrow(() -> new FeedNotFoundException(feedId));
     }
 }
