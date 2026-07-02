@@ -73,7 +73,6 @@ public class AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(user);
         String newRefreshToken = jwtUtil.generateRefreshToken(user);
 
-        deleteRefreshToken(userId);
         saveRefreshToken(userId, newRefreshToken);
         return  new TokenResponse(newAccessToken, newRefreshToken);
     }
@@ -89,9 +88,5 @@ public class AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
         return new LoginResponse(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
-    }
-
-    private void deleteRefreshToken(Long userId) {
-        redisTemplate.delete("refresh:" + userId);
     }
 }
