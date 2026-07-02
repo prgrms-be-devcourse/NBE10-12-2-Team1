@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
+import com.whattoeat.domain.restaurant.service.RestaurantKakaoService;
 import com.whattoeat.domain.restaurant.service.RestaurantService;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
@@ -37,9 +38,23 @@ class RestaurantControllerTest {
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
+    @MockitoBean
+    private RestaurantKakaoService restaurantKakaoService;
+
     private Restaurant createRestaurant(String kakaoId, String name, Category category) {
-        return new Restaurant(kakaoId, name, category, "서울시 강남구", "서울시 강남구 테헤란로",
-                "서울", "강남구", "역삼동", "02-0000-0000", 37.5, 127.0);
+        return new Restaurant(
+                kakaoId,
+                name,
+                category,
+                "서울시 강남구",
+                "서울시 강남구 테헤란로",
+                "서울",
+                "강남구",
+                "역삼동",
+                "02-0000-0000",
+                37.5,
+                127.0
+        );
     }
 
     @Test
