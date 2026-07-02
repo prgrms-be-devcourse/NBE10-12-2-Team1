@@ -59,7 +59,7 @@ public class CustomOAuth2LoginSuccessHandlerTest {
 
         KakaoOAuth2User principal = new KakaoOAuth2User(user);
         given(authentication.getPrincipal()).willReturn(principal);
-        given(jwtUtil.generateToken(user)).willReturn("token-value");
+        given(jwtUtil.generateAccessToken(user)).willReturn("token-value");
 
     }
 

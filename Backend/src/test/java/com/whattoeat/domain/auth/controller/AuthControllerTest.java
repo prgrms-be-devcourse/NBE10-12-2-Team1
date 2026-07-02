@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
@@ -27,6 +28,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Map;
 
 @WebMvcTest(
         controllers = AuthController.class,
@@ -132,7 +135,7 @@ class AuthControllerTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 시 200과 토큰 반환")
     void loginSuccess() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "pass1234");
-        LoginResponse response = new LoginResponse("mocked-token", "testnick", null);
+        LoginResponse response = new LoginResponse("mocked-access-token", "mocked-refresh-token", "testnick", null);
         given(authService.login(any())).willReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -140,7 +143,8 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.accessToken").value("mocked-token"))
+                .andExpect(jsonPath("$.data.accessToken").value("mocked-access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("mocked-refresh-token"))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
     }
@@ -169,4 +173,24 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("loginId")));
     }
+
+    // ========== POST /api/v1/auth/reissue ==========
+
+    @Test
+    @DisplayName("유효 refreshToken으로 재발급시 200 반환")
+    void refreshTokenSuccess() throws Exception {
+        Map<String, String> req = Map.of("refreshToken", "valid-token");
+        TokenResponse res = new TokenResponse("new-access-token", "new-refresh-token");
+        given(authService.reissue("valid-token")).willReturn(res);
+
+        mockMvc.perform(post("/api/v1/auth/reissue").
+                        contentType(MediaType.APPLICATION_JSON)
+                        .characterEncoding("UTF-8")
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
+    }
+
 }

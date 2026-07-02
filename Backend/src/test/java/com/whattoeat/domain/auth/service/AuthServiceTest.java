@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import com.whattoeat.domain.auth.dto.LoginRequest;
 import com.whattoeat.domain.auth.dto.LoginResponse;
 import com.whattoeat.domain.auth.dto.SignUpRequest;
+import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -21,6 +21,8 @@ import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.exception.PasswordMismatchException;
 import com.whattoeat.global.jwt.JwtUtil;
 import java.util.Optional;
+
+import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +45,12 @@ class AuthServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private RedisTemplate<String, String> redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
 
     @InjectMocks
     private AuthService authService;
@@ -113,11 +123,15 @@ class AuthServiceTest {
     void loginSuccess() {
         given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(true);
-        given(jwtUtil.generateToken(user)).willReturn("mocked-token");
+        given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
+        given(jwtUtil.generateRefreshToken(user)).willReturn("mocked-refresh-token");
+
+        given(redisTemplate.opsForValue()).willReturn(mock(ValueOperations.class));
 
         LoginResponse response = authService.login(loginRequest);
 
-        assertThat(response.accessToken()).isEqualTo("mocked-token");
+        assertThat(response.accessToken()).isEqualTo("mocked-access-token");
+        assertThat(response.refreshToken()).isEqualTo("mocked-refresh-token");
         assertThat(response.nickname()).isEqualTo("testnick");
     }
 
@@ -138,5 +152,79 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    @DisplayName("refreshToken으로 새 accessToken 발급")
+    void refreshTokenSuccess() {
+        String refreshToken = "mocked-refresh-token";
+        String newAccessToken = "mocked-access-token";
+
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(refreshToken);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtil.generateAccessToken(user)).willReturn(newAccessToken);
+
+        TokenResponse response = authService.reissue(refreshToken);
+
+        assertThat(response.accessToken()).isEqualTo(newAccessToken);
+    }
+
+    @Test
+    @DisplayName("refreshToken으로 accessToken+refreshToken 재발급")
+    void refreshSuccess() {
+        String oldrefreshToken = "valid-refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+
+        given(jwtUtil.getUserId(oldrefreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(oldrefreshToken);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtil.generateAccessToken(user)).willReturn(newAccessToken);
+        given(jwtUtil.generateRefreshToken(user)).willReturn(newRefreshToken);
+
+        TokenResponse response = authService.reissue(oldrefreshToken);
+
+        assertThat(response.accessToken()).isEqualTo(newAccessToken);
+        assertThat(response.refreshToken()).isEqualTo(newRefreshToken);
+    }
+
+    @Test
+    @DisplayName("Redis 저장된 refreshToken 없을 때 예외 발생")
+    void refreshFailNotFound() {
+        String refreshToken = "unknown-refresh-token";
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(null);
+
+        assertThatThrownBy(() -> authService.reissue(refreshToken))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessageContaining("refreshToken");
+    }
+
+    @Test
+    @DisplayName("저장된 refreshToken, 요청받은 refreshToken 다를 시 예외 발생")
+    void refreshMismatch() {
+        String refreshToken = "my-refresh-token";
+        String storedRefreshToken = "different-token";
+
+        given(jwtUtil.getUserId(refreshToken)).willReturn(1L);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("refresh:1")).willReturn(storedRefreshToken);
+
+        assertThatThrownBy(() -> authService.reissue(refreshToken))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessageContaining("refreshToken");
+    }
+
+    @Test
+    @DisplayName("위변조된 refreshToken일 시 JwtException 발생")
+    void refreshFailJwtException() {
+        String invalidToken = "fake.jwt.token";
+        given(jwtUtil.getUserId(invalidToken)).willThrow(new JwtException("위변조된 토큰입니다."));
+        assertThatThrownBy(() -> authService.reissue(invalidToken))
+        .isInstanceOf(JwtException.class);
     }
 }

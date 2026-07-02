@@ -19,8 +19,12 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration}")
-    private long expiration;
+    @Value("${jwt.access-expiration}")
+    private long accessExpiration;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
+
 
     @PostConstruct
     public void init() {
@@ -28,16 +32,28 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(User user) {
+    public String generateAccessToken(User user) {
         return Jwts.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim("loginId", user.getLoginId())
                 .claim("role", user.getRole().name())
+                .claim("tokenType", "access")
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis()+ expiration))
+                .expiration(new Date(System.currentTimeMillis()+ accessExpiration))
                 .signWith(key)
                 .compact();
     }
+
+    public String generateRefreshToken(User user) {
+        return Jwts.builder()
+                .subject(String.valueOf(user.getId()))
+                .claim("tokenType", "refresh")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis()+ refreshExpiration))
+                .signWith(key)
+                .compact();
+    }
+
     public Claims parseToken(String token) {
          return Jwts.parser()
                     .verifyWith(key)

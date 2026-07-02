@@ -1,6 +1,7 @@
 package com.whattoeat.global.jwt;
 
 import com.whattoeat.global.security.CustomUserDetailsService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -35,6 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         String token = authHeader.substring(7);
         try {
+            Claims claims = jwtUtil.parseToken(token);
+            String tokenType = claims.get("tokenType", String.class);
+
+            if(!"access".equals(tokenType)){
+                sendErrorResponse(response, "access token만 허용됩니다.");
+                return;
+            }
             Long userId = jwtUtil.getUserId(token);
             UserDetails userDetails = userDetailsService.loadUserByUsername(String.valueOf(userId));
             UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
