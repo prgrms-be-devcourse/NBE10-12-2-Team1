@@ -7,6 +7,7 @@ import com.whattoeat.domain.auth.dto.TokenResponse;
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.rsData.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,12 +37,22 @@ public class AuthController {
     }
 
     @PostMapping("/reissue")
-    public ResponseEntity<RsData<TokenResponse>> reissue(@RequestBody Map<String, String> request){
+    public ResponseEntity<RsData<TokenResponse>> reissue(@RequestBody Map<String, String> request) {
         String refreshToken = request.get("refreshToken");
-        if(refreshToken == null|| refreshToken.isBlank()){
+        if (refreshToken == null || refreshToken.isBlank()) {
             throw new InvalidCredentialsException("Refresh Token이 필요합니다.");
         }
         TokenResponse res = authService.reissue(refreshToken);
-        return ResponseEntity.ok(RsData.success(res,"토큰이 갱신되었습니다."));
+        return ResponseEntity.ok(RsData.success(res, "토큰이 갱신되었습니다."));
+    }
+
+    @PostMapping("/logout")
+    public RsData<Void> logout(HttpServletRequest request){
+        String authHeader = request.getHeader("Authorization");
+        if(authHeader != null && authHeader.startsWith("Bearer ")){
+            String token = authHeader.substring(7);
+            authService.logout(token);
+        }
+        return RsData.success(null, "로그아웃 되었습니다.");
     }
 }

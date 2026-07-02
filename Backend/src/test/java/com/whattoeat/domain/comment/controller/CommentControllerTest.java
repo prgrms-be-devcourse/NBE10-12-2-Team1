@@ -17,6 +17,7 @@ import com.whattoeat.domain.comment.dto.CommentResponse;
 import com.whattoeat.domain.comment.service.CommentService;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,9 @@ class CommentControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private RedisTemplate<String, String> redisTemplate;
 
     private CommentResponse createResponse(Long id, String content, Long userId, String nickname) {
         return new CommentResponse(id, content, userId, nickname, LocalDateTime.now());

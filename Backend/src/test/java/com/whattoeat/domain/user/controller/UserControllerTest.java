@@ -16,6 +16,7 @@ import com.whattoeat.domain.user.service.UserService;
 import com.whattoeat.global.exception.UserNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,8 @@ class UserControllerTest {
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
+    @MockitoBean
+    private RedisTemplate<String, String> redisTemplate;
 
     private UserProfileResponse createResponse(Long id, String nickname, String profileImage) {
         return new UserProfileResponse(

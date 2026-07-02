@@ -67,4 +67,8 @@ public class JwtUtil {
     public String getRole(String token) {
         return parseToken(token).get("role", String.class);
     }
+    public long getRemainingExpiration(String token) {
+        Date expiration = parseToken(token).getExpiration();
+        return expiration.getTime() - System.currentTimeMillis();
+    }
 }

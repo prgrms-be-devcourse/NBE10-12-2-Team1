@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
@@ -34,6 +35,9 @@ class JwtAuthenticationFilterTest {
 
     @Mock
     private CustomUserDetailsService customUserDetailsService;
+
+    @Mock
+    private RedisTemplate<String, String> redisTemplate;
 
     @InjectMocks
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -90,6 +94,25 @@ class JwtAuthenticationFilterTest {
         jwtAuthenticationFilter.doFilter(
                 new MockHttpServletRequest(), new MockHttpServletResponse(), mock(FilterChain.class));
 
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    @DisplayName("블랙리스트에 있는 토큰으로 요청 시 401 반환")
+    void blacklistedToken_returns401() throws Exception {
+        Claims claims = mock(Claims.class);
+        given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
+        given(claims.get("tokenType", String.class)).willReturn("access");
+        given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
+        given(redisTemplate.hasKey("blacklist:" + VALID_TOKEN)).willReturn(true);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + VALID_TOKEN);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        jwtAuthenticationFilter.doFilter(request, response, mock(FilterChain.class));
+
+        assertThat(response.getStatus()).isEqualTo(401);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 }
