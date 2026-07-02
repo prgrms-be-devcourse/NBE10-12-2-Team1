@@ -1,5 +1,6 @@
 package com.whattoeat.global.security;
 
+import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.rq.Rq;
@@ -20,6 +21,7 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtUtil jwtUtil;
+    private final AuthService authService;
     private final Rq rq;
 
     //application.yaml 파일에 app: fonrtend: url: 없으면 localhost:3000 동작
@@ -34,18 +36,22 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         User user = kakaoUser.getUser();
 
         String accessToken = jwtUtil.generateAccessToken(user);
-        rq.setCookie("accessToken", accessToken);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+
+        authService.saveRefreshToken(user.getId(), refreshToken);
+
+        rq.setCookie("accessToken", accessToken, 60*60); // 1시간
+        rq.setCookie("refreshToken", refreshToken, 60*60*24*7); // 7일
 
         String redirectUri = frontendUrl;
-
         String stateParam = request.getParameter("state");
+
         if (stateParam != null && !stateParam.isBlank()) {
             // Base64 URL-safe 디코딩
             String decodeState = new String(
                     Base64.getUrlDecoder().decode(stateParam),
                     StandardCharsets.UTF_8
             );
-
             redirectUri = decodeState.split("#", 2)[0];
         }
         response.sendRedirect(redirectUri);
