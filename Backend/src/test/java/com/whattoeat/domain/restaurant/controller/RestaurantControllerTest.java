@@ -12,6 +12,7 @@ import com.whattoeat.domain.restaurant.service.RestaurantService;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -40,6 +41,9 @@ class RestaurantControllerTest {
 
     @MockitoBean
     private RestaurantKakaoService restaurantKakaoService;
+
+    @MockitoBean
+    private RedisTemplate<String, String> redisTemplate;
 
     private Restaurant createRestaurant(String kakaoId, String name, Category category) {
         return new Restaurant(

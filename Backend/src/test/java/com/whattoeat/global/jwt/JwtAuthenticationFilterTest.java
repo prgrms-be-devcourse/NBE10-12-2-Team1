@@ -100,6 +100,9 @@ class JwtAuthenticationFilterTest {
     @Test
     @DisplayName("블랙리스트에 있는 토큰으로 요청 시 401 반환")
     void blacklistedToken_returns401() throws Exception {
+        Claims claims = mock(Claims.class);
+        given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
+        given(claims.get("tokenType", String.class)).willReturn("access");
         given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
         given(redisTemplate.hasKey("blacklist:" + VALID_TOKEN)).willReturn(true);
 

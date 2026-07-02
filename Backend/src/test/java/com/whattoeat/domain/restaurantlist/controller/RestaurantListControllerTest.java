@@ -20,6 +20,7 @@ import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,9 @@ class RestaurantListControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private RedisTemplate<String, String> redisTemplate;
 
     private User mockUser(Long id, String nickname) {
         User user = Mockito.mock(User.class);
