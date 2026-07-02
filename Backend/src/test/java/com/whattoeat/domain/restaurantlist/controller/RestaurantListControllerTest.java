@@ -3,6 +3,8 @@ package com.whattoeat.domain.restaurantlist.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,14 +65,14 @@ class RestaurantListControllerTest {
     private RedisTemplate<String, String> redisTemplate;
 
     private User mockUser(Long id, String nickname) {
-        User user = Mockito.mock(User.class);
+        User user = mock(User.class);
         given(user.getId()).willReturn(id);
         given(user.getNickname()).willReturn(nickname);
         return user;
     }
 
     private Restaurant mockRestaurant(Long id, String name, Category category) {
-        Restaurant restaurant = Mockito.mock(Restaurant.class);
+        Restaurant restaurant = mock(Restaurant.class);
         given(restaurant.getId()).willReturn(id);
         given(restaurant.getName()).willReturn(name);
         given(restaurant.getCategory()).willReturn(category);
@@ -357,5 +359,36 @@ class RestaurantListControllerTest {
                 .andExpect(jsonPath("$.data.items.length()").value(0))
                 .andExpect(jsonPath("$.data.createdAt").exists())
                 .andExpect(jsonPath("$.message").value("전체 맛집 리스트 조회가 완료되었습니다."));
+    }
+
+    @Test
+    void copyRestaurantList_성공() throws Exception {
+        // given
+        Long originalListId = 1L;
+        Long userId = 1L;
+
+        User user = mock(User.class);
+        given(user.getId()).willReturn(userId);
+        given(user.getNickname()).willReturn("user1");
+
+        RestaurantList copiedList = mock(RestaurantList.class);
+        given(copiedList.getId()).willReturn(2L);
+        given(copiedList.getUser()).willReturn(user);
+        given(copiedList.getTitle()).willReturn("혼밥 맛집");
+        given(copiedList.getDescription()).willReturn("혼자 먹기 좋은 곳");
+        given(copiedList.getMoodTag()).willReturn(MoodTag.SOLO);
+        given(copiedList.getItems()).willReturn(List.of());
+
+        given(restaurantListService.copyList(userId, originalListId))
+                .willReturn(copiedList);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/lists/{id}/copy", originalListId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("맛집 리스트가 복사되었습니다."));
+
+        verify(restaurantListService).copyList(userId, originalListId);
     }
 }

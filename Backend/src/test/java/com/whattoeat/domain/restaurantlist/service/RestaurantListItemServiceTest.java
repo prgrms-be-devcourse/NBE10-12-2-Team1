@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
@@ -18,9 +19,12 @@ import com.whattoeat.global.exception.DuplicateRestaurantListItemException;
 import com.whattoeat.global.exception.ListNotFoundException;
 import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
+
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -257,6 +261,52 @@ class RestaurantListItemServiceTest {
                 2
         ))
                 .isInstanceOf(DuplicateRestaurantListItemException.class);
+    }
+
+    @Test
+    void copyList_성공_아이템도_복사된다() {
+        // given
+        Long userId = 1L;
+        Long originalListId = 10L;
+
+        User user = Mockito.mock(User.class);
+
+        RestaurantList originalList = Mockito.mock(RestaurantList.class);
+        given(originalList.getTitle()).willReturn("혼밥 맛집");
+        given(originalList.getDescription()).willReturn("혼자 먹기 좋은 곳");
+        given(originalList.getMoodTag()).willReturn(MoodTag.SOLO);
+
+        RestaurantList savedCopyList = Mockito.mock(RestaurantList.class);
+
+        Restaurant restaurant = Mockito.mock(Restaurant.class);
+
+        RestaurantListItem originalItem = Mockito.mock(RestaurantListItem.class);
+        given(originalItem.getRestaurant()).willReturn(restaurant);
+        given(originalItem.getMemo()).willReturn("한줄평");
+        given(originalItem.getOrderIndex()).willReturn(1);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(restaurantListRepository.findById(originalListId)).willReturn(Optional.of(originalList));
+        given(restaurantListRepository.save(any(RestaurantList.class))).willReturn(savedCopyList);
+        given(restaurantListItemRepository.findItemsByListId(originalListId))
+                .willReturn(List.of(originalItem));
+
+        ArgumentCaptor<RestaurantListItem> itemCaptor =
+                ArgumentCaptor.forClass(RestaurantListItem.class);
+
+        // when
+        RestaurantList result = restaurantListService.copyList(userId, originalListId);
+
+        // then
+        assertThat(result).isEqualTo(savedCopyList);
+
+        verify(restaurantListItemRepository).save(itemCaptor.capture());
+
+        RestaurantListItem copiedItem = itemCaptor.getValue();
+
+        assertThat(copiedItem.getRestaurant()).isEqualTo(restaurant);
+        assertThat(copiedItem.getMemo()).isEqualTo("한줄평");
+        assertThat(copiedItem.getOrderIndex()).isEqualTo(1);
     }
 
 }

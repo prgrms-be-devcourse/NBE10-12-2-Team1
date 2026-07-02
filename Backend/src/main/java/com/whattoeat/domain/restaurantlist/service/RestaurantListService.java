@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
@@ -74,6 +76,7 @@ public class RestaurantListService {
 
         int nextOrderIndex;
 
+        // 인덱스 값 없을 경우 처리 N + 1
         if(orderIndex == null) {
             Integer maxOrderIndex = restaurantListItemRepository.findMaxOrderIndexByListId(listId);
             nextOrderIndex = maxOrderIndex == null ? 1 : maxOrderIndex + 1;
@@ -135,5 +138,44 @@ public class RestaurantListService {
     public RestaurantList findById(Long id) {
         return restaurantListRepository.findById(id)
                 .orElseThrow(() -> new ListNotFoundException(id));
+    }
+
+    // ================= 리스트 저장 ====================
+
+    // ================= 리스트 복사 ====================
+    public RestaurantList copyList(Long userId, Long id) {
+        // 복사하는 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        // 원본 리스트 조회 - 다른 사람 리스트도 복사할 수 있어야해서 userId 조건을 걸지는 않음
+        RestaurantList originalList = restaurantListRepository.findById(id)
+                .orElseThrow(() -> new ListNotFoundException(id));
+
+        // 리스트 복사
+        RestaurantList copyList = restaurantListRepository.save(
+                new RestaurantList(
+                        user,
+                        originalList.getTitle(),
+                        originalList.getDescription(),
+                        originalList.getMoodTag()
+                )
+        );
+
+        // 원본 리스트 아이템 조회
+        List<RestaurantListItem> originalListItems = restaurantListItemRepository.findItemsByListId(id);
+
+        // 원본 아이템들을 새 리스트의 아이템으로 복사
+        for(RestaurantListItem originalListItem : originalListItems) {
+            RestaurantListItem copyListItem = new RestaurantListItem(
+                    copyList,
+                    originalListItem.getRestaurant(),
+                    originalListItem.getMemo(),
+                    originalListItem.getOrderIndex()
+            );
+
+            restaurantListItemRepository.save(copyListItem);
+        }
+        return copyList;
     }
 }
