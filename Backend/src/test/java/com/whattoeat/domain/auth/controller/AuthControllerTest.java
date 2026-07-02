@@ -1,7 +1,6 @@
 package com.whattoeat.domain.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -229,13 +228,17 @@ class AuthControllerTest {
     @Test
     @DisplayName("accessToken쿠키와 함께 로그아웃 요청 시 200 반환")
     void logoutSuccess() throws Exception {
-        willDoNothing().given(authService).logout(anyString());
+        given(rq.getCookieValue("accessToken")).willReturn("valid-token");
+        willDoNothing().given(authService).logout("valid-token");
 
-        mockMvc.perform(post("/api/v1/auth/logout")
-                        .header("Authorization", "Bearer valid.token"))
+        mockMvc.perform(post("/api/v1/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("로그아웃 되었습니다."));
+
+        then(authService).should().logout("valid-token");
+        then(rq).should().delCookie("accessToken");
+        then(rq).should().delCookie("refreshToken");
     }
 
     @Test
