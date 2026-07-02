@@ -16,8 +16,8 @@ public class RestaurantResponse {
             String region2,
             String region3,
             String phone,
-            double lat,
-            double lng
+            Double lat,
+            Double lng
     ) {}
 
     public record Recommend(
@@ -31,8 +31,8 @@ public class RestaurantResponse {
             String region2,
             String region3,
             String phone,
-            double lat,
-            double lng,
+            Double lat,
+            Double lng,
             LocalDateTime createdAt
     ) {
         public Recommend(Restaurant restaurant) {

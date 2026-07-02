@@ -36,23 +36,27 @@ public class RestaurantController {
     }
 
     // 카카오 검색만 하고, DB 저장 안함
-    @PostMapping("/kakao/search")
+    @GetMapping("/search")
     public RsData<List<RestaurantResponse.KakaoRestaurant>> searchFromKakao(
-            @Valid @RequestBody RestaurantRequest.KakaoSearch request
+            @RequestParam String keyword,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(defaultValue = "1000") Integer radius,
+            @RequestParam(defaultValue = "1") Integer page
     ) {
         List<RestaurantResponse.KakaoRestaurant> result = restaurantKakaoService.searchByKeyword(
-                request.keyword(),
-                request.lng(),
-                request.lat(),
-                request.radius(),
-                request.page()
+                keyword,
+                lng,
+                lat,
+                radius,
+                page
         );
 
         return RsData.success(result, "카카오 장소 검색 결과입니다.");
     }
 
     // 프론트에서 선택한 식당만 저장
-    @PostMapping("/kakao")
+    @PostMapping
     public RsData<RestaurantResponse.Recommend> saveSelectedRestaurant(
             @Valid @RequestBody RestaurantRequest.FromKakao request
     ) {
@@ -63,4 +67,16 @@ public class RestaurantController {
                 "식당이 저장되었습니다."
         );
     }
+
+    // 식당 저장된건지 확인용
+    @GetMapping
+    public RsData<List<RestaurantResponse.Recommend>> getRestaurants() {
+        List<RestaurantResponse.Recommend> result = restaurantService.findAll()
+                .stream()
+                .map(RestaurantResponse.Recommend::new)
+                .toList();
+
+        return RsData.success(result, "저장된 식당 목록입니다.");
+    }
+
 }

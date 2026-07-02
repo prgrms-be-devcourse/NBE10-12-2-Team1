@@ -11,8 +11,8 @@ public class RestaurantRequest {
             @NotBlank(message = "검색어는 필수입니다.")
             String keyword,
 
-            double lng,
-            double lat,
+            Double lng,
+            Double lat,
             Integer radius,
             Integer page
     ){}
@@ -33,8 +33,8 @@ public class RestaurantRequest {
             String region3,
             String phone,
             @NotNull(message = "위도는 필수입니다.")
-            double lat,
+            Double lat,
             @NotNull(message = "경도는 필수입니다.")
-            double lng
+            Double lng
     ){}
 }

@@ -52,6 +52,7 @@ public class RestaurantService {
         if(categoryName.contains("중식")) return Category.CHINESE;
         if(categoryName.contains("일식")) return Category.JAPANESE;
         if(categoryName.contains("양식")) return Category.WESTERN;
+        if(categoryName.contains("아시아음식")) return Category.ASIAN;
         if(categoryName.contains("카페") || categoryName.contains("디저트")) return Category.CAFE;
         if(categoryName.contains("분식")) return Category.SNACK;
 
@@ -60,5 +61,10 @@ public class RestaurantService {
 
     private String defaultIfBlank(String value, String defaultValue) {
         return value == null ? defaultValue : value;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Restaurant> findAll() {
+        return restaurantRepository.findAll();
     }
 }
