@@ -63,6 +63,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, message));
     }
 
+
     // 팔로우 관계를 찾지 못한 경우 404 반환
     @ExceptionHandler(FollowNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleFollowNotFound(FollowNotFoundException e) {
@@ -70,9 +71,23 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
     }
 
+    // 좋아요 관계를 찾지 못한 경우 404 반환
+    @ExceptionHandler(FeedLikeNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleFeedLikeNotFound(FeedLikeNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
     // 이미 팔로우 중인 경우 409 반환
     @ExceptionHandler(AlreadyFollowingException.class)
     public ResponseEntity<ErrorResponse> handleAlreadyFollowing(AlreadyFollowingException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
+    }
+
+    // 이미 좋아요한 피드인 경우 409 반환
+    @ExceptionHandler(AlreadyLikedFeedException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyLikedFeed(AlreadyLikedFeedException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
     }
