@@ -1,6 +1,7 @@
 package com.whattoeat.domain.follow.controller;
 
 import com.whattoeat.domain.user.entity.Provider;
+import org.springframework.data.redis.core.RedisTemplate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
 import com.whattoeat.domain.follow.entity.Follow;
 import com.whattoeat.domain.follow.service.FollowService;
@@ -50,6 +52,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @WebMvcTest(
         controllers = FollowController.class,
         excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(FollowControllerTest.AuthenticationPrincipalTestConfig.class)
 class FollowControllerTest {
 
@@ -65,6 +68,9 @@ class FollowControllerTest {
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
+    @MockitoBean
+    private RedisTemplate<String, String> redisTemplate;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -77,10 +83,12 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/api/v1/follows/2").with(userDetails(1L)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.followId").value(10L))
-                .andExpect(jsonPath("$.followerId").value(1L))
-                .andExpect(jsonPath("$.followingId").value(2L))
-                .andExpect(jsonPath("$.createdAt").exists());
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("팔로우했습니다."))
+                .andExpect(jsonPath("$.data.followId").value(10L))
+                .andExpect(jsonPath("$.data.followerId").value(1L))
+                .andExpect(jsonPath("$.data.followingId").value(2L))
+                .andExpect(jsonPath("$.data.createdAt").exists());
     }
 
     @Test
@@ -88,7 +96,9 @@ class FollowControllerTest {
         willDoNothing().given(followService).unfollow(1L, 2L);
 
         mockMvc.perform(delete("/api/v1/follows/2").with(userDetails(1L)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("언팔로우했습니다."));
     }
 
     @Test
@@ -100,12 +110,13 @@ class FollowControllerTest {
 
         mockMvc.perform(get("/api/v1/follows/followings").with(userDetails(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].userId").value(2L))
-                .andExpect(jsonPath("$.content[0].nickname").value("target"))
-                .andExpect(jsonPath("$.content[0].profileImage").value("target.jpg"))
-                .andExpect(jsonPath("$.content[0].isFollowedByMe").value(true))
-                .andExpect(jsonPath("$.content[0].createdAt").exists())
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].userId").value(2L))
+                .andExpect(jsonPath("$.data.content[0].nickname").value("target"))
+                .andExpect(jsonPath("$.data.content[0].profileImage").value("target.jpg"))
+                .andExpect(jsonPath("$.data.content[0].isFollowedByMe").value(true))
+                .andExpect(jsonPath("$.data.content[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test
@@ -117,12 +128,13 @@ class FollowControllerTest {
 
         mockMvc.perform(get("/api/v1/follows/followers").with(userDetails(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].userId").value(2L))
-                .andExpect(jsonPath("$.content[0].nickname").value("follower"))
-                .andExpect(jsonPath("$.content[0].profileImage").value("follower.jpg"))
-                .andExpect(jsonPath("$.content[0].isFollowedByMe").value(false))
-                .andExpect(jsonPath("$.content[0].createdAt").exists())
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].userId").value(2L))
+                .andExpect(jsonPath("$.data.content[0].nickname").value("follower"))
+                .andExpect(jsonPath("$.data.content[0].profileImage").value("follower.jpg"))
+                .andExpect(jsonPath("$.data.content[0].isFollowedByMe").value(false))
+                .andExpect(jsonPath("$.data.content[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
     @Test
