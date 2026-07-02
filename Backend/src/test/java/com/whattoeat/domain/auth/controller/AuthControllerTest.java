@@ -2,23 +2,19 @@ package com.whattoeat.domain.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
-import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.whattoeat.domain.auth.dto.LoginRequest;
-import com.whattoeat.domain.auth.dto.LoginResponse;
-import com.whattoeat.domain.auth.dto.SignUpRequest;
-import com.whattoeat.domain.auth.dto.TokenResponse;
+import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.rq.Rq;
 import com.whattoeat.global.security.CustomUserDetailsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,7 +32,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
 
 @WebMvcTest(
         controllers = AuthController.class,
@@ -44,11 +39,10 @@ import java.util.Map;
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
                 classes = {
-                    com.whattoeat.global.jwt.JwtAuthenticationFilter.class,
-                    com.whattoeat.global.config.SecurityConfig.class
+                        com.whattoeat.global.jwt.JwtAuthenticationFilter.class,
+                        com.whattoeat.global.config.SecurityConfig.class
                 }))
 @AutoConfigureMockMvc(addFilters = false)
-
 class AuthControllerTest {
 
     @TestConfiguration
@@ -56,7 +50,7 @@ class AuthControllerTest {
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
             http.csrf(c -> c.disable())
-                .authorizeHttpRequests(a -> a.anyRequest().permitAll());
+                    .authorizeHttpRequests(a -> a.anyRequest().permitAll());
             return http.build();
         }
     }
@@ -71,6 +65,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private Rq rq;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
@@ -160,18 +157,19 @@ class AuthControllerTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 시 200과 토큰 반환")
     void loginSuccess() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "pass1234");
-        LoginResponse response = new LoginResponse("mocked-access-token", "mocked-refresh-token", "testnick", null);
-        given(authService.login(any())).willReturn(response);
+        AuthResult result = new AuthResult("mocked-access-token", "mocked-refresh-token", "testnick", null);
+        given(authService.login(any())).willReturn(result);
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.accessToken").value("mocked-access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("mocked-refresh-token"))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
+
+        then(rq).should().setCookie("accessToken", "mocked-access-token", 60 * 60);
+        then(rq).should().setCookie("refreshToken", "mocked-refresh-token", 60 * 60 * 24 * 7);
     }
 
     @Test
@@ -204,24 +202,32 @@ class AuthControllerTest {
     @Test
     @DisplayName("유효 refreshToken으로 재발급시 200 반환")
     void refreshTokenSuccess() throws Exception {
-        Map<String, String> req = Map.of("refreshToken", "valid-token");
+        given(rq.getCookieValue("refreshToken")).willReturn("valid-token");
         TokenResponse res = new TokenResponse("new-access-token", "new-refresh-token");
         given(authService.reissue("valid-token")).willReturn(res);
 
-        mockMvc.perform(post("/api/v1/auth/reissue").
-                        contentType(MediaType.APPLICATION_JSON)
-                        .characterEncoding("UTF-8")
-                        .content(objectMapper.writeValueAsString(req)))
+        mockMvc.perform(post("/api/v1/auth/reissue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
+                .andExpect(jsonPath("$.message").value("토큰이 갱신되었습니다."));
+
+        then(rq).should().setCookie("accessToken", "new-access-token", 60 * 60);
+        then(rq).should().setCookie("refreshToken", "new-refresh-token", 60 * 60 * 24 * 7);
+    }
+
+    @Test
+    @DisplayName("refreshToken 없이 재발급 요청 시 401 반환")
+    void refreshTokenMissing() throws Exception {
+        given(rq.getCookieValue("refreshToken")).willReturn(null);
+
+        mockMvc.perform(post("/api/v1/auth/reissue"))
+                .andExpect(status().isUnauthorized());
     }
 
     // ========== POST /api/v1/auth/logout ==========
 
     @Test
-    @DisplayName("토큰과 함께 로그아웃 요청 시 200 반환")
+    @DisplayName("accessToken쿠키와 함께 로그아웃 요청 시 200 반환")
     void logoutSuccess() throws Exception {
         willDoNothing().given(authService).logout(anyString());
 
@@ -233,8 +239,10 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("토큰 없이 로그아웃 요청 시 서비스 호출 없이 200 반환")
+    @DisplayName("accessToken쿠키 없이 로그아웃 요청 시 서비스 호출 없이 200 반환")
     void logoutWithoutToken() throws Exception {
+        given(rq.getCookieValue("accessToken")).willReturn(null);
+
         mockMvc.perform(post("/api/v1/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));

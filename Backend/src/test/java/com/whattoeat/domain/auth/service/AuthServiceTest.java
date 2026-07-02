@@ -11,10 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.whattoeat.domain.auth.dto.LoginRequest;
-import com.whattoeat.domain.auth.dto.LoginResponse;
-import com.whattoeat.domain.auth.dto.SignUpRequest;
-import com.whattoeat.domain.auth.dto.TokenResponse;
+import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -134,11 +131,11 @@ class AuthServiceTest {
 
         given(redisTemplate.opsForValue()).willReturn(mock(ValueOperations.class));
 
-        LoginResponse response = authService.login(loginRequest);
+        AuthResult result = authService.login(loginRequest);
 
-        assertThat(response.accessToken()).isEqualTo("mocked-access-token");
-        assertThat(response.refreshToken()).isEqualTo("mocked-refresh-token");
-        assertThat(response.nickname()).isEqualTo("testnick");
+        assertThat(result.accessToken()).isEqualTo("mocked-access-token");
+        assertThat(result.refreshToken()).isEqualTo("mocked-refresh-token");
+        assertThat(result.nickname()).isEqualTo("testnick");
     }
 
     @Test

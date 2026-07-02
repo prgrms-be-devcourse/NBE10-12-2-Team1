@@ -117,6 +117,7 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
+    @Test
     @DisplayName("accessToken 쿠키로 인증")
     void v4() throws Exception {
         User mockUser = mock(User.class);
