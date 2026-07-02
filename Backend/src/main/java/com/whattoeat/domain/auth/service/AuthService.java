@@ -1,6 +1,7 @@
 package com.whattoeat.domain.auth.service;
 
 import com.whattoeat.domain.auth.dto.*;
+import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -27,7 +28,7 @@ public class AuthService {
     private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional
-    public void signup(SignUpRequest request) {
+    public User signup(SignUpRequest request) {
         if (userRepository.existsByLoginId(request.loginId())) {
             throw new DuplicateLoginIdException("이미 사용 중인 아이디입니다.");
         }
@@ -48,7 +49,7 @@ public class AuthService {
                 .provider(Provider.LOCAL)
                 .role(Role.USER)
                 .build();
-        userRepository.save(user);
+        return userRepository.save(user);
     }
 
     public void saveRefreshToken(Long userId, String refreshToken) {
@@ -87,7 +88,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
-        return new AuthResult(accessToken, refreshToken, user.getNickname(), user.getProfileImage());
+        return new AuthResult(accessToken, refreshToken, UserProfileResponse.from(user));
     }
     public void logout(String token){
         long remaining = jwtUtil.getRemainingExpiration(token);

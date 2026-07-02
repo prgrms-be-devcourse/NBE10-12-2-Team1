@@ -9,6 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
+import com.whattoeat.domain.user.dto.UserProfileResponse;
+import com.whattoeat.domain.user.entity.Provider;
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
@@ -30,6 +34,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
 
 
 @WebMvcTest(
@@ -78,13 +84,24 @@ class AuthControllerTest {
     @DisplayName("정상 입력으로 회원가입 성공 시 200 반환")
     void signupSuccess() throws Exception {
         SignUpRequest request = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
-        willDoNothing().given(authService).signup(any());
+        User user = User.builder()
+                .loginId("testuser")
+                .password("encodedPassword")
+                .nickname("testnick")
+                .email("test@test.com")
+                .provider(Provider.LOCAL)
+                .role(Role.USER)
+                .build();
+        given(authService.signup(any())).willReturn(user);
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.nickname").value("testnick"))
+                .andExpect(jsonPath("$.data.email").value("test@test.com"))
+                .andExpect(jsonPath("$.data.provider").value("LOCAL"))
                 .andExpect(jsonPath("$.message").value("회원가입이 완료되었습니다."));
     }
 
@@ -156,7 +173,10 @@ class AuthControllerTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 시 200과 토큰 반환")
     void loginSuccess() throws Exception {
         LoginRequest request = new LoginRequest("testuser", "pass1234");
-        AuthResult result = new AuthResult("mocked-access-token", "mocked-refresh-token", "testnick", null);
+        UserProfileResponse userProfile = new UserProfileResponse(
+                1L, "testnick", null, "test@test.com", Provider.LOCAL, LocalDateTime.now()
+        );
+        AuthResult result = new AuthResult("mocked-access-token", "mocked-refresh-token", userProfile);
         given(authService.login(any())).willReturn(result);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -164,7 +184,10 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
+                .andExpect(jsonPath("$.data.email").value("test@test.com"))
+                .andExpect(jsonPath("$.data.provider").value("LOCAL"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
 
         then(rq).should().setCookie("accessToken", "mocked-access-token", 60 * 60);

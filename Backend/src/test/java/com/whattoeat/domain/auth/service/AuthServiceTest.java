@@ -125,7 +125,8 @@ class AuthServiceTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 후 토큰 반환")
     void loginSuccess() {
         given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
-        given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(true);
+        given(passwordEncoder.matches("pass1234", "encodedPassword"))
+                .willReturn(true);
         given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
         given(jwtUtil.generateRefreshToken(user)).willReturn("mocked-refresh-token");
 
@@ -135,7 +136,9 @@ class AuthServiceTest {
 
         assertThat(result.accessToken()).isEqualTo("mocked-access-token");
         assertThat(result.refreshToken()).isEqualTo("mocked-refresh-token");
-        assertThat(result.nickname()).isEqualTo("testnick");
+        assertThat(result.userProfile().nickname()).isEqualTo("testnick");
+        assertThat(result.userProfile().email()).isEqualTo("test@test.com");
+        assertThat(result.userProfile().provider()).isEqualTo(Provider.LOCAL);
     }
 
     @Test
