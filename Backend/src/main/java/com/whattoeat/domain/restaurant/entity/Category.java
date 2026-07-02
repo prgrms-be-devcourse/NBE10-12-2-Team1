@@ -6,5 +6,7 @@ public enum Category {
     CHINESE,    // 중식
     JAPANESE,   // 일식
     ASIAN,      // 아시안
-    CAFE        // 카페
+    CAFE,       // 카페
+    SNACK,      // 분식
+    ETC         // 기타
 }

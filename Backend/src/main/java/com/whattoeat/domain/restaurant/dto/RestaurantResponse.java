@@ -6,6 +6,20 @@ import java.time.LocalDateTime;
 
 public class RestaurantResponse {
 
+    public record KakaoRestaurant(
+            String kakaoPlaceId,
+            String name,
+            String category,
+            String address,
+            String roadAddress,
+            String region1,
+            String region2,
+            String region3,
+            String phone,
+            Double lat,
+            Double lng
+    ) {}
+
     public record Recommend(
             Long id,
             String kakaoPlaceId,
@@ -17,8 +31,8 @@ public class RestaurantResponse {
             String region2,
             String region3,
             String phone,
-            double lat,
-            double lng,
+            Double lat,
+            Double lng,
             LocalDateTime createdAt
     ) {
         public Recommend(Restaurant restaurant) {
