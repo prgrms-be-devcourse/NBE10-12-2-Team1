@@ -13,6 +13,7 @@ import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,7 +60,7 @@ class JwtAuthenticationFilterTest {
 
         Claims claims = mock(Claims.class);
         given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
-        given(claims.get("tokenType",String.class)).willReturn("access");
+        given(claims.get("tokenType", String.class)).willReturn("access");
         given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
         given(customUserDetailsService.loadUserByUsername("1")).willReturn(customUserDetails);
 
@@ -114,5 +115,27 @@ class JwtAuthenticationFilterTest {
 
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @DisplayName("accessToken 쿠키로 인증")
+    void v4() throws Exception {
+        User mockUser = mock(User.class);
+        when(mockUser.getRole()).thenReturn(Role.USER);
+        CustomUserDetails customUserDetails = new CustomUserDetails(mockUser);
+
+        Claims claims = mock(Claims.class);
+        given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
+        given(claims.get("tokenType", String.class)).willReturn("access");
+        given(jwtUtil.getUserId(VALID_TOKEN)).willReturn(1L);
+        given(customUserDetailsService.loadUserByUsername("1")).willReturn(customUserDetails);
+
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setCookies(new Cookie("accessToken", VALID_TOKEN));
+
+        jwtAuthenticationFilter.doFilter(req, new MockHttpServletResponse(), mock(FilterChain.class));
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(authentication).isNotNull();
+        assertThat(authentication.isAuthenticated()).isTrue();
     }
 }
