@@ -21,7 +21,7 @@ public class KakaoMapApiClient {
     }
 
 
-    public KakaoPlaceResponse searchByKeyword(String query, Double x, Double y, int radius, int page){
+    public KakaoPlaceResponse searchByKeyword(String query, Double x, Double y, Integer radius, Integer page){
         return kakaoMapWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/v2/local/search/keyword.json")
@@ -40,7 +40,7 @@ public class KakaoMapApiClient {
                 .bodyToMono(KakaoPlaceResponse.class)
                 .block();
     }
-    public KakaoPlaceResponse searchByCategory(String categoryGroupCode, Double x, Double y, int radius) {
+    public KakaoPlaceResponse searchByCategory(String categoryGroupCode, Double x, Double y, Integer radius) {
         return kakaoMapWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/v2/local/search/category.json")
