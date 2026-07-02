@@ -1,7 +1,6 @@
 package com.whattoeat.global.security;
 
-import com.whattoeat.domain.user.entity.Provider;
-import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.rq.Rq;
@@ -29,7 +28,13 @@ public class CustomOAuth2LoginSuccessHandlerTest {
     private JwtUtil jwtUtil;
 
     @Mock
+    private AuthService authService;
+
+    @Mock
     private Rq rq;
+
+    @Mock
+    private User user;
 
     @Mock
     private Authentication authentication;
@@ -49,37 +54,32 @@ public class CustomOAuth2LoginSuccessHandlerTest {
         req = new MockHttpServletRequest();
         res = new MockHttpServletResponse();
 
-        User user = User.builder()
-                .kakaoId("123456789")
-                .nickname("nickname")
-                .email("test@test.com")
-                .provider(Provider.KAKAO)
-                .role(Role.USER)
-                .build();
-
         KakaoOAuth2User principal = new KakaoOAuth2User(user);
         given(authentication.getPrincipal()).willReturn(principal);
-        given(jwtUtil.generateAccessToken(user)).willReturn("token-value");
+        given(jwtUtil.generateAccessToken(user)).willReturn("access-token");
+        given(jwtUtil.generateRefreshToken(user)).willReturn("refresh-token");
 
     }
 
     @Test
     @DisplayName("로그인 성공")
-    void success() throws Exception{
-        handler.onAuthenticationSuccess(req,res,authentication);
+    void success() throws Exception {
+        handler.onAuthenticationSuccess(req, res, authentication);
 
-        then(rq).should().setCookie("accessToken","token-value");
+        then(authService).should().saveRefreshToken(user.getId(), "refresh-token");
+        then(rq).should().setCookie("accessToken", "access-token", 60 * 60);
+        then(rq).should().setCookie("refreshToken", "refresh-token", 60 * 60 * 24 * 7);
         assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000");
     }
 
     @Test
     @DisplayName("state로 redirectUri 복원")
-    void state_redirect_uri() throws Exception{
-        String state= Base64.getUrlEncoder().encodeToString(
+    void state_redirect_uri() throws Exception {
+        String state = Base64.getUrlEncoder().encodeToString(
                 ("http://localhost:3000/mypage#uuid").getBytes()
         );
-        req.setParameter("state",state);
-        handler.onAuthenticationSuccess(req,res,authentication);
+        req.setParameter("state", state);
+        handler.onAuthenticationSuccess(req, res, authentication);
         assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage");
     }
 }
