@@ -5,28 +5,27 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Settings, Users, UserPlus, Bookmark, X, UserMinus } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { apiFetchJson } from "@/lib/api";
 
 const tabs = ["내 리스트", "포스트", "저장함"];
 
-const currentUser = {
-  id: "me",
-  name: "오늘의푸디",
-  handle: "@todayfoodie",
-  email: "foodie@example.com",
-  image: "https://picsum.photos/seed/myprofile/120/120",
-  followers: 342,
-  followings: 128,
-};
+interface UserProfile {
+  id: number;
+  nickname: string;
+  profileImage: string | null;
+  email: string;
+  provider: "LOCAL" | "KAKAO";
+  createdAt: string;
+  ownProfile: boolean;
+  following: boolean;
+}
 
-const otherUsers: Record<string, { name: string; handle: string; email?: string; image: string; followers: number; followings: number }> = {
-  user1: { name: "김푸디", handle: "@kimfoodie", image: "https://picsum.photos/seed/user1/120/120", followers: 892, followings: 45 },
-  user2: { name: "맛탐정_소연", handle: "@sotaste", image: "https://picsum.photos/seed/user2/120/120", followers: 234, followings: 67 },
-  user3: { name: "혼밥러", handle: "@honbap", image: "https://picsum.photos/seed/user3/120/120", followers: 567, followings: 89 },
-  user4: { name: "점심러", handle: "@lunchhunter", image: "https://picsum.photos/seed/user4/120/120", followers: 123, followings: 34 },
-  user5: { name: "푸디맘", handle: "@foodimom", image: "https://picsum.photos/seed/user5/120/120", followers: 1204, followings: 156 },
-  user6: { name: "카페인 중독", handle: "@cafeholic", image: "https://picsum.photos/seed/user6/120/120", followers: 445, followings: 78 },
-  user7: { name: "맛집 탐험가", handle: "@foodtrip", image: "https://picsum.photos/seed/user7/120/120", followers: 678, followings: 123 },
-};
+interface FollowUser {
+  id: number;
+  nickname: string;
+  profileImage: string | null;
+  following: boolean;
+}
 
 const myLists = [
   { id: 1, title: "을지로 데이트 코스", itemCount: 4, savedCount: 23, coverSeed: "date", moodTag: "데이트" },
@@ -47,24 +46,72 @@ export default function ProfilePage() {
   const params = useParams();
   const rawId = params.id;
   const userId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const isMe = !userId || userId === "me";
-  const user = isMe ? currentUser : otherUsers[userId] || currentUser;
 
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("내 리스트");
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(user.followers);
-  const [followingsCount] = useState(user.followings);
+  const [followLoading, setFollowLoading] = useState(false);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowings, setShowFollowings] = useState(false);
 
   useEffect(() => {
-    setFollowersCount(user.followers);
-  }, [user.followers]);
+    const load = async () => {
+      setLoading(true);
+      setError("");
 
-  const handleFollowToggle = () => {
-    setIsFollowing(!isFollowing);
-    setFollowersCount((prev) => (isFollowing ? prev - 1 : prev + 1));
+      const path = userId ? `/api/v1/users/${userId}` : "/api/v1/users/me";
+      const res = await apiFetchJson<UserProfile>(path);
+
+      if (res.ok && res.data) {
+        setUser(res.data);
+        setIsFollowing(res.data.following);
+      } else {
+        setError(res.message || "프로필을 불러오지 못했습니다.");
+      }
+
+      setLoading(false);
+    };
+
+    load();
+  }, [userId]);
+
+  const handleFollowToggle = async () => {
+    if (!user || user.ownProfile) return;
+
+    setFollowLoading(true);
+
+    const res = isFollowing
+      ? await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "DELETE" })
+      : await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "POST" });
+
+    if (res.ok) {
+      setIsFollowing(!isFollowing);
+    } else {
+      alert(res.message || "팔로우 처리에 실패했습니다.");
+    }
+
+    setFollowLoading(false);
   };
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="flex h-96 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (error || !user) {
+    return (
+      <AppShell>
+        <p className="py-20 text-center text-sm text-red-500">{error || "프로필을 불러오지 못했습니다."}</p>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -74,40 +121,47 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-5">
               <img
-                src={user.image}
+                src={user.profileImage || `https://picsum.photos/seed/user${user.id}/120/120`}
                 alt="프로필"
                 className="h-20 w-20 rounded-full object-cover ring-4 ring-primary/15"
               />
               <div>
-                <h1 className="text-[22px] font-bold tracking-tight text-ink">{user.name}</h1>
-                <p className="text-sm text-muted">{isMe ? user.email : user.handle}</p>
+                <h1 className="text-[22px] font-bold tracking-tight text-ink">{user.nickname}</h1>
+                <p className="text-sm text-muted">{user.email}</p>
+                <p className="text-xs text-muted-soft mt-1">
+                  {user.provider === "KAKAO" ? "카카오 로그인" : "이메일 로그인"}
+                </p>
                 <div className="mt-3 flex gap-4 text-sm">
                   <button onClick={() => setShowFollowers(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
                     <Users className="h-4 w-4 text-muted" />
-                    팔로워 <span className="font-bold text-ink">{followersCount}</span>
+                    팔로워 <span className="font-bold text-ink">-</span>
                   </button>
                   <button onClick={() => setShowFollowings(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
                     <UserPlus className="h-4 w-4 text-muted" />
-                    팔로잉 <span className="font-bold text-ink">{followingsCount}</span>
+                    팔로잉 <span className="font-bold text-ink">-</span>
                   </button>
                 </div>
               </div>
             </div>
-            {isMe && (
-              <button className="rounded-full border border-hairline bg-surface-soft p-2 text-muted hover:text-ink">
+            {user.ownProfile && (
+              <Link href="/profile/edit" className="rounded-full border border-hairline bg-surface-soft p-2 text-muted hover:text-ink">
                 <Settings className="h-5 w-5" />
-              </button>
+              </Link>
             )}
           </div>
 
           <div className="mt-6 flex gap-3">
-            {isMe ? (
-              <button className="rounded-full border border-hairline bg-surface-soft px-4 py-2 text-sm font-bold text-ink hover:bg-white transition-colors">
+            {user.ownProfile ? (
+              <Link
+                href="/profile/edit"
+                className="rounded-full border border-hairline bg-surface-soft px-4 py-2 text-sm font-bold text-ink hover:bg-white transition-colors"
+              >
                 프로필 수정
-              </button>
+              </Link>
             ) : (
               <button
                 onClick={handleFollowToggle}
+                disabled={followLoading}
                 className={`rounded-full px-5 py-2 text-sm font-bold transition-colors ${
                   isFollowing ? "bg-surface-strong text-ink hover:bg-hairline" : "bg-primary text-white hover:bg-primary-active"
                 }`}
@@ -209,11 +263,7 @@ export default function ProfilePage() {
 }
 
 function FollowListModal({ title, onClose }: { title: string; onClose: () => void }) {
-  const users = [
-    { id: 1, nickname: "서교동김푸디", profileImage: "https://picsum.photos/seed/user2/80/80" },
-    { id: 2, nickname: "망원동고독가", profileImage: "https://picsum.photos/seed/user3/80/80" },
-    { id: 3, nickname: "맛집 사냥꾼", profileImage: "https://picsum.photos/seed/user4/80/80" },
-  ];
+  const users: FollowUser[] = [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in-50">
@@ -225,18 +275,22 @@ function FollowListModal({ title, onClose }: { title: string; onClose: () => voi
           </button>
         </div>
         <ul className="mt-4 max-h-60 overflow-y-auto space-y-3">
-          {users.map((f) => (
-            <li key={f.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src={f.profileImage} alt={f.nickname} className="h-9 w-9 rounded-full object-cover" />
-                <span className="text-sm font-bold text-ink">{f.nickname}</span>
-              </div>
-              <button className="flex items-center gap-1 rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-muted hover:text-primary">
-                <UserMinus className="h-3 w-3" />
-                {title === "팔로워 목록" ? "삭제" : "언팔로우"}
-              </button>
-            </li>
-          ))}
+          {users.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">목록을 불러올 수 없습니다. (API 미연동)</p>
+          ) : (
+            users.map((f) => (
+              <li key={f.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img src={f.profileImage || `https://picsum.photos/seed/user${f.id}/80/80`} alt={f.nickname} className="h-9 w-9 rounded-full object-cover" />
+                  <span className="text-sm font-bold text-ink">{f.nickname}</span>
+                </div>
+                <button className="flex items-center gap-1 rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-muted hover:text-primary">
+                  <UserMinus className="h-3 w-3" />
+                  {title === "팔로워 목록" ? "삭제" : "언팔로우"}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
       </div>
     </div>
