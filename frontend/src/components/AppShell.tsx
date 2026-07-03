@@ -20,25 +20,52 @@ const mainNav = [
   { href: "/profile", label: "프로필", icon: User },
 ];
 
-const currentUser = {
-  id: "me",
-  name: "오늘의푸디",
-  handle: "@todayfoodie",
-  image: "https://picsum.photos/seed/myprofile/80/80",
+interface CurrentUser {
+  userId: number;
+  nickname: string;
+  profileImage: string | null;
+  email: string;
+}
+
+function getStoredUser(): CurrentUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return null;
+    return JSON.parse(raw) as CurrentUser;
+  } catch {
+    return null;
+  }
+}
+
+const fallbackUser: CurrentUser = {
+  userId: 0,
+  nickname: "오늘의푸디",
+  profileImage: "https://picsum.photos/seed/myprofile/80/80",
+  email: "",
 };
 
 export function SidebarProfile() {
+  const [user, setUser] = useState<CurrentUser>(fallbackUser);
+
+  useEffect(() => {
+    setUser(getStoredUser() ?? fallbackUser);
+    const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
+    window.addEventListener("login-state-change", handleChange);
+    return () => window.removeEventListener("login-state-change", handleChange);
+  }, []);
+
   return (
     <Link href="/profile" className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors">
       <div className="flex items-center gap-4">
         <img
-          src={currentUser.image}
+          src={user.profileImage ?? "https://picsum.photos/seed/myprofile/80/80"}
           alt=""
           className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/20"
         />
         <div>
-          <p className="text-base font-bold text-ink">{currentUser.name}</p>
-          <p className="text-sm text-muted">{currentUser.handle}</p>
+          <p className="text-base font-bold text-ink">{user.nickname}</p>
+          <p className="text-sm text-muted">{user.email || "@todayfoodie"}</p>
         </div>
       </div>
       <div className="mt-4 flex justify-between text-center text-base">
@@ -85,7 +112,15 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<CurrentUser>(fallbackUser);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setUser(getStoredUser() ?? fallbackUser);
+    const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
+    window.addEventListener("login-state-change", handleChange);
+    return () => window.removeEventListener("login-state-change", handleChange);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -97,10 +132,20 @@ export default function AppShell({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    window.dispatchEvent(new Event("login-state-change"));
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/api/v1/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // 서버 요청 실패핏 localStorage 클리어 및 이동
+    } finally {
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("user");
+      window.dispatchEvent(new Event("login-state-change"));
+      router.push("/login");
+    }
   };
 
   if (hideSidebars) {
@@ -153,7 +198,7 @@ export default function AppShell({
                 className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20 focus:outline-hidden"
               >
                 <img
-                  src={currentUser.image}
+                  src={user.profileImage ?? "https://picsum.photos/seed/myprofile/80/80"}
                   alt="프로필"
                   className="h-full w-full object-cover"
                 />

@@ -33,8 +33,9 @@ export default function LoginPage() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (user: Record<string, unknown>) => {
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("user", JSON.stringify(user));
     window.dispatchEvent(new Event("login-state-change"));
     router.push("/feed");
   };
@@ -76,7 +77,7 @@ export default function LoginPage() {
       const result = await res.json().catch(() => ({}));
 
       if (res.ok && result.success) {
-        handleLoginSuccess();
+        handleLoginSuccess(result.data ?? {});
       } else {
         const message = result.message || "로그인/회원가입에 실패했습니다.";
         setError(message);
