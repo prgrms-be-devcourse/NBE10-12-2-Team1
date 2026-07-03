@@ -698,7 +698,7 @@ paths:
                       phone: "02-123-4567"
                       lat: 37.5665
                       lng: 126.9780
-                      postCount: 12
+                      feedCount: 12
         "400":
           description: 필수 파라미터 query 누락 또는 radius 20000 초과
           content:
@@ -854,7 +854,7 @@ paths:
               example:
                 success: true
                 data:
-                  postId: 45
+                  feedId: 45
                   userId: 1
                   nickname: "푸디보이"
                   profileImage: "https://k.kakaocdn.net/.../img.jpg"
@@ -952,8 +952,8 @@ paths:
               example:
                 success: true
                 data:
-                  posts:
-                    - postId: 45
+                  feeds:
+                    - feedId: 45
                       userId: 1
                       nickname: "푸디보이"
                       profileImage: "https://k.kakaocdn.net/.../img.jpg"
@@ -1023,7 +1023,7 @@ paths:
               example:
                 success: true
                 data:
-                  postId: 45
+                  feedId: 45
                   content: "재방문했는데 여전히 맛있네요. 강력 추천합니다."
                   restaurantId: 2
                 message: "글이 수정되었습니다."
@@ -1048,24 +1048,24 @@ paths:
                   code: "UNAUTHORIZED"
                   message: "로그인 후 이용해주세요."
         "403":
-          description: 타인 글 수정 시도 (FORBIDDEN_POST_UPDATE)
+          description: 타인 글 수정 시도 (FORBIDDEN_FEED_UPDATE)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "FORBIDDEN_POST_UPDATE"
+                  code: "FORBIDDEN_FEED_UPDATE"
                   message: "본인의 글만 수정할 수 있습니다."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
@@ -1110,24 +1110,24 @@ paths:
                   code: "UNAUTHORIZED"
                   message: "로그인 후 이용해주세요."
         "403":
-          description: 타인 글 삭제 시도 (FORBIDDEN_POST_DELETE)
+          description: 타인 글 삭제 시도 (FORBIDDEN_FEED_DELETE)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "FORBIDDEN_POST_DELETE"
+                  code: "FORBIDDEN_FEED_DELETE"
                   message: "본인의 글만 삭제할 수 있습니다."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
@@ -1161,7 +1161,7 @@ paths:
               example:
                 success: true
                 data:
-                  postId: 45
+                  feedId: 45
                   likeCount: 13
                   isLikedByMe: true
                 message: "좋아요를 눌렀습니다."
@@ -1176,14 +1176,14 @@ paths:
                   code: "UNAUTHORIZED"
                   message: "로그인 후 이용해주세요."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "409":
           description: 이미 좋아요 누름 (ALREADY_LIKED)
@@ -1226,7 +1226,7 @@ paths:
               example:
                 success: true
                 data:
-                  postId: 45
+                  feedId: 45
                   likeCount: 12
                   isLikedByMe: false
                 message: "좋아요를 취소했습니다."
@@ -1251,14 +1251,14 @@ paths:
                   code: "FORBIDDEN"
                   message: "본인의 좋아요만 취소할 수 있습니다."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류
@@ -1308,7 +1308,7 @@ paths:
                 success: true
                 data:
                   commentId: 101
-                  postId: 45
+                  feedId: 45
                   userId: 2
                   nickname: "서교동김푸디"
                   profileImage: "https://k.kakaocdn.net/.../profile2.jpg"
@@ -1336,14 +1336,14 @@ paths:
                   code: "UNAUTHORIZED"
                   message: "로그인 후 이용해주세요."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "500":
           description: 저장 실패
@@ -1410,14 +1410,14 @@ paths:
                   code: "INVALID_PAGE_SIZE"
                   message: "페이지 번호와 크기는 0보다 커야 합니다."
         "404":
-          description: 존재하지 않는 글 (POST_NOT_FOUND)
+          description: 존재하지 않는 글 (FEED_NOT_FOUND)
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "POST_NOT_FOUND"
+                  code: "FEED_NOT_FOUND"
                   message: "존재하지 않는 게시글입니다."
         "500":
           description: 서버 오류

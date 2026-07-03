@@ -10,15 +10,21 @@ public record UserProfileResponse(
         String profileImage,
         String email,
         Provider provider,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        boolean isOwnProfile,
+        boolean isFollowing) {
 
-    public static UserProfileResponse from(User user) {
+    public static UserProfileResponse from(User user, Long currentUserId, boolean isFollowing) {
+        boolean isOwn = user.getId().equals(currentUserId);
         return new UserProfileResponse(
                 user.getId(),
                 user.getNickname(),
                 user.getProfileImage(),
                 user.getEmail(),
                 user.getProvider(),
-                user.getCreatedAt());
+                user.getCreatedAt(),
+                isOwn,
+                isOwn ? false : isFollowing);
+
     }
 }
