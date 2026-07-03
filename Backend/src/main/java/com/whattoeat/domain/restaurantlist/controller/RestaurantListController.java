@@ -186,8 +186,6 @@ public class RestaurantListController {
         );
     }
 
-    // ================= 리스트 저장 ====================
-
     // ================= 리스트 복사 ====================
     @PostMapping("/{id}/copy")
     @Operation(summary = "맛집 리스트 복사")

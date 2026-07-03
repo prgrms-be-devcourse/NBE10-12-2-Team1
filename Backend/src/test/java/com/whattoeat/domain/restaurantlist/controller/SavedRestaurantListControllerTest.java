@@ -1,0 +1,178 @@
+package com.whattoeat.domain.restaurantlist.controller;
+
+import com.whattoeat.domain.restaurant.entity.MoodTag;
+import com.whattoeat.domain.restaurantlist.dto.SavedRestaurantListResponse;
+import com.whattoeat.domain.restaurantlist.service.SavedRestaurantListService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+class SavedRestaurantListControllerTest {
+
+    private static final Long TEST_USER_ID = 2L;
+
+    private MockMvc mockMvc;
+
+    private SavedRestaurantListService savedRestaurantListService;
+
+    @BeforeEach
+    void setUp() {
+        savedRestaurantListService = Mockito.mock(SavedRestaurantListService.class);
+
+        SavedRestaurantListController controller =
+                new SavedRestaurantListController(savedRestaurantListService);
+
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .setCustomArgumentResolvers(
+                        new PageableHandlerMethodArgumentResolver()
+                )
+                .build();
+    }
+
+    @Test
+    void save_성공() throws Exception {
+        // given
+        Long restaurantListId = 10L;
+
+        willDoNothing()
+                .given(savedRestaurantListService)
+                .save(TEST_USER_ID, restaurantListId);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/restaurant_lists/{restaurantListId}/save", restaurantListId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("레스토랑 리스트를 저장했습니다."));
+
+        then(savedRestaurantListService)
+                .should()
+                .save(TEST_USER_ID, restaurantListId);
+    }
+
+    @Test
+    void unsave_성공() throws Exception {
+        // given
+        Long restaurantListId = 10L;
+
+        willDoNothing()
+                .given(savedRestaurantListService)
+                .unsave(TEST_USER_ID, restaurantListId);
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/restaurant_lists/{restaurantListId}/save", restaurantListId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("레스토랑 리스트 저장을 취소했습니다."));
+
+        then(savedRestaurantListService)
+                .should()
+                .unsave(TEST_USER_ID, restaurantListId);
+    }
+
+    @Test
+    void findMySavedLists_성공() throws Exception {
+        // given
+        SavedRestaurantListResponse response = new SavedRestaurantListResponse(
+                100L,
+                10L,
+                2L,
+                "작성자",
+                "혼밥 맛집",
+                "혼자 먹기 좋은 곳",
+                MoodTag.SOLO,
+                LocalDateTime.of(2026, 7, 4, 2, 30)
+        );
+
+        Page<SavedRestaurantListResponse> page =
+                new PageImpl<>(
+                        List.of(response),
+                        PageRequest.of(0, 10),
+                        1
+                );
+
+        given(savedRestaurantListService.findMySavedLists(eq(TEST_USER_ID), any()))
+                .willReturn(page);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/restaurant_lists/saved")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("저장한 레스토랑 리스트 조회가 완료되었습니다."))
+                .andExpect(jsonPath("$.data.content[0].savedId").value(100L))
+                .andExpect(jsonPath("$.data.content[0].restaurantListId").value(10L))
+                .andExpect(jsonPath("$.data.content[0].ownerId").value(2L))
+                .andExpect(jsonPath("$.data.content[0].ownerName").value("작성자"))
+                .andExpect(jsonPath("$.data.content[0].title").value("혼밥 맛집"))
+                .andExpect(jsonPath("$.data.content[0].description").value("혼자 먹기 좋은 곳"))
+                .andExpect(jsonPath("$.data.content[0].moodTag").value("SOLO"));
+
+        then(savedRestaurantListService)
+                .should()
+                .findMySavedLists(eq(TEST_USER_ID), any());
+    }
+
+    @Test
+    void isSaved_저장되어있으면_true() throws Exception {
+        // given
+        Long restaurantListId = 10L;
+
+        given(savedRestaurantListService.isSaved(TEST_USER_ID, restaurantListId))
+                .willReturn(true);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/restaurant_lists/{restaurantListId}/saved", restaurantListId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.restaurantListId").value(10L))
+                .andExpect(jsonPath("$.data.saved").value(true))
+                .andExpect(jsonPath("$.message").value("저장한 레스토랑 리스트입니다."));
+
+        then(savedRestaurantListService)
+                .should()
+                .isSaved(TEST_USER_ID, restaurantListId);
+    }
+
+    @Test
+    void isSaved_저장되어있지않으면_false() throws Exception {
+        // given
+        Long restaurantListId = 10L;
+
+        given(savedRestaurantListService.isSaved(TEST_USER_ID, restaurantListId))
+                .willReturn(false);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/restaurant_lists/{restaurantListId}/saved", restaurantListId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.restaurantListId").value(10L))
+                .andExpect(jsonPath("$.data.saved").value(false))
+                .andExpect(jsonPath("$.message").value("저장하지 않은 레스토랑 리스트입니다."));
+
+        then(savedRestaurantListService)
+                .should()
+                .isSaved(TEST_USER_ID, restaurantListId);
+    }
+}
