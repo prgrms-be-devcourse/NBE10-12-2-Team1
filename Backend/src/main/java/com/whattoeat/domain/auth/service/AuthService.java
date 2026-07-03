@@ -72,7 +72,7 @@ public class AuthService {
         return  new TokenResponse(newAccessToken, newRefreshToken);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResult login(LoginRequest request) {
         User user = userRepository.findByLoginId(request.loginId())
                 .orElseThrow(() -> new InvalidCredentialsException("아이디/비밀번호가 올바르지 않습니다."));
