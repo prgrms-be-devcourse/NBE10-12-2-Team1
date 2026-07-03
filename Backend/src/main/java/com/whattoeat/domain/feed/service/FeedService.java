@@ -29,6 +29,7 @@ public class FeedService {
     private final RestaurantRepository restaurantRepository;
     private final FollowRepository followRepository;
 
+
     @Transactional
     public FeedDetailResponse createFeed(User user, FeedCreateRequest feedCreateRequest) {
         Restaurant restaurant = feedCreateRequest.restaurantId() != null
@@ -46,7 +47,7 @@ public class FeedService {
         } else if (restaurantId != null) {
             feeds = feedRepository.findByRestaurantId(restaurantId, pageable);
         } else {
-            feeds = feedRepository.findAll(pageable);
+            feeds = feedRepository.findAllByOrderByIdDesc(pageable);
         }
         return feeds.map(FeedListResponse::from);
     }

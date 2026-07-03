@@ -33,6 +33,15 @@ public class FeedController {
         return feedService.createFeed(user, feedCreateRequest);
     }
 
+    @GetMapping
+    public Page<FeedListResponse> getFeeds(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long restaurantId,
+            Pageable pageable
+    ) {
+        return feedService.getFeeds(userId, restaurantId, pageable);
+    }
+
     @GetMapping("/following")
     public Page<FeedListResponse> getFollowingFeeds(
             @AuthenticationPrincipal CustomUserDetails userDetails,
