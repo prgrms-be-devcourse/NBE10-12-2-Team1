@@ -1,8 +1,8 @@
 "use client";
 
-import { ReactNode, useState, useEffect, useRef } from "react";
+import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
 
 interface AppShellProps {
@@ -18,6 +18,11 @@ const mainNav = [
   { href: "/lists", label: "리스트", icon: List },
   { href: "/recommend", label: "추천", icon: Sparkles },
   { href: "/profile", label: "프로필", icon: User },
+];
+
+const feedNav = [
+  { href: "/feed?tab=following", label: "팔로잉 피드", icon: Home, tab: "following" as const },
+  { href: "/feed?tab=recommended", label: "추천 피드", icon: Sparkles, tab: "recommended" as const },
 ];
 
 const followings = [
@@ -36,6 +41,9 @@ const currentUser = {
 
 function DefaultLeftSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentFeedTab = searchParams.get("tab") === "recommended" ? "recommended" : "following";
+
   return (
     <div className="sticky top-20 space-y-5">
       <Link href="/profile" className="block rounded-2xl bg-surface p-4 border border-hairline-soft hover:border-primary/30 transition-colors">
@@ -65,6 +73,28 @@ function DefaultLeftSidebar() {
           </div>
         </div>
       </Link>
+
+      <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
+        <p className="text-xs font-bold text-muted uppercase tracking-wider mb-3">피드</p>
+        <nav className="space-y-1">
+          {feedNav.map((item) => {
+            const Icon = item.icon;
+            const active = pathname === "/feed" && currentFeedTab === item.tab;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                  active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface hover:text-ink"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
       <nav className="space-y-1">
         {mainNav.map((item) => {
@@ -122,6 +152,7 @@ export default function AppShell({
   hideSidebars = false,
 }: AppShellProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -148,7 +179,7 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-hairline-soft bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center px-4 lg:mx-0 lg:max-w-none lg:px-6">
           <div className="flex items-center gap-6">
             <Link href="/feed" className="text-lg font-bold tracking-tight text-primary">
               오늘뭐먹지
@@ -163,7 +194,24 @@ export default function AppShell({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1">
+            {mainNav.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+                    active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface-soft hover:text-ink"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2 ml-auto">
             <button className="rounded-full p-2 text-muted hover:bg-surface-soft hover:text-ink transition-colors">
               <Bell className="h-5 w-5" />
             </button>
@@ -214,9 +262,18 @@ export default function AppShell({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[240px_1fr_300px]">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 md:grid-cols-[240px_1fr_300px] lg:mx-0 lg:max-w-none lg:px-6">
         <aside className="hidden md:block">
-          {leftSidebar ?? <DefaultLeftSidebar />}
+          <Suspense
+            fallback={
+              <div className="sticky top-20 space-y-5">
+                <div className="h-40 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
+                <div className="h-56 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
+              </div>
+            }
+          >
+            {leftSidebar ?? <DefaultLeftSidebar />}
+          </Suspense>
         </aside>
 
         <main className="min-w-0">{children}</main>
