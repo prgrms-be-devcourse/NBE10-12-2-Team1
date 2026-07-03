@@ -19,7 +19,6 @@ import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
-import com.whattoeat.global.exception.PasswordMismatchException;
 import com.whattoeat.global.jwt.JwtUtil;
 import java.util.Optional;
 
@@ -64,10 +63,10 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        signUpRequest = new SignUpRequest("testuser", "pass1234", "pass1234", "testnick", "test@test.com");
-        loginRequest = new LoginRequest("testuser", "pass1234");
+        signUpRequest = new SignUpRequest("test@tset.com", "pass1234", "testnick");
+        loginRequest = new LoginRequest("test@tset.com", "pass1234");
         user = User.builder()
-                .loginId("testuser")
+                .loginId("test@tset.com")
                 .password("encodedPassword")
                 .nickname("testnick")
                 .email("test@test.com")
@@ -81,7 +80,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("정상 입력으로 회원가입 성공")
     void signupSuccess() {
-        given(userRepository.existsByLoginId("testuser")).willReturn(false);
+        given(userRepository.existsByLoginId("test@tset.com")).willReturn(false);
         given(userRepository.existsByNickname("testnick")).willReturn(false);
 
         assertThatNoException().isThrownBy(() -> authService.signup(signUpRequest));
@@ -91,7 +90,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("아이디 중복 시 DuplicateLoginIdException 발생")
     void signupFailDuplicateLoginId() {
-        given(userRepository.existsByLoginId("testuser")).willReturn(true);
+        given(userRepository.existsByLoginId("test@tset.com")).willReturn(true);
 
         assertThatThrownBy(() -> authService.signup(signUpRequest))
                 .isInstanceOf(DuplicateLoginIdException.class)
@@ -101,7 +100,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("닉네임 중복 시 DuplicateNicknameException 발생")
     void signupFailDuplicateNickname() {
-        given(userRepository.existsByLoginId("testuser")).willReturn(false);
+        given(userRepository.existsByLoginId("test@tset.com")).willReturn(false);
         given(userRepository.existsByNickname("testnick")).willReturn(true);
 
         assertThatThrownBy(() -> authService.signup(signUpRequest))
@@ -109,22 +108,13 @@ class AuthServiceTest {
                 .hasMessageContaining("닉네임");
     }
 
-    @Test
-    @DisplayName("비밀번호 확인 불일치 시 PasswordMismatchException 발생")
-    void signupFailPasswordMismatch() {
-        SignUpRequest mismatchRequest = new SignUpRequest("testuser", "pass1234", "different", "testnick", "test@test.com");
-
-        assertThatThrownBy(() -> authService.signup(mismatchRequest))
-                .isInstanceOf(PasswordMismatchException.class)
-                .hasMessageContaining("비밀번호");
-    }
 
     // ========== login ==========
 
     @Test
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 후 토큰 반환")
     void loginSuccess() {
-        given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
+        given(userRepository.findByLoginId("test@tset.com")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("pass1234", "encodedPassword"))
                 .willReturn(true);
         given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
@@ -144,7 +134,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("존재하지 않는 아이디로 로그인 시 InvalidCredentialsException 발생")
     void loginFailUserNotFound() {
-        given(userRepository.findByLoginId("testuser")).willReturn(Optional.empty());
+        given(userRepository.findByLoginId("test@tset.com")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(InvalidCredentialsException.class);
@@ -153,7 +143,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("비밀번호 불일치 시 InvalidCredentialsException 발생")
     void loginFailWrongPassword() {
-        given(userRepository.findByLoginId("testuser")).willReturn(Optional.of(user));
+        given(userRepository.findByLoginId("test@tset.com")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("pass1234", "encodedPassword")).willReturn(false);
 
         assertThatThrownBy(() -> authService.login(loginRequest))

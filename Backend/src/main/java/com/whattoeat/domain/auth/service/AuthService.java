@@ -35,9 +35,6 @@ public class AuthService {
         if (userRepository.existsByNickname(request.nickname())) {
             throw new DuplicateNicknameException("이미 사용 중인 닉네임입니다.");
         }
-        if (!request.password().equals(request.passwordConfirm())) {
-            throw new PasswordMismatchException("비밀번호가 일치하지 않습니다.");
-        }
         User user = User.builder()
                 .loginId(request.loginId())
                 .password(passwordEncoder.encode(request.password()))
