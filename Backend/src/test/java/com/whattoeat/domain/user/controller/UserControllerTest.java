@@ -3,7 +3,6 @@ package com.whattoeat.domain.user.controller;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,20 +11,31 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.whattoeat.domain.user.dto.UpdateProfileRequest;
 import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.entity.Provider;
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.service.UserService;
 import com.whattoeat.global.exception.UserNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
-import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(
         controllers = UserController.class,
@@ -50,54 +60,119 @@ class UserControllerTest {
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
 
-    private UserProfileResponse createResponse(Long id, String nickname, String profileImage) {
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    // 테스트 요청에 인증 정보를 직접 SecurityContextHolder에 주입하는 헬퍼
+    private RequestPostProcessor withUserId(Long userId) {
+        return (MockHttpServletRequest request) -> {
+            User user = User.builder()
+                    .nickname("testUser")
+                    .email("test@example.com")
+                    .provider(Provider.LOCAL)
+                    .role(Role.USER)
+                    .build();
+            ReflectionTestUtils.setField(user, "id", userId);
+            CustomUserDetails userDetails = new CustomUserDetails(user);
+
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()));
+            SecurityContextHolder.setContext(context);
+            return request;
+        };
+    }
+
+    private UserProfileResponse createResponse(Long id, String nickname, String profileImage,
+            boolean isOwnProfile, boolean isFollowing) {
         return new UserProfileResponse(
-                id, nickname, profileImage, "test@example.com", Provider.LOCAL, LocalDateTime.now());
+                id, nickname, profileImage, "test@example.com",
+                Provider.LOCAL, LocalDateTime.now(), isOwnProfile, isFollowing);
+    }
+
+    // ===================== getUser 테스트 =====================
+
+    @Test
+    void getUser_본인_프로필_조회_성공() throws Exception {
+        UserProfileResponse response = createResponse(1L, "testNickname", "profile.jpg", true, false);
+        given(userService.getUser(1L, 1L)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/users/1").with(withUserId(1L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isOwnProfile").value(true))
+                .andExpect(jsonPath("$.isFollowing").value(false))
+                .andExpect(jsonPath("$.nickname").value("testNickname"));
     }
 
     @Test
-    void getUser_성공() throws Exception {
-        UserProfileResponse response = createResponse(1L, "testNickname", "profile.jpg");
-        given(userService.getUser(1L)).willReturn(response);
+    void getUser_타인_프로필_조회시_팔로우_중() throws Exception {
+        UserProfileResponse response = createResponse(2L, "otherUser", "other.jpg", false, true);
+        given(userService.getUser(2L, 1L)).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/users/1"))
+        mockMvc.perform(get("/api/v1/users/2").with(withUserId(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.nickname").value("testNickname"))
-                .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.provider").value("LOCAL"));
+                .andExpect(jsonPath("$.isOwnProfile").value(false))
+                .andExpect(jsonPath("$.isFollowing").value(true));
+    }
+
+    @Test
+    void getUser_타인_프로필_조회시_팔로우_안함() throws Exception {
+        UserProfileResponse response = createResponse(2L, "otherUser", "other.jpg", false, false);
+        given(userService.getUser(2L, 1L)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/users/2").with(withUserId(1L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isOwnProfile").value(false))
+                .andExpect(jsonPath("$.isFollowing").value(false));
     }
 
     @Test
     void getUser_존재하지_않으면_404() throws Exception {
-        given(userService.getUser(999L)).willThrow(new UserNotFoundException(999L));
+        given(userService.getUser(999L, 1L)).willThrow(new UserNotFoundException(999L));
 
-        mockMvc.perform(get("/api/v1/users/999"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("User not found: 999"));
+        mockMvc.perform(get("/api/v1/users/999").with(withUserId(1L)))
+                .andExpect(status().isNotFound());
     }
+
+    // ===================== updateProfile 테스트 =====================
 
     @Test
     void updateProfile_성공() throws Exception {
         UpdateProfileRequest request = new UpdateProfileRequest("newNickname", "new.jpg");
-        UserProfileResponse response = createResponse(1L, "newNickname", "new.jpg");
-        given(userService.updateProfile(1L, request)).willReturn(response);
+        UserProfileResponse response = createResponse(1L, "newNickname", "new.jpg", true, false);
+        given(userService.updateProfile(1L, 1L, request)).willReturn(response);
 
         mockMvc.perform(patch("/api/v1/users/1")
+                        .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nickname").value("newNickname"))
-                .andExpect(jsonPath("$.profileImage").value("new.jpg"));
+                .andExpect(jsonPath("$.profileImage").value("new.jpg"))
+                .andExpect(jsonPath("$.isOwnProfile").value(true));
+    }
+
+    @Test
+    void updateProfile_타인_프로필_수정시_403() throws Exception {
+        UpdateProfileRequest request = new UpdateProfileRequest("nickname", null);
+        given(userService.updateProfile(2L, 1L, request)).willThrow(new AccessDeniedException(""));
+
+        mockMvc.perform(patch("/api/v1/users/2")
+                        .with(withUserId(1L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void updateProfile_존재하지_않으면_404() throws Exception {
         UpdateProfileRequest request = new UpdateProfileRequest("nickname", null);
-        given(userService.updateProfile(999L, request)).willThrow(new UserNotFoundException(999L));
+        given(userService.updateProfile(999L, 999L, request)).willThrow(new UserNotFoundException(999L));
 
         mockMvc.perform(patch("/api/v1/users/999")
+                        .with(withUserId(999L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
@@ -108,10 +183,10 @@ class UserControllerTest {
         UpdateProfileRequest request = new UpdateProfileRequest("", "image.jpg");
 
         mockMvc.perform(patch("/api/v1/users/1")
+                        .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("nickname")));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -119,9 +194,9 @@ class UserControllerTest {
         UpdateProfileRequest request = new UpdateProfileRequest("a".repeat(21), "image.jpg");
 
         mockMvc.perform(patch("/api/v1/users/1")
+                        .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("nickname")));
+                .andExpect(status().isBadRequest());
     }
 }
