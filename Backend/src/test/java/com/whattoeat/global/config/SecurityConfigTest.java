@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 @TestPropertySource(properties = {
         "spring.security.oauth2.client.registration.kakao.client-id=test-client-id",
         "spring.security.oauth2.client.registration.kakao.client-secret=test-client-secret",
+        "spring.security.oauth2.client.registration.kakao.authorization-grant-type=authorization_code",
+        "spring.security.oauth2.client.registration.kakao.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}",
         "spring.security.oauth2.client.provider.kakao.authorization-uri=https://kauth.kakao.com/oauth/authorize",
         "spring.security.oauth2.client.provider.kakao.token-uri=https://kauth.kakao.com/oauth/token",
         "spring.security.oauth2.client.provider.kakao.user-info-uri=https://kauth.kakao.com/v2/user/me",

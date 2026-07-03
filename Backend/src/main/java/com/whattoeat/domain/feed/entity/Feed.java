@@ -42,4 +42,14 @@ public class Feed extends BaseEntity {
         this.content = content;
     }
 
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
 }

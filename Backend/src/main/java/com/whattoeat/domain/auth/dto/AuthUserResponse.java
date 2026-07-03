@@ -13,7 +13,7 @@ public record AuthUserResponse(
         String email,
         Provider provider,
         Role role,
-        LocalDateTime createTime
+        LocalDateTime createAt
 ) {
     public static AuthUserResponse from(User user) {
         return new AuthUserResponse(
