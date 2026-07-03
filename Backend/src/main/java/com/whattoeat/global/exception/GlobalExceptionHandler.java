@@ -63,6 +63,27 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, message));
     }
 
+    // 팔로우 관계를 찾지 못한 경우 404 반환
+    @ExceptionHandler(FollowNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleFollowNotFound(FollowNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
+    // 이미 팔로우 중인 경우 409 반환
+    @ExceptionHandler(AlreadyFollowingException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyFollowing(AlreadyFollowingException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
+    }
+
+    // 자기 자신을 팔로우하려는 경우 400 반환
+    @ExceptionHandler(SelfFollowNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleSelfFollowNotAllowed(SelfFollowNotAllowedException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, e.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest()

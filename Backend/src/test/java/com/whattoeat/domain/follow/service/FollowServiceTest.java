@@ -9,6 +9,9 @@ import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
+import com.whattoeat.global.exception.AlreadyFollowingException;
+import com.whattoeat.global.exception.FollowNotFoundException;
+import com.whattoeat.global.exception.SelfFollowNotAllowedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +59,7 @@ class FollowServiceTest {
         User user = saveUser("user");
 
         assertThatThrownBy(() -> followService.follow(user.getId(), user.getId()))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(SelfFollowNotAllowedException.class)
                 .hasMessage("자기 자신을 팔로우할 수 없습니다.");
     }
 
@@ -68,7 +71,7 @@ class FollowServiceTest {
         followService.follow(follower.getId(), following.getId());
 
         assertThatThrownBy(() -> followService.follow(follower.getId(), following.getId()))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(AlreadyFollowingException.class)
                 .hasMessage("이미 팔로우 중인 사용자입니다.");
     }
 
@@ -92,7 +95,7 @@ class FollowServiceTest {
         User following = saveUser("following");
 
         assertThatThrownBy(() -> followService.unfollow(follower.getId(), following.getId()))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(FollowNotFoundException.class)
                 .hasMessage("팔로우 관계가 존재하지 않습니다.");
     }
 
