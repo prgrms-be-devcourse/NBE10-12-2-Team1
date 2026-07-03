@@ -73,17 +73,6 @@ paths:
       summary: 토큰 재발급
       description: Refresh Token을 이용해 새로운 Access Token과 Refresh Token을 발급합니다.
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
-                  example: "existing_refresh_token"
       responses:
         "200":
           description: 토큰 재발급 성공
@@ -91,19 +80,7 @@ paths:
             application/json:
               example:
                 success: true
-                data:
-                  accessToken: "new_access_token_jwt"
-                  refreshToken: "new_refresh_token_jwt"
-        "400":
-          description: Refresh Token이 요청에 없음
-          content:
-            application/json:
-              example:
-                success: false
                 data: null
-                error:
-                  code: "MISSING_REFRESH_TOKEN"
-                  message: "Refresh Token이 필요합니다."
         "401":
           description: Refresh Token 만료 / 위조 / 불일치 / 연결된 사용자 없음
           content:
@@ -129,7 +106,7 @@ paths:
     post:
       tags: [Auth]
       summary: 일반 회원가입
-      description: 이메일과 비밀번호로 회원가입합니다.
+      description: 이메일(로그인id)와 비밀번호로 회원가입합니다.
       security: []
       requestBody:
         required: true
@@ -137,9 +114,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password, nickname]
+              required: [loginId, password, nickname]
               properties:
-                email:
+                loginId:
                   type: string
                   format: email
                   example: "foodie@example.com"
@@ -152,17 +129,19 @@ paths:
                   maxLength: 20
                   example: "푸디보이"
       responses:
-        "201":
+        "200":
           description: 회원가입 성공
           content:
             application/json:
               example:
                 success: true
                 data:
-                  userId: 1
-                  email: "foodie@example.com"
+                  id: 1
                   nickname: "푸디보이"
-                  role: "USER"
+                  profileImage: null
+                  email: "foodie@example.com"
+                  provider: "LOCAL"
+                  createdAt: "2026-07-03T10:00:00"
                 message: "회원가입이 완료되었습니다."
         "400":
           description: 필수 필드 누락 / 이메일 형식 오류 / 비밀번호 8자 미만 / 닉네임 20자 초과
@@ -199,7 +178,7 @@ paths:
     post:
       tags: [Auth]
       summary: 일반 로그인
-      description: 이메일과 비밀번호로 로그인합니다.
+      description: 이메일(로그인id)와 비밀번호로 로그인합니다.
       security: []
       requestBody:
         required: true
@@ -207,9 +186,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required: [loginId, password]
               properties:
-                email:
+                loginId:
                   type: string
                   format: email
                   example: "foodie@example.com"
@@ -224,13 +203,12 @@ paths:
               example:
                 success: true
                 data:
-                  userId: 1
+                  id: 1
                   nickname: "푸디보이"
                   profileImage: null
                   email: "foodie@example.com"
-                  role: "USER"
-                  accessToken: "eyJhbGciOi..."
-                  refreshToken: "eyJhbGciOi..."
+                  provider: "LOCAL"
+                  createdAt: "2026-07-03T10:00:00"
                 message: "로그인에 성공했습니다."
         "400":
           description: 필수 필드 누락 / 이메일 형식 오류
@@ -267,18 +245,7 @@ paths:
     post:
       tags: [Auth]
       summary: 로그아웃
-      description: Refresh Token을 무효화하여 로그아웃합니다. 카카오 및 일반 로그인 공통으로 사용합니다.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
-                  example: "existing_refresh_token"
+      description: Access Token을 무효화하여 로그아웃합니다. 카카오 및 일반 로그인 공통으로 사용합니다.
       responses:
         "200":
           description: 로그아웃 성공
@@ -288,26 +255,16 @@ paths:
                 success: true
                 data: null
                 message: "로그아웃되었습니다."
-        "400":
-          description: Refresh Token 누락
-          content:
-            application/json:
-              example:
-                success: false
-                data: null
-                error:
-                  code: "MISSING_REFRESH_TOKEN"
-                  message: "Refresh Token이 필요합니다."
         "401":
-          description: 유효하지 않은 Refresh Token
+          description: 인증되지 않은 사용자
           content:
             application/json:
               example:
                 success: false
                 data: null
                 error:
-                  code: "INVALID_REFRESH_TOKEN"
-                  message: "유효하지 않은 Refresh Token입니다. 다시 로그인해주세요."
+                  code: "UNAUTHORIZED"
+                  message: "인증이 만료되었습니다. 다시 로그인해주세요."
         "500":
           description: 서버 오류
           content:
