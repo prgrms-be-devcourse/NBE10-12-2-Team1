@@ -1,0 +1,26 @@
+package com.whattoeat.domain.auth.dto;
+
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
+
+import java.time.LocalDateTime;
+
+public record AuthUserResponse(
+        Long userId,
+        String nickname,
+        String profileImage,
+        String email,
+        Role role,
+        LocalDateTime createTime
+) {
+    public static AuthUserResponse from(User user) {
+        return new AuthUserResponse(
+                user.getId(),
+                user.getNickname(),
+                user.getProfileImage(),
+                user.getEmail(),
+                user.getRole(),
+                user.getCreatedAt()
+        );
+    }
+}
