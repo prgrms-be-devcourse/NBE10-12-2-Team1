@@ -10,6 +10,7 @@ import com.whattoeat.domain.restaurantlist.repository.RestaurantListRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
 import com.whattoeat.global.exception.*;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,7 @@ public class RestaurantListService {
     private final UserRepository userRepository;
     private final RestaurantListItemRepository restaurantListItemRepository;
     private final RestaurantRepository restaurantRepository;
+    private final EntityManager entityManager;
 
     public RestaurantList create(Long userId, String title, String description, MoodTag moodTag) {
         User user = userRepository.findById(userId)
@@ -175,7 +177,10 @@ public class RestaurantListService {
             );
 
             restaurantListItemRepository.save(copyListItem);
+            restaurantListItemRepository.flush();
+            entityManager.clear();
         }
-        return copyList;
+        return restaurantListRepository.findByIdWithItems(copyList.getId())
+                .orElseThrow(() -> new ListNotFoundException(copyList.getId()));
     }
 }
