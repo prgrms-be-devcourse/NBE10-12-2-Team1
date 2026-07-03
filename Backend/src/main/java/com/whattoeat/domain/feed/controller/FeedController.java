@@ -41,9 +41,4 @@ public class FeedController {
         feedService.deleteFeed(id);
     }
 
-//    @ExceptionHandler(IllegalArgumentException.class)
-//    public RsData<Void> handleNotFound(IllegalArgumentException e) {
-//        return RsData.fail("POST_NOT_FOUND", e.getMessage());
-//    }
-
 }

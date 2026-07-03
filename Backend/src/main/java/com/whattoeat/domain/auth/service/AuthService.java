@@ -35,9 +35,6 @@ public class AuthService {
         if (userRepository.existsByNickname(request.nickname())) {
             throw new DuplicateNicknameException("이미 사용 중인 닉네임입니다.");
         }
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new DuplicateEmailException("이미 사용 중인 이메일입니다.");
-        }
         if (!request.password().equals(request.passwordConfirm())) {
             throw new PasswordMismatchException("비밀번호가 일치하지 않습니다.");
         }
@@ -45,7 +42,7 @@ public class AuthService {
                 .loginId(request.loginId())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
-                .email(request.email())
+                .email(request.loginId())
                 .provider(Provider.LOCAL)
                 .role(Role.USER)
                 .build();
