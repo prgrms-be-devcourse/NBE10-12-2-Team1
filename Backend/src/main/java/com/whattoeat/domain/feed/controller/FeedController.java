@@ -1,27 +1,28 @@
 package com.whattoeat.domain.feed.controller;
 
+import com.whattoeat.domain.feed.dto.response.FeedListPageResponse;
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.domain.user.service.UserService;
+import com.whattoeat.global.rsData.RsData;
 import com.whattoeat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-//import com.whattoeat.global.rsdata.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.whattoeat.domain.feed.service.FeedService;
-//import com.whattoeat.domain.user.service.UserService;
 
 @RestController
 @RequestMapping("/api/v1/feeds")
 @RequiredArgsConstructor
 public class FeedController {
     private final FeedService feedService;
-//    private final UserService userService;
+    private final UserService userService;
 
     @PostMapping
     public FeedDetailResponse createFeed(
@@ -34,12 +35,13 @@ public class FeedController {
     }
 
     @GetMapping
-    public Page<FeedListResponse> getFeeds(
+    public RsData<FeedListPageResponse> getFeeds(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long restaurantId,
             Pageable pageable
     ) {
-        return feedService.getFeeds(userId, restaurantId, pageable);
+        Page<FeedListResponse> page = feedService.getFeeds(userId, restaurantId, pageable);
+        return RsData.success(FeedListPageResponse.from(page),"피드 목록 조회가 완료되었습니다.");
     }
 
     @GetMapping("/following")
