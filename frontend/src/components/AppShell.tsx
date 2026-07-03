@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
 
 interface AppShellProps {
@@ -20,16 +20,16 @@ const mainNav = [
   { href: "/profile", label: "프로필", icon: User },
 ];
 
-const feedNav = [
-  { href: "/feed?tab=following", label: "팔로잉 피드", icon: Home, tab: "following" as const },
-  { href: "/feed?tab=recommended", label: "추천 피드", icon: Sparkles, tab: "recommended" as const },
+const recommendFoodies = [
+  { id: "user5", name: "푸디맘", handle: "@foodimom", img: "user5" },
+  { id: "user6", name: "카페인 중독", handle: "@cafeholic", img: "user6" },
+  { id: "user7", name: "맛집 탐험가", handle: "@foodtrip", img: "user7" },
 ];
 
-const followings = [
-  { id: "user1", name: "김푸디", img: "user1" },
-  { id: "user2", name: "맛탐정_소연", img: "user2" },
-  { id: "user3", name: "혼밥러", img: "user3" },
-  { id: "user4", name: "점심러", img: "user4" },
+const hotPlaces = [
+  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
+  { name: "성수동 카페거리", category: "카페", likes: 189 },
+  { name: "이태원 양식당", category: "양식", likes: 156 },
 ];
 
 const currentUser = {
@@ -40,12 +40,8 @@ const currentUser = {
 };
 
 function DefaultLeftSidebar() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentFeedTab = searchParams.get("tab") === "recommended" ? "recommended" : "following";
-
   return (
-    <div className="sticky top-20 space-y-5">
+    <div className="sticky top-28 space-y-5">
       <Link href="/profile" className="block rounded-2xl bg-surface p-4 border border-hairline-soft hover:border-primary/30 transition-colors">
         <div className="flex items-center gap-3">
           <img
@@ -75,71 +71,40 @@ function DefaultLeftSidebar() {
       </Link>
 
       <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-        <p className="text-xs font-bold text-muted uppercase tracking-wider mb-3">피드</p>
-        <nav className="space-y-1">
-          {feedNav.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === "/feed" && currentFeedTab === item.tab;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                  active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface hover:text-ink"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <nav className="space-y-1">
-        {mainNav.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface hover:text-ink"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-        <p className="text-xs font-bold text-muted uppercase tracking-wider mb-3">팔로잉</p>
-        <div className="space-y-2.5">
-          {followings.map((f) => (
-            <Link key={f.id} href={`/profile/${f.id}`} className="flex items-center gap-2.5 group">
-              <div className="relative">
-                <img
-                  src={`https://picsum.photos/seed/${f.img}/40/40`}
-                  alt=""
-                  className="h-7 w-7 rounded-full object-cover"
-                />
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 ring-1 ring-white" />
+        <p className="text-sm font-bold text-ink mb-3">추천 푸디</p>
+        <div className="space-y-3">
+          {recommendFoodies.map((f) => (
+            <Link key={f.id} href={`/profile/${f.id}`} className="flex items-center justify-between group">
+              <div className="flex items-center gap-2.5">
+                <img src={`https://picsum.photos/seed/${f.img}/60/60`} alt="" className="h-8 w-8 rounded-full object-cover" />
+                <div>
+                  <p className="text-sm font-bold text-ink group-hover:text-primary transition-colors">{f.name}</p>
+                  <p className="text-xs text-muted-soft">{f.handle}</p>
+                </div>
               </div>
-              <span className="text-sm text-ink group-hover:text-primary transition-colors">{f.name}</span>
+              <button className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white hover:bg-primary-active transition-colors">
+                팔로우
+              </button>
             </Link>
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl bg-primary-soft p-3">
-        <p className="text-xs font-bold text-primary-active mb-1">새로운 맛집 소식 받기</p>
-        <p className="text-[11px] text-muted mb-2">팔로잉의 최신 피드를 높치지 마세요.</p>
-        <button className="w-full rounded-lg bg-primary py-1.5 text-xs font-bold text-white hover:bg-primary-active transition-colors">
-          알림 설정하기
-        </button>
+      <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
+        <p className="text-sm font-bold text-ink mb-3">오늘의 핫플</p>
+        <div className="space-y-3">
+          {hotPlaces.map((p, i) => (
+            <div key={p.name} className="flex items-start gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                {i + 1}
+              </span>
+              <div>
+                <p className="text-sm font-bold text-ink">{p.name}</p>
+                <p className="text-xs text-muted">{p.category} · 좋아요 {p.likes}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -179,9 +144,9 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-hairline-soft bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center px-4 lg:mx-0 lg:max-w-none lg:px-6">
+        <div className="mx-auto flex h-[100px] max-w-[calc(100vw-200px)] items-center px-4 lg:px-0">
           <div className="flex items-center gap-6">
-            <Link href="/feed" className="text-lg font-bold tracking-tight text-primary">
+            <Link href="/feed" className="text-xl font-bold tracking-tight text-primary">
               오늘뭐먹지
             </Link>
             <div className="hidden md:flex items-center rounded-full bg-surface-soft px-3 py-1.5">
@@ -194,7 +159,7 @@ export default function AppShell({
             </div>
           </div>
 
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1">
+          <nav className="hidden lg:flex items-center justify-end gap-1 ml-auto">
             {mainNav.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
@@ -211,12 +176,11 @@ export default function AppShell({
             })}
           </nav>
 
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 ml-6">
             <button className="rounded-full p-2 text-muted hover:bg-surface-soft hover:text-ink transition-colors">
               <Bell className="h-5 w-5" />
             </button>
 
-            {/* Profile dropdown */}
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((prev) => !prev)}
@@ -262,11 +226,11 @@ export default function AppShell({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-6 md:grid-cols-[240px_1fr_300px] lg:mx-0 lg:max-w-none lg:px-6">
+      <div className="mx-auto grid max-w-[calc(100vw-200px)] grid-cols-1 gap-5 px-4 py-6 md:grid-cols-[260px_1fr_300px] lg:px-0">
         <aside className="hidden md:block">
           <Suspense
             fallback={
-              <div className="sticky top-20 space-y-5">
+              <div className="sticky top-28 space-y-5">
                 <div className="h-40 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
                 <div className="h-56 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
               </div>
@@ -279,7 +243,7 @@ export default function AppShell({
         <main className="min-w-0">{children}</main>
 
         <aside className="hidden md:block">
-          <div className="sticky top-20">{rightSidebar}</div>
+          <div className="sticky top-28">{rightSidebar}</div>
         </aside>
       </div>
     </div>
