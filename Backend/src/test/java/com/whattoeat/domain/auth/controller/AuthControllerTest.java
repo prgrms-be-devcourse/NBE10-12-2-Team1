@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
-import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -173,8 +172,8 @@ class AuthControllerTest {
     @DisplayName("정상 아이디/비밀번호로 로그인 성공 시 200과 토큰 반환")
     void loginSuccess() throws Exception {
         LoginRequest request = new LoginRequest("test@tset.com", "pass1234");
-        UserProfileResponse userProfile = new UserProfileResponse(
-                1L, "testnick", null, "test@test.com", Provider.LOCAL, LocalDateTime.now()
+        AuthUserResponse userProfile = new AuthUserResponse(
+                1L, "testnick", null, "test@test.com", Provider.LOCAL,Role.USER, LocalDateTime.now()
         );
         AuthResult result = new AuthResult("mocked-access-token", "mocked-refresh-token", userProfile);
         given(authService.login(any())).willReturn(result);
@@ -184,10 +183,11 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.userId").value(1))
                 .andExpect(jsonPath("$.data.nickname").value("testnick"))
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
                 .andExpect(jsonPath("$.data.provider").value("LOCAL"))
+                .andExpect(jsonPath("$.data.role").value("USER"))
                 .andExpect(jsonPath("$.message").value("로그인 성공"));
 
         then(rq).should().setCookie("accessToken", "mocked-access-token", 60 * 60);

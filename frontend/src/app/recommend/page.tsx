@@ -14,7 +14,13 @@ import {
   Check,
   RotateCcw,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+
+const hotPlaces = [
+  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
+  { name: "성수동 카페거리", category: "카페", likes: 189 },
+  { name: "이태원 양식당", category: "양식", likes: 156 },
+];
 
 const categories = ["한식", "일식", "양식", "중식", "분식", "카페", "아시안", "피자", "치킨"];
 const categoryEmoji: Record<string, string> = {
@@ -93,11 +99,6 @@ const mockRecommendations = [
   },
 ];
 
-const recentLists = [
-  { title: "을지로 데이트 코스", author: "푸디맘", items: 4 },
-  { title: "혼밥 명당 모음", author: "혼밥러", items: 7 },
-];
-
 export default function RecommendPage() {
   const router = useRouter();
 
@@ -136,21 +137,24 @@ export default function RecommendPage() {
 
   return (
     <AppShell
-      rightSidebar={
-        <div className="space-y-5">
-          <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-            <p className="text-sm font-bold text-ink mb-3">최근 생성된 리스트</p>
-            <div className="space-y-3">
-              {recentLists.map((l) => (
-                <div key={l.title} className="rounded-xl bg-surface-soft p-3">
-                  <p className="text-sm font-bold text-ink">{l.title}</p>
-                  <p className="text-xs text-muted">
-                    by {l.author} · 식당 {l.items}개
-                  </p>
+      leftSidebar={
+        <div className="sticky top-28 space-y-5">
+          <SidebarProfile />
+          <SidebarCard title="오늘의 핫플">
+            <div className="space-y-4">
+              {hotPlaces.map((p, i) => (
+                <div key={p.name} className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="text-base font-bold text-ink">{p.name}</p>
+                    <p className="text-sm text-muted">{p.category} · 좋아요 {p.likes}</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </SidebarCard>
         </div>
       }
     >

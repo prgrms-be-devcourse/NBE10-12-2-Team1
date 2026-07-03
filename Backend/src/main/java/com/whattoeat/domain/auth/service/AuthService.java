@@ -1,7 +1,6 @@
 package com.whattoeat.domain.auth.service;
 
 import com.whattoeat.domain.auth.dto.*;
-import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
@@ -82,7 +81,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);
         saveRefreshToken(user.getId(), refreshToken);
-        return new AuthResult(accessToken, refreshToken, UserProfileResponse.from(user));
+        return new AuthResult(accessToken, refreshToken, AuthUserResponse.from(user));
     }
     public void logout(String token){
         long remaining = jwtUtil.getRemainingExpiration(token);
