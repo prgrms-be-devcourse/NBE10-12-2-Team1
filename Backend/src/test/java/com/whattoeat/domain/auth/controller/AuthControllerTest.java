@@ -164,7 +164,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("email")));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("loginId")));
     }
 
     // ========== POST /api/v1/auth/login ==========
