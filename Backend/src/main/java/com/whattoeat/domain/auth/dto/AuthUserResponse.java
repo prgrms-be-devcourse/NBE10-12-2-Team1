@@ -1,5 +1,6 @@
 package com.whattoeat.domain.auth.dto;
 
+import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 
@@ -10,6 +11,7 @@ public record AuthUserResponse(
         String nickname,
         String profileImage,
         String email,
+        Provider provider,
         Role role,
         LocalDateTime createTime
 ) {
@@ -19,6 +21,7 @@ public record AuthUserResponse(
                 user.getNickname(),
                 user.getProfileImage(),
                 user.getEmail(),
+                user.getProvider(),
                 user.getRole(),
                 user.getCreatedAt()
         );
