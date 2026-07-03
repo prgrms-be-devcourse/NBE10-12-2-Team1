@@ -1,15 +1,13 @@
 package com.whattoeat.domain.feedlike.controller;
 
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.whattoeat.domain.feed.entity.Feed;
-import com.whattoeat.domain.feedlike.entity.FeedLike;
+import com.whattoeat.domain.feedlike.dto.FeedLikeResponse;
 import com.whattoeat.domain.feedlike.service.FeedLikeService;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
@@ -75,49 +73,56 @@ class FeedLikeControllerTest {
 
     @Test
     void like_success() throws Exception {
-        FeedLike feedLike = createFeedLike(10L, 1L, 2L);
-        given(feedLikeService.like(1L, 2L)).willReturn(feedLike);
+        FeedLikeResponse response = FeedLikeResponse.of(2L, 1, true);
+        given(feedLikeService.like(1L, 2L)).willReturn(response);
 
         mockMvc.perform(post("/api/v1/feeds/2/like").with(userDetails(1L)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("좋아요를 눌렀습니다."))
-                .andExpect(jsonPath("$.data.feedLikeId").value(10L))
                 .andExpect(jsonPath("$.data.feedId").value(2L))
-                .andExpect(jsonPath("$.data.userId").value(1L))
-                .andExpect(jsonPath("$.data.createdAt").exists());
+                .andExpect(jsonPath("$.data.likeCount").value(1))
+                .andExpect(jsonPath("$.data.isLikedByMe").value(true));
     }
 
     @Test
     void unlike_success() throws Exception {
-        willDoNothing().given(feedLikeService).unlike(1L, 2L);
+        FeedLikeResponse response = FeedLikeResponse.of(2L, 0, false);
+        given(feedLikeService.unlike(1L, 2L)).willReturn(response);
 
         mockMvc.perform(delete("/api/v1/feeds/2/like").with(userDetails(1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("좋아요를 취소했습니다."));
+                .andExpect(jsonPath("$.message").value("좋아요를 취소했습니다."))
+                .andExpect(jsonPath("$.data.feedId").value(2L))
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.isLikedByMe").value(false));
     }
 
     @Test
     void isLiked_true() throws Exception {
-        given(feedLikeService.isLiked(1L, 2L)).willReturn(true);
+        FeedLikeResponse response = FeedLikeResponse.of(2L, 1, true);
+        given(feedLikeService.getLikeStatus(1L, 2L)).willReturn(response);
 
         mockMvc.perform(get("/api/v1/feeds/2/like").with(userDetails(1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.feedId").value(2L))
-                .andExpect(jsonPath("$.data.liked").value(true));
+                .andExpect(jsonPath("$.data.likeCount").value(1))
+                .andExpect(jsonPath("$.data.isLikedByMe").value(true));
     }
 
     @Test
     void isLiked_false() throws Exception {
-        given(feedLikeService.isLiked(1L, 2L)).willReturn(false);
+        FeedLikeResponse response = FeedLikeResponse.of(2L, 0, false);
+        given(feedLikeService.getLikeStatus(1L, 2L)).willReturn(response);
 
         mockMvc.perform(get("/api/v1/feeds/2/like").with(userDetails(1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.feedId").value(2L))
-                .andExpect(jsonPath("$.data.liked").value(false));
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.isLikedByMe").value(false));
     }
 
     @Test
@@ -172,23 +177,7 @@ class FeedLikeControllerTest {
         };
     }
 
-    private FeedLike createFeedLike(Long id, Long userId, Long feedId) {
-        FeedLike feedLike = FeedLike.of(createFeed(feedId), createUser(userId));
-        ReflectionTestUtils.setField(feedLike, "id", id);
-        ReflectionTestUtils.setField(feedLike, "createdAt", LocalDateTime.of(2026, 7, 2, 12, 0));
-        return feedLike;
-    }
 
-    private Feed createFeed(Long id) {
-        Feed feed = Feed.builder()
-                .user(createUser(100L))
-                .content("content")
-                .build();
-        ReflectionTestUtils.setField(feed, "id", id);
-        ReflectionTestUtils.setField(feed, "createdAt", LocalDateTime.of(2026, 7, 2, 12, 0));
-        ReflectionTestUtils.setField(feed, "updatedAt", LocalDateTime.of(2026, 7, 2, 12, 0));
-        return feed;
-    }
 
     private User createUser(Long id) {
         User user = User.builder()

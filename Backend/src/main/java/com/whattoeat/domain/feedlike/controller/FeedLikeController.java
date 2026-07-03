@@ -1,8 +1,6 @@
 package com.whattoeat.domain.feedlike.controller;
 
 import com.whattoeat.domain.feedlike.dto.FeedLikeResponse;
-import com.whattoeat.domain.feedlike.dto.FeedLikeStatusResponse;
-import com.whattoeat.domain.feedlike.entity.FeedLike;
 import com.whattoeat.domain.feedlike.service.FeedLikeService;
 import com.whattoeat.global.rsData.RsData;
 import com.whattoeat.global.security.CustomUserDetails;
@@ -28,24 +26,25 @@ public class FeedLikeController {
     public ResponseEntity<RsData<FeedLikeResponse>> like(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long feedId) {
-        FeedLike feedLike = feedLikeService.like(userDetails.getUserId(), feedId);
+        FeedLikeResponse response = feedLikeService.like(userDetails.getUserId(), feedId);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(RsData.success(FeedLikeResponse.from(feedLike), "좋아요를 눌렀습니다."));
+                .body(RsData.success(response, "좋아요를 눌렀습니다."));
     }
 
     @DeleteMapping
-    public ResponseEntity<RsData<Void>> unlike(
+    public ResponseEntity<RsData<FeedLikeResponse>> unlike(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long feedId) {
-        feedLikeService.unlike(userDetails.getUserId(), feedId);
-        return ResponseEntity.ok(RsData.success(null, "좋아요를 취소했습니다."));
+        FeedLikeResponse response = feedLikeService.unlike(userDetails.getUserId(), feedId);
+        return ResponseEntity.ok(RsData.success(response, "좋아요를 취소했습니다."));
     }
 
     @GetMapping
-    public ResponseEntity<RsData<FeedLikeStatusResponse>> isLiked(
+    public ResponseEntity<RsData<FeedLikeResponse>> isLiked(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long feedId) {
-        boolean liked = feedLikeService.isLiked(userDetails.getUserId(), feedId);
-        return ResponseEntity.ok(RsData.success(FeedLikeStatusResponse.of(feedId, liked)));
+        FeedLikeResponse response = feedLikeService.getLikeStatus(userDetails.getUserId(), feedId);
+
+        return ResponseEntity.ok(RsData.success(response));
     }
 }

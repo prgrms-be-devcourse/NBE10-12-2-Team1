@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.repository.FeedRepository;
-import com.whattoeat.domain.feedlike.entity.FeedLike;
+import com.whattoeat.domain.feedlike.dto.FeedLikeResponse;
 import com.whattoeat.domain.feedlike.repository.FeedLikeRepository;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
@@ -50,11 +50,11 @@ class FeedLikeServiceTest {
         User user = saveUser("user");
         Feed feed = saveFeed(user, "content");
 
-        FeedLike feedLike = feedLikeService.like(user.getId(), feed.getId());
+        FeedLikeResponse response = feedLikeService.like(user.getId(), feed.getId());
 
-        assertThat(feedLike.getId()).isNotNull();
-        assertThat(feedLike.getUser().getId()).isEqualTo(user.getId());
-        assertThat(feedLike.getFeed().getId()).isEqualTo(feed.getId());
+        assertThat(response.feedId()).isEqualTo(feed.getId());
+        assertThat(response.likeCount()).isEqualTo(1);
+        assertThat(response.isLikedByMe()).isTrue();
         assertThat(feedLikeRepository.existsByFeed_IdAndUser_Id(feed.getId(), user.getId()))
                 .isTrue();
     }
@@ -78,8 +78,11 @@ class FeedLikeServiceTest {
         Feed feed = saveFeed(user, "content");
         feedLikeService.like(user.getId(), feed.getId());
 
-        feedLikeService.unlike(user.getId(), feed.getId());
+        FeedLikeResponse response = feedLikeService.unlike(user.getId(), feed.getId());
 
+        assertThat(response.feedId()).isEqualTo(feed.getId());
+        assertThat(response.likeCount()).isEqualTo(0);
+        assertThat(response.isLikedByMe()).isFalse();
         assertThat(feedLikeRepository.existsByFeed_IdAndUser_Id(feed.getId(), user.getId()))
                 .isFalse();
     }
@@ -96,26 +99,30 @@ class FeedLikeServiceTest {
     }
 
     @Test
-    @DisplayName("is liked returns true")
-    void isLikedTrue() {
+    @DisplayName("like status returns true")
+    void getLikeStatusTrue() {
         User user = saveUser("user");
         Feed feed = saveFeed(user, "content");
         feedLikeService.like(user.getId(), feed.getId());
 
-        boolean liked = feedLikeService.isLiked(user.getId(), feed.getId());
+        FeedLikeResponse response = feedLikeService.getLikeStatus(user.getId(), feed.getId());
 
-        assertThat(liked).isTrue();
+        assertThat(response.feedId()).isEqualTo(feed.getId());
+        assertThat(response.likeCount()).isEqualTo(1);
+        assertThat(response.isLikedByMe()).isTrue();
     }
 
     @Test
-    @DisplayName("is liked returns false")
-    void isLikedFalse() {
+    @DisplayName("like status returns false")
+    void getLikeStatusFalse() {
         User user = saveUser("user");
         Feed feed = saveFeed(user, "content");
 
-        boolean liked = feedLikeService.isLiked(user.getId(), feed.getId());
+        FeedLikeResponse response = feedLikeService.getLikeStatus(user.getId(), feed.getId());
 
-        assertThat(liked).isFalse();
+        assertThat(response.feedId()).isEqualTo(feed.getId());
+        assertThat(response.likeCount()).isEqualTo(0);
+        assertThat(response.isLikedByMe()).isFalse();
     }
 
     @Test

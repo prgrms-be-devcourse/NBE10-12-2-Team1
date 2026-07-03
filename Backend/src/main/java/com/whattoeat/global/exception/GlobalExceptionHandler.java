@@ -63,7 +63,6 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, message));
     }
 
-
     // 팔로우 관계를 찾지 못한 경우 404 반환
     @ExceptionHandler(FollowNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleFollowNotFound(FollowNotFoundException e) {
