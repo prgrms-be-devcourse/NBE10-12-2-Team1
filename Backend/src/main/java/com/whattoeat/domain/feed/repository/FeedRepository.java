@@ -10,6 +10,8 @@ import java.util.List;
 
 
 public interface FeedRepository extends JpaRepository<Feed, Long> {
+    Page<Feed> findAllByOrderByIdDesc(Pageable pageable);
+
     Page<Feed> findByUserId(Long userId, Pageable pageable);
     Page<Feed> findByRestaurantId(Long restaurantId, Pageable pageable);
 

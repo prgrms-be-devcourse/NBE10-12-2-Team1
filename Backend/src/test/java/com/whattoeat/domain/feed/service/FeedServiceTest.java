@@ -107,7 +107,7 @@ public class FeedServiceTest {
         Feed feed1 = Feed.builder().user(user).content("맛집1").build();
         Feed feed2 = Feed.builder().user(user).content("맛집2").build();
         PageRequest pageable = PageRequest.of(0, 10);
-        given(feedRepository.findAll(pageable))
+        given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
@@ -120,7 +120,7 @@ public class FeedServiceTest {
     @DisplayName("피드 목록 조회 - 빈 결과")
     public void getFeed_empty() {
         PageRequest pageable = PageRequest.of(0, 10);
-        given(feedRepository.findAll(pageable))
+        given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(), pageable, 0));
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
