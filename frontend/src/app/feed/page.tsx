@@ -4,7 +4,13 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+
+const recommendFoodies = [
+  { id: "user5", name: "푸디맘", handle: "@foodimom", img: "user5" },
+  { id: "user6", name: "카페인 중독", handle: "@cafeholic", img: "user6" },
+  { id: "user7", name: "맛집 탐험가", handle: "@foodtrip", img: "user7" },
+];
 
 const feedPosts = [
   {
@@ -91,7 +97,31 @@ function FeedContent() {
   };
 
   return (
-    <AppShell>
+    <AppShell
+      leftSidebar={
+        <div className="sticky top-28 space-y-5">
+          <SidebarProfile />
+          <SidebarCard title="추천 푸디">
+            <div className="space-y-4">
+              {recommendFoodies.map((f) => (
+                <Link key={f.id} href={`/profile/${f.id}`} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <img src={`https://picsum.photos/seed/${f.img}/60/60`} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    <div>
+                      <p className="text-base font-bold text-ink group-hover:text-primary transition-colors">{f.name}</p>
+                      <p className="text-sm text-muted-soft">{f.handle}</p>
+                    </div>
+                  </div>
+                  <button className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-bold text-white hover:bg-primary-active transition-colors">
+                    팔로우
+                  </button>
+                </Link>
+              ))}
+            </div>
+          </SidebarCard>
+        </div>
+      }
+    >
       <div className="space-y-5">
         {/* Page header */}
         <div className="flex items-center justify-between">

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Search, MapPin, Navigation } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+
+const hotPlaces = [
+  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
+  { name: "성수동 카페거리", category: "카페", likes: 189 },
+  { name: "이태원 양식당", category: "양식", likes: 156 },
+];
 
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
 
@@ -49,7 +55,28 @@ export default function SearchPage() {
   const filtered = activeCategory === "전체" ? mockResults : mockResults.filter((r) => r.category === activeCategory);
 
   return (
-    <AppShell>
+    <AppShell
+      leftSidebar={
+        <div className="sticky top-28 space-y-5">
+          <SidebarProfile />
+          <SidebarCard title="오늘의 핫플">
+            <div className="space-y-4">
+              {hotPlaces.map((p, i) => (
+                <div key={p.name} className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="text-base font-bold text-ink">{p.name}</p>
+                    <p className="text-sm text-muted">{p.category} · 좋아요 {p.likes}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SidebarCard>
+        </div>
+      }
+    >
       <div className="relative h-[calc(100vh-6.5rem)] overflow-hidden rounded-2xl border border-hairline-soft">
         {/* Map — full main background */}
         <div className="absolute inset-0 flex items-center justify-center bg-surface-strong">

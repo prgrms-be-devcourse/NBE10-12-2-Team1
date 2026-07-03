@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Bookmark, GripVertical, Trash2 } from "lucide-react";
-import AppShell from "@/components/AppShell";
+import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+
+const recentLists = [
+  { id: 10, title: "을지로 데이트 코스", author: "푸디맘", moodTag: "데이트", itemCount: 4 },
+  { id: 11, title: "혼밥 명당 모음", author: "혼밥러", moodTag: "혼밥", itemCount: 7 },
+  { id: 12, title: "성수동 브런치", author: "브런치퀸", moodTag: "데이트", itemCount: 4 },
+];
 
 const myLists = [
   { id: 1, title: "을지로 데이트 코스", description: "분위기 좋은 을지로 맛집 모음", moodTag: "데이트", itemCount: 4, savedCount: 23, seed: "date" },
@@ -30,22 +36,35 @@ export default function ListsPage() {
 
   return (
     <AppShell
-      rightSidebar={
-        <div className="space-y-5">
-          <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-            <p className="text-sm font-bold text-ink mb-3">인기 맛집 리스트</p>
-            <div className="space-y-3">
+      leftSidebar={
+        <div className="sticky top-28 space-y-5">
+          <SidebarProfile />
+          <SidebarCard title="인기 맛집 리스트">
+            <div className="space-y-4">
               {publicLists.map((l) => (
-                <div key={l.id} className="rounded-xl bg-surface-soft p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-ink">{l.title}</p>
-                    <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{l.moodTag}</span>
+                <div key={l.id} className="rounded-xl bg-surface-soft p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-base font-bold text-ink">{l.title}</p>
+                    <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{l.moodTag}</span>
                   </div>
-                  <p className="text-xs text-muted mt-1">by {l.author} · 식당 {l.itemCount}개</p>
+                  <p className="text-sm text-muted mt-1.5">by {l.author} · 식당 {l.itemCount}개</p>
                 </div>
               ))}
             </div>
-          </div>
+          </SidebarCard>
+          <SidebarCard title="최근 생성된 리스트">
+            <div className="space-y-4">
+              {recentLists.map((l) => (
+                <div key={l.id} className="rounded-xl bg-surface-soft p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-base font-bold text-ink">{l.title}</p>
+                    <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{l.moodTag}</span>
+                  </div>
+                  <p className="text-sm text-muted mt-1.5">by {l.author} · 식당 {l.itemCount}개</p>
+                </div>
+              ))}
+            </div>
+          </SidebarCard>
         </div>
       }
     >
@@ -58,7 +77,7 @@ export default function ListsPage() {
           </button>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+        <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
           {/* My lists */}
           <div className="space-y-3">
             <p className="text-sm font-bold text-muted">내 리스트</p>
@@ -66,65 +85,74 @@ export default function ListsPage() {
               <button
                 key={list.id}
                 onClick={() => setSelectedId(list.id)}
-                className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                className={`w-full rounded-2xl border p-5 text-left transition-all ${
                   selectedId === list.id
                     ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
                     : "border-hairline-soft bg-surface hover:bg-surface-soft"
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-base font-bold text-ink">{list.title}</p>
-                    <p className="mt-1 text-xs text-muted line-clamp-1">{list.description}</p>
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
+                    <img
+                      src={`https://picsum.photos/seed/${list.seed}/120/120`}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink shrink-0">{list.moodTag}</span>
-                </div>
-                <div className="mt-3 flex items-center gap-3 text-xs text-muted-soft">
-                  <span>식당 {list.itemCount}개</span>
-                  <span>저장 {list.savedCount}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-base font-bold text-ink truncate">{list.title}</p>
+                      <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{list.moodTag}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
+                    <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
+                      <span>식당 {list.itemCount}개</span>
+                      <span>저장 {list.savedCount}</span>
+                    </div>
+                  </div>
                 </div>
               </button>
             ))}
           </div>
 
           {/* Selected list detail */}
-          <div className="rounded-2xl bg-surface p-5 border border-hairline-soft min-h-[500px]">
+          <div className="rounded-2xl bg-surface p-6 border border-hairline-soft min-h-[520px]">
             {selectedList ? (
               <>
-                <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-4">
+                <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-5">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-ink">{selectedList.title}</h3>
-                      <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{selectedList.moodTag}</span>
+                      <h3 className="text-xl font-bold text-ink">{selectedList.title}</h3>
+                      <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">{selectedList.moodTag}</span>
                     </div>
-                    <p className="mt-1 text-sm text-muted">{selectedList.description}</p>
+                    <p className="mt-1.5 text-base text-muted">{selectedList.description}</p>
                   </div>
-                  <button className="flex items-center gap-1 rounded-lg bg-surface-soft px-3 py-1.5 text-xs font-bold text-muted hover:text-ink transition-colors">
-                    <Bookmark className="h-3.5 w-3.5" />
+                  <button className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors">
+                    <Bookmark className="h-4 w-4" />
                     저장
                   </button>
                 </div>
 
-                <div className="mt-5 space-y-3">
+                <div className="mt-6 space-y-4">
                   {selectedListItems.map((item, idx) => (
-                    <div key={item.id} className="flex items-start gap-3 rounded-xl border border-hairline-soft bg-surface-soft p-3">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    <div key={item.id} className="flex items-start gap-4 rounded-xl border border-hairline-soft bg-surface-soft p-4">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                         {idx + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-ink">{item.name}</p>
-                        <p className="mt-1 text-xs text-muted line-clamp-2">{item.memo}</p>
+                        <p className="text-base font-bold text-ink">{item.name}</p>
+                        <p className="mt-1 text-sm text-muted line-clamp-2">{item.memo}</p>
                       </div>
                       <div className="flex items-center gap-1 text-muted">
-                        <button className="p-1 hover:text-primary"><GripVertical className="h-3.5 w-3.5" /></button>
-                        <button className="p-1 hover:text-primary"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <button className="p-1 hover:text-primary"><GripVertical className="h-4 w-4" /></button>
+                        <button className="p-1 hover:text-primary"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <p className="py-20 text-center text-sm text-muted">리스트를 선택해주세요</p>
+              <p className="py-20 text-center text-base text-muted">리스트를 선택해주세요</p>
             )}
           </div>
         </div>
