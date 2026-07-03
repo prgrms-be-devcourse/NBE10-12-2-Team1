@@ -20,7 +20,6 @@ import com.whattoeat.global.exception.ListNotFoundException;
 import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
