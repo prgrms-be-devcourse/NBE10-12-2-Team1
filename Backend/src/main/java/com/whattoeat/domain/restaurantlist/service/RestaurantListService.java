@@ -109,7 +109,7 @@ public class RestaurantListService {
             String memo
     ) {
         // 식당 있는지 확인
-        restaurantListRepository.findById(listId)
+        restaurantListRepository.findByIdAndUserId(listId, userId)
                 .orElseThrow(() -> new ListNotFoundException(listId));
 
         RestaurantListItem item =  restaurantListItemRepository.findListItem(itemId, listId, userId)
@@ -177,9 +177,10 @@ public class RestaurantListService {
             );
 
             restaurantListItemRepository.save(copyListItem);
-            restaurantListItemRepository.flush();
-            entityManager.clear();
         }
+        restaurantListItemRepository.flush();
+        entityManager.clear();
+
         return restaurantListRepository.findByIdWithItems(copyList.getId())
                 .orElseThrow(() -> new ListNotFoundException(copyList.getId()));
     }

@@ -20,8 +20,11 @@ import com.whattoeat.global.exception.ListNotFoundException;
 import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +36,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class RestaurantListItemServiceTest {
+    @Mock
+    private EntityManager entityManager;
 
     @Mock
     private RestaurantListRepository restaurantListRepository;
@@ -183,7 +188,7 @@ class RestaurantListItemServiceTest {
                 1
         );
 
-        given(restaurantListRepository.findById(1L))
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
                 .willReturn(Optional.of(restaurantList));
 
         given(restaurantListItemRepository.findListItem(100L, 1L, 1L))
@@ -204,7 +209,7 @@ class RestaurantListItemServiceTest {
 
     @Test
     void updateItem_리스트가_없으면_예외발생() {
-        given(restaurantListRepository.findById(999L))
+        given(restaurantListRepository.findByIdAndUserId(999L, 1L))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> restaurantListService.updateItem(
@@ -222,7 +227,7 @@ class RestaurantListItemServiceTest {
         User user = createUser();
         RestaurantList restaurantList = createRestaurantList(1L, user);
 
-        given(restaurantListRepository.findById(1L))
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
                 .willReturn(Optional.of(restaurantList));
 
         given(restaurantListItemRepository.findListItem(999L, 1L, 1L))
@@ -268,6 +273,7 @@ class RestaurantListItemServiceTest {
         // given
         Long userId = 1L;
         Long originalListId = 10L;
+        Long copyListId = 20L;
 
         User user = Mockito.mock(User.class);
 
@@ -277,6 +283,9 @@ class RestaurantListItemServiceTest {
         given(originalList.getMoodTag()).willReturn(MoodTag.SOLO);
 
         RestaurantList savedCopyList = Mockito.mock(RestaurantList.class);
+        given(savedCopyList.getId()).willReturn(copyListId);
+
+        RestaurantList fetchedCopyList = Mockito.mock(RestaurantList.class);
 
         Restaurant restaurant = Mockito.mock(Restaurant.class);
 
@@ -288,19 +297,21 @@ class RestaurantListItemServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(restaurantListRepository.findById(originalListId)).willReturn(Optional.of(originalList));
         given(restaurantListRepository.save(any(RestaurantList.class))).willReturn(savedCopyList);
-        given(restaurantListItemRepository.findItemsByListId(originalListId))
-                .willReturn(List.of(originalItem));
+        given(restaurantListItemRepository.findItemsByListId(originalListId)).willReturn(List.of(originalItem));
+        given(restaurantListRepository.findByIdWithItems(copyListId)).willReturn(Optional.of(fetchedCopyList));
 
-        ArgumentCaptor<RestaurantListItem> itemCaptor =
-                ArgumentCaptor.forClass(RestaurantListItem.class);
+        ArgumentCaptor<RestaurantListItem> itemCaptor = ArgumentCaptor.forClass(RestaurantListItem.class);
 
         // when
         RestaurantList result = restaurantListService.copyList(userId, originalListId);
 
         // then
-        assertThat(result).isEqualTo(savedCopyList);
+        assertThat(result).isEqualTo(fetchedCopyList);
 
         verify(restaurantListItemRepository).save(itemCaptor.capture());
+        verify(restaurantListItemRepository).flush();
+        verify(entityManager).clear();
+        verify(restaurantListRepository).findByIdWithItems(copyListId);
 
         RestaurantListItem copiedItem = itemCaptor.getValue();
 

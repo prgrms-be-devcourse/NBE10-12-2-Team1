@@ -163,4 +163,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ErrorResponse.of(HttpStatus.BAD_GATEWAY, e.getMessage()));
     }
+
+    // 맛집 리스트 아이템을 찾지 못한 경우 404 반환
+    @ExceptionHandler(RestaurantListItemNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRestaurantListItemNotFound(RestaurantListItemNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
+    // 맛집 리스트에 이미 같은 식당이 있는 경우 409 반환
+    @ExceptionHandler(DuplicateRestaurantListItemException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateRestaurantListItem(DuplicateRestaurantListItemException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
+    }
 }

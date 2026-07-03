@@ -22,6 +22,8 @@ import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.exception.UserNotFoundException;
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +38,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class RestaurantListServiceTest {
+    @Mock
+    private EntityManager entityManager;
 
     @Mock
     private RestaurantListRepository restaurantListRepository;
@@ -270,7 +274,7 @@ class RestaurantListServiceTest {
                 restaurant
         );
 
-        given(restaurantListRepository.findById(1L))
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
                 .willReturn(Optional.of(restaurantList));
 
         given(restaurantListItemRepository.findListItem(1L, 1L, 1L))
@@ -290,7 +294,7 @@ class RestaurantListServiceTest {
 
     @Test
     void updateItem_리스트가_없으면_예외() {
-        given(restaurantListRepository.findById(999L))
+        given(restaurantListRepository.findByIdAndUserId(999L, 1L))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> restaurantListService.updateItem(
@@ -308,7 +312,7 @@ class RestaurantListServiceTest {
         User user = Mockito.mock(User.class);
         RestaurantList restaurantList = createRestaurantList(1L, user);
 
-        given(restaurantListRepository.findById(1L))
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
                 .willReturn(Optional.of(restaurantList));
 
         given(restaurantListItemRepository.findListItem(999L, 1L, 1L))
@@ -329,6 +333,7 @@ class RestaurantListServiceTest {
         // given
         Long userId = 1L;
         Long originalListId = 10L;
+        Long copyListId = 20L;
 
         User user = Mockito.mock(User.class);
 
@@ -338,6 +343,9 @@ class RestaurantListServiceTest {
         given(originalList.getMoodTag()).willReturn(MoodTag.SOLO);
 
         RestaurantList savedCopyList = Mockito.mock(RestaurantList.class);
+        given(savedCopyList.getId()).willReturn(copyListId);
+
+        RestaurantList fetchedCopyList = Mockito.mock(RestaurantList.class);
 
         Restaurant restaurant1 = Mockito.mock(Restaurant.class);
         Restaurant restaurant2 = Mockito.mock(Restaurant.class);
@@ -355,25 +363,24 @@ class RestaurantListServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(restaurantListRepository.findById(originalListId)).willReturn(Optional.of(originalList));
-
-        given(restaurantListRepository.save(any(RestaurantList.class)))
-                .willReturn(savedCopyList);
-
-        given(restaurantListItemRepository.findItemsByListId(originalListId))
-                .willReturn(List.of(originalItem1, originalItem2));
+        given(restaurantListRepository.save(any(RestaurantList.class))).willReturn(savedCopyList);
+        given(restaurantListItemRepository.findItemsByListId(originalListId)).willReturn(List.of(originalItem1, originalItem2));
+        given(restaurantListRepository.findByIdWithItems(copyListId)).willReturn(Optional.of(fetchedCopyList));
 
         // when
         RestaurantList result = restaurantListService.copyList(userId, originalListId);
 
         // then
-        assertThat(result).isEqualTo(savedCopyList);
+        assertThat(result).isEqualTo(fetchedCopyList);
 
         verify(userRepository).findById(userId);
         verify(restaurantListRepository).findById(originalListId);
         verify(restaurantListRepository).save(any(RestaurantList.class));
-
         verify(restaurantListItemRepository).findItemsByListId(originalListId);
         verify(restaurantListItemRepository, times(2)).save(any(RestaurantListItem.class));
+        verify(restaurantListItemRepository).flush();
+        verify(entityManager).clear();
+        verify(restaurantListRepository).findByIdWithItems(copyListId);
     }
 
     @Test
