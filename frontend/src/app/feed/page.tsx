@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
@@ -88,7 +88,6 @@ function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") === "recommended" ? "recommended" : "following";
-  const [sortBy, setSortBy] = useState("최신순");
 
   const posts = activeTab === "following" ? feedPosts : recommendedPosts;
 
@@ -150,23 +149,13 @@ function FeedContent() {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-hidden"
-            >
-              <option>최신순</option>
-              <option>인기순</option>
-            </select>
-            <Link
-              href="/feed/write"
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              글쓰기
-            </Link>
-          </div>
+          <Link
+            href="/feed/write"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            글쓰기
+          </Link>
         </div>
 
         {/* Feed cards */}
