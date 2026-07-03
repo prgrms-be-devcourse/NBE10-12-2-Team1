@@ -61,11 +61,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/reissue",
+                                "/api/v1/auth/logout",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**")
                         .permitAll()
-                        .requestMatchers("/api/v1/auth/logout").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

@@ -67,7 +67,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "/api/v1/auth/reissue".equals(request.getRequestURI());
+        String path = request.getRequestURI();
+        return "/api/v1/auth/reissue".equals(path) || "/api/v1/auth/logout".equals(path);
     }
 
     private void sendErrorResponse(HttpServletResponse response, String message) throws IOException {
