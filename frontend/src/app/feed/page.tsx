@@ -78,18 +78,6 @@ const recommendedPosts = [
   },
 ];
 
-const recommendFoodies = [
-  { id: "user5", name: "푸디맘", handle: "@foodimom", img: "user5" },
-  { id: "user6", name: "카페인 중독", handle: "@cafeholic", img: "user6" },
-  { id: "user7", name: "맛집 탐험가", handle: "@foodtrip", img: "user7" },
-];
-
-const hotPlaces = [
-  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
-  { name: "성수동 카페거리", category: "카페", likes: 189 },
-  { name: "이태원 양식당", category: "양식", likes: 156 },
-];
-
 function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,7 +91,7 @@ function FeedContent() {
   };
 
   return (
-    <AppShell rightSidebar={<RightSidebar />}>
+    <AppShell>
       <div className="space-y-5">
         {/* Page header */}
         <div className="flex items-center justify-between">
@@ -232,7 +220,7 @@ export default function FeedPage() {
   return (
     <Suspense
       fallback={
-        <AppShell rightSidebar={<RightSidebar />}>
+        <AppShell>
           <div className="space-y-5">
             <div className="h-10 w-40 rounded-lg bg-surface-soft animate-pulse" />
             <div className="space-y-4">
@@ -248,47 +236,3 @@ export default function FeedPage() {
   );
 }
 
-export function RightSidebar() {
-  return (
-    <div className="space-y-5">
-      {/* Recommend Foodies */}
-      <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-        <p className="text-sm font-bold text-ink mb-3">추천 푸디</p>
-        <div className="space-y-3">
-          {recommendFoodies.map((f) => (
-            <Link key={f.id} href={`/profile/${f.id}`} className="flex items-center justify-between group">
-              <div className="flex items-center gap-2.5">
-                <img src={`https://picsum.photos/seed/${f.img}/60/60`} alt="" className="h-8 w-8 rounded-full object-cover" />
-                <div>
-                  <p className="text-sm font-bold text-ink group-hover:text-primary transition-colors">{f.name}</p>
-                  <p className="text-xs text-muted-soft">{f.handle}</p>
-                </div>
-              </div>
-              <button className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white hover:bg-primary-active transition-colors">
-                팔로우
-              </button>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Hot Places */}
-      <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
-        <p className="text-sm font-bold text-ink mb-3">오늘의 핫플</p>
-        <div className="space-y-3">
-          {hotPlaces.map((p, i) => (
-            <div key={p.name} className="flex items-start gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                {i + 1}
-              </span>
-              <div>
-                <p className="text-sm font-bold text-ink">{p.name}</p>
-                <p className="text-xs text-muted">{p.category} · 좋아요 {p.likes}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
