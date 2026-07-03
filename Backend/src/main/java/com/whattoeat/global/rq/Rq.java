@@ -16,8 +16,14 @@ public class Rq {
     private final HttpServletRequest request;
     private final HttpServletResponse response;
 
+    // 배포시(https사용)엔 application.yaml에서 cookie: secure: true 변경 필요
     @Value("${cookie.secure:false}")
     private boolean secure;
+
+    // 배포시엔 application.yaml에서 cookie: same-site: Strict, Lax , None 선택 필요
+    // 프론트/백이 같은 도메인이면 strict, Lax. 프론트/백이 완전 다르면 None 선택
+    @Value("${cookie.same-site:Lax}")
+    private String cookieSameSite;
 
     public String getCookieValue(String name, String defaultValue) {
         return Arrays.stream(Optional.ofNullable(request.getCookies()).orElse(new Cookie[0]))
@@ -39,6 +45,7 @@ public class Rq {
         cookie.setSecure(secure);
         cookie.setPath("/");
         cookie.setMaxAge(value.isBlank() ? 0 : maxAge);
+        cookie.setAttribute("SameSite", cookieSameSite);
         response.addCookie(cookie);
     }
 
