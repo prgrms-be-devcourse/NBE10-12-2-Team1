@@ -17,6 +17,7 @@ import com.whattoeat.domain.user.entity.Role;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @Profile("dev")
 @RequiredArgsConstructor
-public class BaseInitData {
+public class BaseInitData implements CommandLineRunner {
     private final UserRepository userRepository;
     private final RestaurantRepository  restaurantRepository;
     private final FeedRepository feedRepository;
@@ -163,7 +164,6 @@ public class BaseInitData {
 
         Feed f5 = feedRepository.save(Feed.builder()
                 .user(user4).restaurant(r5)
-                .content("성수 아시안 음식점, 친구들이랑 가기 좋아요.")
                 .content("성수 아시안 음식점, 친구들이랑 가기 좋아요.")
                 .build());
 
