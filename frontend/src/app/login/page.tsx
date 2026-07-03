@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, Map, List, Sparkles, ChevronRight } from "lucide-react";
+import { MessageCircle, Map, List, Sparkles } from "lucide-react";
 
 type Tab = "kakao" | "email";
 type Mode = "login" | "signup";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 const hotPlaces = [
   { name: "을지로 순대곱창", category: "한식", distance: "120m", seed: "euljiro" },
@@ -25,24 +27,68 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<Tab>("kakao");
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLoginSuccess = () => {
+    localStorage.setItem("isLoggedIn", "true");
+    window.dispatchEvent(new Event("login-state-change"));
+    router.push("/feed");
+  };
 
   const handleKakaoLogin = () => {
     setLoading(true);
-    setTimeout(() => {
-      localStorage.setItem("isLoggedIn", "true");
-      window.dispatchEvent(new Event("login-state-change"));
-      router.push("/feed");
-    }, 800);
+    window.location.href = `${API_BASE}/oauth2/authorization/kakao`;
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (mode === "signup" && password !== passwordConfirm) {
+      setError("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      localStorage.setItem("isLoggedIn", "true");
-      window.dispatchEvent(new Event("login-state-change"));
-      router.push("/feed");
-    }, 800);
+
+    const url =
+      mode === "login"
+        ? `${API_BASE}/api/v1/auth/login`
+        : `${API_BASE}/api/v1/auth/signup`;
+
+    const body: Record<string, string> = { loginId, password };
+    if (mode === "signup") {
+      body.nickname = nickname;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok && result.success) {
+        handleLoginSuccess();
+      } else {
+        const message = result.message || "로그인/회원가입에 실패했습니다.";
+        setError(message);
+        alert(message);
+      }
+    } catch {
+      const message = "서버와 통신 중 오류가 발생했습니다.";
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -156,6 +202,8 @@ export default function LoginPage() {
                   <input
                     type="text"
                     placeholder="푸디 닉네임"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
                     required
                   />
@@ -166,6 +214,8 @@ export default function LoginPage() {
                 <input
                   type="email"
                   placeholder="email@example.com"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
                   required
                 />
@@ -175,10 +225,26 @@ export default function LoginPage() {
                 <input
                   type="password"
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
                   required
                 />
               </div>
+              {mode === "signup" && (
+                <div>
+                  <label className="text-xs font-bold text-muted">비밀번호 확인</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                    required
+                  />
+                </div>
+              )}
+              {error && <p className="text-center text-sm text-red-500">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
@@ -190,7 +256,10 @@ export default function LoginPage() {
                 {mode === "login" ? "아직 계정이 없으신가요?" : "이미 계정이 있으신가요?"}{" "}
                 <button
                   type="button"
-                  onClick={() => setMode(mode === "login" ? "signup" : "login")}
+                  onClick={() => {
+                    setMode(mode === "login" ? "signup" : "login");
+                    setError("");
+                  }}
                   className="font-bold text-primary hover:underline"
                 >
                   {mode === "login" ? "회원가입" : "로그인"}
