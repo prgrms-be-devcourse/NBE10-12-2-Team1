@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Bookmark, GripVertical, Trash2 } from "lucide-react";
+import { Plus, Bookmark, GripVertical, Trash2, X } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
@@ -46,27 +46,39 @@ export default function ListsPage() {
   const [selectedDetail, setSelectedDetail] = useState<ListDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newMoodTag, setNewMoodTag] = useState("DATE");
+  const [copying, setCopying] = useState(false);
+
+  const moodTags = ["DATE", "FRIENDS", "FAMILY", "SOLO"];
+
+  const loadLists = async () => {
+    const [myRes, publicRes] = await Promise.all([
+      apiFetchJson<ListSummary[]>("/api/v1/lists"),
+      apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
+    ]);
+
+    let my: ListSummary[] = [];
+    if (myRes.ok && myRes.data) {
+      my = myRes.data;
+      setMyLists(my);
+    }
+
+    if (publicRes.ok && publicRes.data) {
+      setPublicLists(publicRes.data);
+    }
+
+    return my;
+  };
 
   useEffect(() => {
     const load = async () => {
-      const [myRes, publicRes] = await Promise.all([
-        apiFetchJson<ListSummary[]>("/api/v1/lists"),
-        apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
-      ]);
-
-      if (myRes.ok && myRes.data) {
-        setMyLists(myRes.data);
-        if (myRes.data.length > 0 && selectedId === null) {
-          setSelectedId(myRes.data[0].id);
-        }
-      } else {
-        setError(myRes.message || "내 리스트를 불러오지 못했습니다.");
+      const my = await loadLists();
+      if (my.length > 0 && selectedId === null) {
+        setSelectedId(my[0].id);
       }
-
-      if (publicRes.ok && publicRes.data) {
-        setPublicLists(publicRes.data);
-      }
-
       setLoading(false);
     };
 
@@ -76,20 +88,88 @@ export default function ListsPage() {
   useEffect(() => {
     if (!selectedId) return;
 
+    const isMine = myLists.some((l) => l.id === selectedId);
+
     const loadDetail = async () => {
       setSelectedDetail(null);
-      const res = await apiFetchJson<ListDetail>(`/api/v1/lists/all/${selectedId}`);
+      const res = await apiFetchJson<ListDetail>(
+        isMine ? `/api/v1/lists/${selectedId}` : `/api/v1/lists/all/${selectedId}`
+      );
       if (res.ok && res.data) {
         setSelectedDetail(res.data);
       }
     };
 
     loadDetail();
-  }, [selectedId]);
+  }, [selectedId, myLists]);
 
   const recentLists = [...publicLists].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    const res = await apiFetchJson<ListSummary>("/api/v1/lists", {
+      method: "POST",
+      body: JSON.stringify({
+        title: newTitle.trim(),
+        description: newDescription.trim(),
+        moodTag: newMoodTag,
+      }),
+    });
+
+    if (res.ok && res.data) {
+      setNewTitle("");
+      setNewDescription("");
+      setNewMoodTag("DATE");
+      setShowCreateModal(false);
+      const my = await loadLists();
+      setSelectedId(res.data.id);
+      if (my.length === 0) {
+        // 새로 생성된 리스트가 첫 항목이면 즉시 선택
+        setSelectedId(res.data.id);
+      }
+    } else {
+      alert(res.message || "리스트 생성에 실패했습니다.");
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!selectedDetail) return;
+    setCopying(true);
+    const res = await apiFetchJson<ListDetail>(`/api/v1/lists/${selectedDetail.listId}/copy`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const my = await loadLists();
+      if (res.data) {
+        setSelectedId(res.data.listId);
+      }
+      alert("내 리스트에 저장되었습니다.");
+    } else {
+      alert(res.message || "리스트 저장에 실패했습니다.");
+    }
+    setCopying(false);
+  };
+
+  const handleDeleteItem = async (item: ListItem) => {
+    if (!selectedDetail) return;
+    if (!confirm("식당을 리스트에서 삭제할까요?")) return;
+
+    const res = await apiFetchJson(`/api/v1/lists/${selectedDetail.listId}/items/${item.id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      setSelectedDetail((prev) =>
+        prev ? { ...prev, items: prev.items.filter((i) => i.id !== item.id) } : null
+      );
+    } else {
+      alert(res.message || "삭제에 실패했습니다.");
+    }
+  };
 
   return (
     <AppShell
@@ -128,7 +208,10 @@ export default function ListsPage() {
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-ink">맛집 리스트</h2>
-          <button className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-active transition-colors">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+          >
             <Plus className="h-4 w-4" />
             리스트 만들기
           </button>
@@ -195,9 +278,13 @@ export default function ListsPage() {
                       </div>
                       <p className="mt-1.5 text-base text-muted">{selectedDetail.description}</p>
                     </div>
-                    <button className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors">
+                    <button
+                      onClick={handleCopy}
+                      disabled={copying}
+                      className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
+                    >
                       <Bookmark className="h-4 w-4" />
-                      저장
+                      {copying ? "저장 중..." : "저장"}
                     </button>
                   </div>
 
@@ -213,7 +300,7 @@ export default function ListsPage() {
                         </div>
                         <div className="flex items-center gap-1 text-muted">
                           <button className="p-1 hover:text-primary"><GripVertical className="h-4 w-4" /></button>
-                          <button className="p-1 hover:text-primary"><Trash2 className="h-4 w-4" /></button>
+                          <button onClick={() => handleDeleteItem(item)} className="p-1 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </div>
                     ))}
@@ -226,6 +313,76 @@ export default function ListsPage() {
           </div>
         )}
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl animate-in fade-in-50 zoom-in-95">
+            <div className="flex items-center justify-between border-b border-hairline-soft pb-3">
+              <h3 className="text-base font-bold text-ink">새 맛집 리스트</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-ink">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">제목</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="예: 을지로 데이트 코스"
+                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">설명</label>
+                <input
+                  type="text"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="리스트에 대한 간단한 설명"
+                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">분위기</label>
+                <div className="flex flex-wrap gap-2">
+                  {moodTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setNewMoodTag(tag)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                        newMoodTag === tag
+                          ? "bg-primary text-white"
+                          : "bg-surface-soft text-muted hover:bg-hairline-soft"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 rounded-xl border border-hairline bg-surface-soft py-2.5 text-sm font-bold text-ink hover:bg-white transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+                >
+                  만들기
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
