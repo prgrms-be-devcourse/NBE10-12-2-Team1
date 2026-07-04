@@ -94,14 +94,14 @@ class SavedRestaurantListControllerTest {
     void findMySavedLists_성공() throws Exception {
         // given
         SavedRestaurantListResponse response = new SavedRestaurantListResponse(
-                100L,
-                10L,
-                2L,
-                "작성자",
-                "혼밥 맛집",
-                "혼자 먹기 좋은 곳",
-                MoodTag.SOLO,
-                LocalDateTime.of(2026, 7, 4, 2, 30)
+                10L,                                     // listId
+                2L,                                      // userId
+                "작성자",                                 // nickname
+                "혼밥 맛집",                              // title
+                "혼자 먹기 좋은 곳",                       // description
+                MoodTag.SOLO,                            // moodTag
+                List.of(),                               // items
+                LocalDateTime.of(2026, 7, 4, 2, 30)     // savedAt
         );
 
         Page<SavedRestaurantListResponse> page =
@@ -120,14 +120,19 @@ class SavedRestaurantListControllerTest {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("저장한 레스토랑 리스트 조회가 완료되었습니다."))
-                .andExpect(jsonPath("$.data.content[0].savedId").value(100L))
-                .andExpect(jsonPath("$.data.content[0].restaurantListId").value(10L))
-                .andExpect(jsonPath("$.data.content[0].ownerId").value(2L))
-                .andExpect(jsonPath("$.data.content[0].ownerName").value("작성자"))
+                .andExpect(jsonPath("$.message")
+                        .value("저장한 레스토랑 리스트 조회가 완료되었습니다."))
+
+                .andExpect(jsonPath("$.data.content[0].listId").value(10L))
+                .andExpect(jsonPath("$.data.content[0].userId").value(2L))
+                .andExpect(jsonPath("$.data.content[0].nickname").value("작성자"))
                 .andExpect(jsonPath("$.data.content[0].title").value("혼밥 맛집"))
                 .andExpect(jsonPath("$.data.content[0].description").value("혼자 먹기 좋은 곳"))
-                .andExpect(jsonPath("$.data.content[0].moodTag").value("SOLO"));
+                .andExpect(jsonPath("$.data.content[0].moodTag").value("SOLO"))
+                .andExpect(jsonPath("$.data.content[0].items").isArray())
+                .andExpect(jsonPath("$.data.content[0].items").isEmpty())
+                .andExpect(jsonPath("$.data.content[0].savedAt")
+                        .value("2026-07-04T02:30:00"));
 
         then(savedRestaurantListService)
                 .should()

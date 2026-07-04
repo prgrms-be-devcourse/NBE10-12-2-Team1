@@ -1,16 +1,29 @@
 package com.whattoeat.domain.restaurantlist.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.*;
+
 import com.whattoeat.domain.restaurant.entity.MoodTag;
-import com.whattoeat.domain.restaurantlist.dto.SavedRestaurantListResponse;
+import com.whattoeat.domain.restaurant.entity.Restaurant;
+import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
-import com.whattoeat.domain.restaurantlist.entity.SavedRestaurantList;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
+import com.whattoeat.domain.restaurantlist.repository.RestaurantListItemRepository;
 import com.whattoeat.domain.restaurantlist.repository.RestaurantListRepository;
-import com.whattoeat.domain.restaurantlist.repository.SavedRestaurantListRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.domain.user.repository.UserRepository;
-import com.whattoeat.global.exception.AlreadySavedRestaurantListException;
 import com.whattoeat.global.exception.ListNotFoundException;
+import com.whattoeat.global.exception.RestaurantListItemNotFoundException;
+import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.exception.UserNotFoundException;
+import java.util.List;
+import java.util.Optional;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,309 +34,388 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-class SavedRestaurantListServiceTest {
-
+class RestaurantListServiceTest {
     @Mock
-    private UserRepository userRepository;
+    private EntityManager entityManager;
 
     @Mock
     private RestaurantListRepository restaurantListRepository;
 
     @Mock
-    private SavedRestaurantListRepository savedRestaurantListRepository;
+    private UserRepository userRepository;
+
+    @Mock
+    private RestaurantListItemRepository restaurantListItemRepository;
+
+    @Mock
+    private RestaurantRepository restaurantRepository;
 
     @InjectMocks
-    private SavedRestaurantListService savedRestaurantListService;
+    private RestaurantListService restaurantListService;
 
-    @Test
-    void save_성공() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
+    private User mockUser(Long id, String nickname) {
         User user = Mockito.mock(User.class);
-        User owner = Mockito.mock(User.class);
-        RestaurantList restaurantList = Mockito.mock(RestaurantList.class);
+        given(user.getId()).willReturn(id);
+        given(user.getNickname()).willReturn(nickname);
+        return user;
+    }
 
-        given(userRepository.findById(userId))
-                .willReturn(Optional.of(user));
+    private Restaurant mockRestaurant(Long id, String name) {
+        Restaurant restaurant = Mockito.mock(Restaurant.class);
+        given(restaurant.getId()).willReturn(id);
+        given(restaurant.getName()).willReturn(name);
+        return restaurant;
+    }
 
-        given(restaurantListRepository.findById(restaurantListId))
-                .willReturn(Optional.of(restaurantList));
+    private RestaurantList createRestaurantList(Long id, User user) {
+        RestaurantList restaurantList = new RestaurantList(
+                user,
+                "데이트 맛집",
+                "분위기 좋은 곳",
+                MoodTag.DATE
+        );
 
-        given(restaurantList.getUser())
-                .willReturn(owner);
+        ReflectionTestUtils.setField(restaurantList, "id", id);
 
-        given(owner.getId())
-                .willReturn(2L);
+        return restaurantList;
+    }
 
-        given(savedRestaurantListRepository.existsByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(false);
+    private RestaurantListItem createRestaurantListItem(
+            Long id,
+            RestaurantList restaurantList,
+            Restaurant restaurant
+    ) {
+        RestaurantListItem item = new RestaurantListItem(
+                restaurantList,
+                restaurant,
+                "한줄평",
+                1
+        );
 
-        // when
-        savedRestaurantListService.save(userId, restaurantListId);
+        ReflectionTestUtils.setField(item, "id", id);
 
-        // then
-        then(savedRestaurantListRepository)
-                .should()
-                .save(any(SavedRestaurantList.class));
+        return item;
     }
 
     @Test
-    void save_사용자가_없으면_예외() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
+    void create_성공() {
+        User user = Mockito.mock(User.class);
 
-        given(userRepository.findById(userId))
-                .willReturn(Optional.empty());
+        RestaurantList savedRestaurantList = new RestaurantList(
+                user,
+                "데이트 맛집",
+                "분위기 좋은 곳",
+                MoodTag.DATE
+        );
+        ReflectionTestUtils.setField(savedRestaurantList, "id", 1L);
 
-        // when & then
-        assertThatThrownBy(() -> savedRestaurantListService.save(userId, restaurantListId))
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(restaurantListRepository.save(any(RestaurantList.class)))
+                .willReturn(savedRestaurantList);
+
+        RestaurantList result = restaurantListService.create(
+                1L,
+                "데이트 맛집",
+                "분위기 좋은 곳",
+                MoodTag.DATE
+        );
+
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getTitle()).isEqualTo("데이트 맛집");
+        assertThat(result.getDescription()).isEqualTo("분위기 좋은 곳");
+        assertThat(result.getMoodTag()).isEqualTo(MoodTag.DATE);
+    }
+
+    @Test
+    void create_유저가_없으면_예외() {
+        given(userRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.create(
+                999L,
+                "데이트 맛집",
+                "분위기 좋은 곳",
+                MoodTag.DATE
+        ))
                 .isInstanceOf(UserNotFoundException.class);
-
-        then(restaurantListRepository)
-                .should(never())
-                .findById(anyLong());
-
-        then(savedRestaurantListRepository)
-                .should(never())
-                .save(any(SavedRestaurantList.class));
     }
 
     @Test
-    void save_레스토랑_리스트가_없으면_예외() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
+    void findAllByUserId_성공() {
         User user = Mockito.mock(User.class);
 
-        given(userRepository.findById(userId))
-                .willReturn(Optional.of(user));
+        RestaurantList list1 = createRestaurantList(1L, user);
+        RestaurantList list2 = createRestaurantList(2L, user);
 
-        given(restaurantListRepository.findById(restaurantListId))
-                .willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> savedRestaurantListService.save(userId, restaurantListId))
-                .isInstanceOf(ListNotFoundException.class);
-
-        then(savedRestaurantListRepository)
-                .should(never())
-                .save(any(SavedRestaurantList.class));
-    }
-
-    @Test
-    void save_본인의_리스트면_예외() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
-        User user = Mockito.mock(User.class);
-        User owner = Mockito.mock(User.class);
-        RestaurantList restaurantList = Mockito.mock(RestaurantList.class);
-
-        given(userRepository.findById(userId))
-                .willReturn(Optional.of(user));
-
-        given(restaurantListRepository.findById(restaurantListId))
-                .willReturn(Optional.of(restaurantList));
-
-        given(restaurantList.getUser())
-                .willReturn(owner);
-
-        given(owner.getId())
-                .willReturn(userId);
-
-        // when & then
-        assertThatThrownBy(() -> savedRestaurantListService.save(userId, restaurantListId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("본인의 리스트는 저장할 수 없습니다.");
-
-        then(savedRestaurantListRepository)
-                .should(never())
-                .save(any(SavedRestaurantList.class));
-    }
-
-    @Test
-    void save_이미_저장한_리스트면_예외() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
-        User user = Mockito.mock(User.class);
-        User owner = Mockito.mock(User.class);
-        RestaurantList restaurantList = Mockito.mock(RestaurantList.class);
-
-        given(userRepository.findById(userId))
-                .willReturn(Optional.of(user));
-
-        given(restaurantListRepository.findById(restaurantListId))
-                .willReturn(Optional.of(restaurantList));
-
-        given(restaurantList.getUser())
-                .willReturn(owner);
-
-        given(owner.getId())
-                .willReturn(2L);
-
-        given(savedRestaurantListRepository.existsByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(true);
-
-        // when & then
-        assertThatThrownBy(() -> savedRestaurantListService.save(userId, restaurantListId))
-                .isInstanceOf(AlreadySavedRestaurantListException.class);
-
-        then(savedRestaurantListRepository)
-                .should(never())
-                .save(any(SavedRestaurantList.class));
-    }
-
-    @Test
-    void unsave_성공() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
-        SavedRestaurantList savedRestaurantList = Mockito.mock(SavedRestaurantList.class);
-
-        given(savedRestaurantListRepository.findByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(Optional.of(savedRestaurantList));
-
-        // when
-        savedRestaurantListService.unsave(userId, restaurantListId);
-
-        // then
-        then(savedRestaurantListRepository)
-                .should()
-                .delete(savedRestaurantList);
-    }
-
-    @Test
-    void unsave_저장한_리스트가_아니면_예외() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
-
-        given(savedRestaurantListRepository.findByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> savedRestaurantListService.unsave(userId, restaurantListId))
-                .isInstanceOf(ListNotFoundException.class);
-
-        then(savedRestaurantListRepository)
-                .should(never())
-                .delete(any(SavedRestaurantList.class));
-    }
-
-    @Test
-    void findMySavedLists_성공() {
-        // given
-        Long userId = 1L;
         Pageable pageable = PageRequest.of(0, 10);
 
-        User owner = Mockito.mock(User.class);
-        RestaurantList restaurantList = Mockito.mock(RestaurantList.class);
-        SavedRestaurantList savedRestaurantList = Mockito.mock(SavedRestaurantList.class);
+        given(restaurantListRepository.findByUserIdOrderByIdDesc(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(list2, list1), pageable, 2));
 
-        Page<SavedRestaurantList> page =
-                new PageImpl<>(List.of(savedRestaurantList), pageable, 1);
+        Page<RestaurantList> result = restaurantListService.findAllByUserId(1L, pageable);
 
-        given(savedRestaurantListRepository.findByUserId(userId, pageable))
-                .willReturn(page);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(2L);
+        assertThat(result.getContent().get(1).getId()).isEqualTo(1L);
 
-        given(savedRestaurantList.getId())
-                .willReturn(100L);
-
-        given(savedRestaurantList.getRestaurantList())
-                .willReturn(restaurantList);
-
-        given(savedRestaurantList.getCreatedAt())
-                .willReturn(null);
-
-        given(restaurantList.getId())
-                .willReturn(10L);
-
-        given(restaurantList.getUser())
-                .willReturn(owner);
-
-        given(owner.getId())
-                .willReturn(2L);
-
-        given(owner.getNickname())
-                .willReturn("작성자");
-
-        given(restaurantList.getTitle())
-                .willReturn("혼밥 맛집");
-
-        given(restaurantList.getDescription())
-                .willReturn("혼자 먹기 좋은 곳");
-
-        given(restaurantList.getMoodTag())
-                .willReturn(MoodTag.SOLO);
-
-        // when
-        Page<SavedRestaurantListResponse> result =
-                savedRestaurantListService.findMySavedLists(userId, pageable);
-
-        // then
-        assertThat(result.getContent()).hasSize(1);
-
-        SavedRestaurantListResponse response = result.getContent().get(0);
-
-        assertThat(response.savedId()).isEqualTo(100L);
-        assertThat(response.restaurantListId()).isEqualTo(10L);
-        assertThat(response.ownerId()).isEqualTo(2L);
-        assertThat(response.ownerName()).isEqualTo("작성자");
-        assertThat(response.title()).isEqualTo("혼밥 맛집");
-        assertThat(response.description()).isEqualTo("혼자 먹기 좋은 곳");
-        assertThat(response.moodTag()).isEqualTo(MoodTag.SOLO);
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getNumber()).isEqualTo(0);
+        assertThat(result.getSize()).isEqualTo(10);
     }
 
     @Test
-    void isSaved_저장되어_있으면_true() {
-        // given
-        Long userId = 1L;
-        Long restaurantListId = 10L;
+    void findByIdAndUserId_성공() {
+        User user = Mockito.mock(User.class);
+        RestaurantList restaurantList = createRestaurantList(1L, user);
 
-        given(savedRestaurantListRepository.existsByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(true);
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
+                .willReturn(Optional.of(restaurantList));
 
-        // when
-        boolean result = savedRestaurantListService.isSaved(userId, restaurantListId);
+        RestaurantList result = restaurantListService.findByIdAndUserId(1L, 1L);
 
-        // then
-        assertThat(result).isTrue();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getTitle()).isEqualTo("데이트 맛집");
     }
 
     @Test
-    void isSaved_저장되어_있지_않으면_false() {
+    void findByIdAndUserId_없으면_예외() {
+        given(restaurantListRepository.findByIdAndUserId(999L, 1L))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.findByIdAndUserId(999L, 1L))
+                .isInstanceOf(ListNotFoundException.class);
+    }
+
+    @Test
+    void addItem_성공() {
+        User user = Mockito.mock(User.class);
+        RestaurantList restaurantList = createRestaurantList(1L, user);
+        Restaurant restaurant = mockRestaurant(10L, "초밥집");
+
+        RestaurantListItem savedItem = createRestaurantListItem(
+                1L,
+                restaurantList,
+                restaurant
+        );
+
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantRepository.findById(10L))
+                .willReturn(Optional.of(restaurant));
+
+        given(restaurantListItemRepository.save(any(RestaurantListItem.class)))
+                .willReturn(savedItem);
+
+        RestaurantListItem result = restaurantListService.addItem(
+                1L,
+                1L,
+                10L,
+                "한줄평",
+                1
+        );
+
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getRestaurantList().getId()).isEqualTo(1L);
+        assertThat(result.getRestaurant().getId()).isEqualTo(10L);
+        assertThat(result.getRestaurant().getName()).isEqualTo("초밥집");
+        assertThat(result.getMemo()).isEqualTo("한줄평");
+        assertThat(result.getOrderIndex()).isEqualTo(1);
+    }
+
+    @Test
+    void addItem_리스트가_없으면_예외() {
+        given(restaurantListRepository.findByIdAndUserId(999L, 1L))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.addItem(
+                1L,
+                999L,
+                10L,
+                "한줄평",
+                1
+        ))
+                .isInstanceOf(ListNotFoundException.class);
+    }
+
+    @Test
+    void addItem_식당이_없으면_예외() {
+        User user = Mockito.mock(User.class);
+        RestaurantList restaurantList = createRestaurantList(1L, user);
+
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantRepository.findById(999L))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.addItem(
+                1L,
+                1L,
+                999L,
+                "한줄평",
+                1
+        ))
+                .isInstanceOf(RestaurantNotFoundException.class);
+    }
+
+    @Test
+    void updateItem_성공() {
+        User user = Mockito.mock(User.class);
+        RestaurantList restaurantList = createRestaurantList(1L, user);
+        Restaurant restaurant = Mockito.mock(Restaurant.class);
+
+        RestaurantListItem item = createRestaurantListItem(
+                1L,
+                restaurantList,
+                restaurant
+        );
+
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantListItemRepository.findListItem(1L, 1L, 1L))
+                .willReturn(Optional.of(item));
+
+        RestaurantListItem result = restaurantListService.updateItem(
+                1L,
+                1L,
+                1L,
+                2,
+                "수정된 한줄평"
+        );
+
+        assertThat(result.getOrderIndex()).isEqualTo(2);
+        assertThat(result.getMemo()).isEqualTo("수정된 한줄평");
+    }
+
+    @Test
+    void updateItem_리스트가_없으면_예외() {
+        given(restaurantListRepository.findByIdAndUserId(999L, 1L))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.updateItem(
+                999L,
+                1L,
+                1L,
+                2,
+                "수정된 한줄평"
+        ))
+                .isInstanceOf(ListNotFoundException.class);
+    }
+
+    @Test
+    void updateItem_아이템이_없으면_예외() {
+        User user = Mockito.mock(User.class);
+        RestaurantList restaurantList = createRestaurantList(1L, user);
+
+        given(restaurantListRepository.findByIdAndUserId(1L, 1L))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantListItemRepository.findListItem(999L, 1L, 1L))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantListService.updateItem(
+                1L,
+                999L,
+                1L,
+                2,
+                "수정된 한줄평"
+        ))
+                .isInstanceOf(RestaurantListItemNotFoundException.class);
+    }
+
+    @Test
+    void copyList_성공() {
         // given
         Long userId = 1L;
-        Long restaurantListId = 10L;
+        Long originalListId = 10L;
+        Long copyListId = 20L;
 
-        given(savedRestaurantListRepository.existsByUserIdAndRestaurantListId(userId, restaurantListId))
-                .willReturn(false);
+        User user = Mockito.mock(User.class);
+
+        RestaurantList originalList = Mockito.mock(RestaurantList.class);
+        given(originalList.getTitle()).willReturn("혼밥 맛집");
+        given(originalList.getDescription()).willReturn("혼자 먹기 좋은 곳");
+        given(originalList.getMoodTag()).willReturn(MoodTag.SOLO);
+
+        RestaurantList savedCopyList = Mockito.mock(RestaurantList.class);
+        given(savedCopyList.getId()).willReturn(copyListId);
+
+        RestaurantList fetchedCopyList = Mockito.mock(RestaurantList.class);
+
+        Restaurant restaurant1 = Mockito.mock(Restaurant.class);
+        Restaurant restaurant2 = Mockito.mock(Restaurant.class);
+
+        RestaurantListItem originalItem1 = Mockito.mock(RestaurantListItem.class);
+        RestaurantListItem originalItem2 = Mockito.mock(RestaurantListItem.class);
+
+        given(originalItem1.getRestaurant()).willReturn(restaurant1);
+        given(originalItem1.getMemo()).willReturn("맛있음");
+        given(originalItem1.getOrderIndex()).willReturn(1);
+
+        given(originalItem2.getRestaurant()).willReturn(restaurant2);
+        given(originalItem2.getMemo()).willReturn("또 갈 곳");
+        given(originalItem2.getOrderIndex()).willReturn(2);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(restaurantListRepository.findById(originalListId)).willReturn(Optional.of(originalList));
+        given(restaurantListRepository.save(any(RestaurantList.class))).willReturn(savedCopyList);
+        given(restaurantListItemRepository.findItemsByListId(originalListId)).willReturn(List.of(originalItem1, originalItem2));
+        given(restaurantListRepository.findByIdWithItems(copyListId)).willReturn(Optional.of(fetchedCopyList));
 
         // when
-        boolean result = savedRestaurantListService.isSaved(userId, restaurantListId);
+        RestaurantList result = restaurantListService.copyList(userId, originalListId);
 
         // then
-        assertThat(result).isFalse();
+        assertThat(result).isEqualTo(fetchedCopyList);
+
+        verify(userRepository).findById(userId);
+        verify(restaurantListRepository).findById(originalListId);
+        verify(restaurantListRepository).save(any(RestaurantList.class));
+        verify(restaurantListItemRepository).findItemsByListId(originalListId);
+        verify(restaurantListItemRepository, times(2)).save(any(RestaurantListItem.class));
+        verify(restaurantListItemRepository).flush();
+        verify(entityManager).clear();
+        verify(restaurantListRepository).findByIdWithItems(copyListId);
+    }
+
+    @Test
+    void copyList_원본_리스트가_없으면_예외() {
+        // given
+        Long userId = 1L;
+        Long originalListId = 999L;
+
+        User user = Mockito.mock(User.class);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(restaurantListRepository.findById(originalListId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> restaurantListService.copyList(userId, originalListId))
+                .isInstanceOf(ListNotFoundException.class);
+
+        verify(restaurantListRepository, never()).save(any(RestaurantList.class));
+        verify(restaurantListItemRepository, never()).save(any(RestaurantListItem.class));
+    }
+
+    @Test
+    void copyList_사용자가_없으면_예외() {
+        // given
+        Long userId = 999L;
+        Long originalListId = 10L;
+
+        given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> restaurantListService.copyList(userId, originalListId))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(restaurantListRepository, never()).findById(originalListId);
+        verify(restaurantListRepository, never()).save(any(RestaurantList.class));
+        verify(restaurantListItemRepository, never()).save(any(RestaurantListItem.class));
     }
 }

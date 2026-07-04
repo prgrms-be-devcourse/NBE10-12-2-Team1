@@ -1,29 +1,39 @@
 package com.whattoeat.domain.restaurantlist.dto;
 
 import com.whattoeat.domain.restaurant.entity.MoodTag;
+import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
 import com.whattoeat.domain.restaurantlist.entity.SavedRestaurantList;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record SavedRestaurantListResponse(
-        Long savedId,
-        Long restaurantListId,
-        Long ownerId,
-        String ownerName,
+        Long listId,
+        Long userId,
+        String nickname,
         String title,
         String description,
         MoodTag moodTag,
-        LocalDateTime createAt
+        List<RestaurantListResponse.RestaurantListItemDetail> items,
+        LocalDateTime savedAt
 ) {
-    public static SavedRestaurantListResponse from(SavedRestaurantList savedRestaurantList) {
+
+    public static SavedRestaurantListResponse from(
+            SavedRestaurantList savedRestaurantList
+    ) {
+        RestaurantList restaurantList =
+                savedRestaurantList.getRestaurantList();
+
         return new SavedRestaurantListResponse(
-                savedRestaurantList.getId(),
-                savedRestaurantList.getRestaurantList().getId(),
-                savedRestaurantList.getRestaurantList().getUser().getId(),
-                savedRestaurantList.getRestaurantList().getUser().getNickname(),
-                savedRestaurantList.getRestaurantList().getTitle(),
-                savedRestaurantList.getRestaurantList().getDescription(),
-                savedRestaurantList.getRestaurantList().getMoodTag(),
+                restaurantList.getId(),
+                restaurantList.getUser().getId(),
+                restaurantList.getUser().getNickname(),
+                restaurantList.getTitle(),
+                restaurantList.getDescription(),
+                restaurantList.getMoodTag(),
+                restaurantList.getItems().stream()
+                        .map(RestaurantListResponse.RestaurantListItemDetail::new)
+                        .toList(),
                 savedRestaurantList.getCreatedAt()
         );
     }

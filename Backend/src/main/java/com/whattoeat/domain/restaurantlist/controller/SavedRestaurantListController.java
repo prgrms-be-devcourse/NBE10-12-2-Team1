@@ -8,6 +8,7 @@ import com.whattoeat.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +29,7 @@ public class SavedRestaurantListController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
+//        Long userId = userDetails.getUserId();
         Long userId = TEMP_USER_ID;
 
         savedRestaurantListService.save(userId, id);
@@ -43,8 +45,8 @@ public class SavedRestaurantListController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
+//        Long userId = userDetails.getUserId();
         Long userId = TEMP_USER_ID;
-
         savedRestaurantListService.unsave(userId, id);
 
         return ResponseEntity.ok(
@@ -56,9 +58,13 @@ public class SavedRestaurantListController {
     @Operation(summary = "내가 저장한 리스트 조회")
     public ResponseEntity<RsData<Page<SavedRestaurantListResponse>>> findMySavedLists(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
+//        Long userId = userDetails.getUserId();
         Long userId = TEMP_USER_ID;
+
+        Pageable pageable = PageRequest.of(page, size);
 
         Page<SavedRestaurantListResponse> response =
                 savedRestaurantListService.findMySavedLists(userId, pageable);
@@ -68,17 +74,18 @@ public class SavedRestaurantListController {
         );
     }
 
-    @GetMapping("/{restaurantListId}/saved")
+    @GetMapping("/{id}/saved")
     public ResponseEntity<RsData<SavedRestaurantListStatusResponse>> isSaved(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long restaurantListId
+            @PathVariable Long id
     ) {
+//        Long userId = userDetails.getUserId();
         Long userId = TEMP_USER_ID;
 
-        boolean saved = savedRestaurantListService.isSaved(userId, restaurantListId);
+        boolean saved = savedRestaurantListService.isSaved(userId, id);
 
         SavedRestaurantListStatusResponse response =
-                SavedRestaurantListStatusResponse.of(restaurantListId, saved);
+                SavedRestaurantListStatusResponse.of(id, saved);
 
         String message = saved
                 ? "저장한 레스토랑 리스트입니다."
