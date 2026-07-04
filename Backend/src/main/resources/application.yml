@@ -23,8 +23,10 @@ spring:
 
 jwt:
   secret: "dGVzdFNlY3JldEtleUZvckp3dFRlc3RpbmdQdXJwb3Nl"
-  expiration: 86400000
+  access-expiration: 86400000
   # 1000(밀리초) × 60(초) × 60(분) × 24(시간) = 24시간
+  refresh-expiration: 604800000
+  # 1000(밀리초) × 60(초) × 60(분) × 24(시간) × 7(일) = 7일
 
 kakao:
   map:

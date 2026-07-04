@@ -5,6 +5,7 @@ import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
+import com.whattoeat.domain.feed.event.FeedCreatedEvent;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.follow.entity.Follow;
 import com.whattoeat.domain.follow.repository.FollowRepository;
@@ -22,6 +23,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -34,6 +37,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
+@RecordApplicationEvents
 public class FeedServiceTest {
     @MockitoBean
     FeedRepository feedRepository;
@@ -49,6 +53,9 @@ public class FeedServiceTest {
 
     @Autowired
     FeedService feedService;
+
+    @Autowired
+    ApplicationEvents applicationEvents;
 
     private User createTestUser() {
         return User.builder()
@@ -98,6 +105,27 @@ public class FeedServiceTest {
         FeedDetailResponse result = feedService.createFeed(user, feedCreateRequest);
 
         assertThat(result.content()).isEqualTo("맛집이네요");
+    }
+
+    @Test
+    @DisplayName("피드 생성 시 FeedCreatedEvent가 발행된다")
+    public void createFeed_publishesFeedCreatedEvent() {
+        User user = User.builder().nickname("test").build();
+        ReflectionTestUtils.setField(user, "id", 1L);
+        FeedCreateRequest feedCreateRequest = new FeedCreateRequest("맛집이네요", null);
+
+        Feed savedFeed = Feed.builder()
+                .user(user)
+                .content(feedCreateRequest.content())
+                .build();
+        ReflectionTestUtils.setField(savedFeed, "id", 10L);
+
+        given(feedRepository.save(any())).willReturn(savedFeed);
+
+        feedService.createFeed(user, feedCreateRequest);
+
+        assertThat(applicationEvents.stream(FeedCreatedEvent.class))
+                .anyMatch(event -> event.feedId().equals(10L) && event.authorId().equals(1L));
     }
 
     @Test
