@@ -29,8 +29,7 @@ public class SavedRestaurantListController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
-//        Long userId = userDetails.getUserId();
-        Long userId = TEMP_USER_ID;
+        Long userId = userDetails.getUserId();
 
         savedRestaurantListService.save(userId, id);
 
@@ -45,8 +44,8 @@ public class SavedRestaurantListController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
-//        Long userId = userDetails.getUserId();
-        Long userId = TEMP_USER_ID;
+        Long userId = userDetails.getUserId();
+
         savedRestaurantListService.unsave(userId, id);
 
         return ResponseEntity.ok(
@@ -61,8 +60,7 @@ public class SavedRestaurantListController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-//        Long userId = userDetails.getUserId();
-        Long userId = TEMP_USER_ID;
+        Long userId = userDetails.getUserId();
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -79,8 +77,7 @@ public class SavedRestaurantListController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
-//        Long userId = userDetails.getUserId();
-        Long userId = TEMP_USER_ID;
+        Long userId = userDetails.getUserId();
 
         boolean saved = savedRestaurantListService.isSaved(userId, id);
 

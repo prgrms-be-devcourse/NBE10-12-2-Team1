@@ -6,11 +6,13 @@ import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
 import com.whattoeat.global.rsData.RsData;
+import com.whattoeat.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,10 +28,10 @@ public class RestaurantListController {
     @PostMapping
     @Operation(summary = "맛집 리스트 등록")
     public RsData<RestaurantListResponse.RestaurantLists> createRestaurantList(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
            @Valid @RequestBody RestaurantListRequest.RestaurantList req
     ) {
-        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
 
         RestaurantList restaurantList = restaurantListService.create(
                 userId,
@@ -48,11 +50,11 @@ public class RestaurantListController {
     @GetMapping
     @Operation(summary = "맛집 리스트 다건 조회")
     public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -70,9 +72,11 @@ public class RestaurantListController {
     // 맛집 리스트 단건 조회
     @GetMapping("/{id}")
     @Operation(summary = "맛집 리스트 단건 조회")
-    public RsData<RestaurantListResponse.RestaurantListDetail> getRestaurantList(@PathVariable Long id) {
-        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
-        Long userId = 1L;
+    public RsData<RestaurantListResponse.RestaurantListDetail> getRestaurantList(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id
+    ) {
+        Long userId = userDetails.getUserId();
 
         RestaurantList restaurantList = restaurantListService.findByIdAndUserId(id, userId);
 
@@ -89,11 +93,11 @@ public class RestaurantListController {
     @PostMapping("/{id}/items")
     @Operation(summary = "맛집 리스트 아이템 등록")
     public RsData<RestaurantListResponse.RestaurantListItemDetail> createRestaurantListItem(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("id") Long listId,
             @Valid @RequestBody RestaurantListRequest.RestaurantListItem req
     ) {
-        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
 
         RestaurantListItem item = restaurantListService.addItem(
                 userId,
@@ -112,12 +116,12 @@ public class RestaurantListController {
     @PutMapping("/{id}/items/{itemId}")
     @Operation(summary = "식당 리스트 아이템 수정(순서/메모)")
     public RsData<RestaurantListResponse.RestaurantListItemDetail> updateRestaurantListItem(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
             @PathVariable Long itemId,
             @Valid @RequestBody RestaurantListRequest.RestaurantListItem req
     ) {
-        // 임시로 1로 지정 로그인 붙으면 사용자 id로 변경 예정
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
 
         RestaurantListItem item = restaurantListService.updateItem(
                 id, // listId
@@ -136,10 +140,11 @@ public class RestaurantListController {
     @DeleteMapping("/{id}/items/{itemId}")
     @Operation(summary = "맛집 리스트 아이템 삭제")
     public RsData<Void> deleteRestaurantListItem(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id, // listId
             @PathVariable Long itemId
     ) {
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
 
         // 나중에 인증 추가 사용자일 경우에만 삭제가능하도록 수정
         restaurantListService.deleteItem(id, itemId, userId);
@@ -190,10 +195,10 @@ public class RestaurantListController {
     @PostMapping("/{id}/copy")
     @Operation(summary = "맛집 리스트 복사")
     public RsData<RestaurantListResponse.RestaurantListDetail> copyRestaurantList(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id
     ) {
-        // 임시 사용자 id : 복사본 리스트의 소유자로 사용
-        Long userId = 1L;
+        Long userId = userDetails.getUserId();
         RestaurantList copyList = restaurantListService.copyList(userId, id);
 
         return RsData.success(
