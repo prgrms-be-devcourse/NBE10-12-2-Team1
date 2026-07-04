@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,6 +22,7 @@ import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
 import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
@@ -34,9 +36,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @WebMvcTest(
         controllers = RestaurantListController.class,
@@ -62,6 +68,33 @@ class RestaurantListControllerTest {
 
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
+
+    private static final Long TEST_USER_ID = 1L;
+
+    private CustomUserDetails userDetails;
+
+    @BeforeEach
+    void setUp() {
+        userDetails = mock(CustomUserDetails.class);
+
+        given(userDetails.getUserId())
+                .willReturn(TEST_USER_ID);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        List.of()
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     private User mockUser(Long id, String nickname) {
         User user = mock(User.class);
@@ -366,6 +399,9 @@ class RestaurantListControllerTest {
         Long originalListId = 1L;
         Long userId = 1L;
 
+        CustomUserDetails userDetails = mock(CustomUserDetails.class);
+        given(userDetails.getUserId()).willReturn(userId);
+
         User user = mock(User.class);
         given(user.getId()).willReturn(userId);
         given(user.getNickname()).willReturn("user1");
@@ -378,16 +414,31 @@ class RestaurantListControllerTest {
         given(copiedList.getMoodTag()).willReturn(MoodTag.SOLO);
         given(copiedList.getItems()).willReturn(List.of());
 
+        // ⭐ 이거 추가
+        given(copiedList.getCreatedAt())
+                .willReturn(LocalDateTime.of(2026, 7, 5, 10, 0));
+
         given(restaurantListService.copyList(userId, originalListId))
                 .willReturn(copiedList);
 
         // when & then
-        mockMvc.perform(post("/api/v1/lists/{id}/copy", originalListId)
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(
+                        post("/api/v1/lists/{id}/copy", originalListId)
+                                .with(authentication(
+                                        new UsernamePasswordAuthenticationToken(
+                                                userDetails,
+                                                null,
+                                                List.of()
+                                        )
+                                ))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("맛집 리스트가 복사되었습니다."));
+                .andExpect(jsonPath("$.message")
+                        .value("맛집 리스트가 복사되었습니다."));
 
-        verify(restaurantListService).copyList(userId, originalListId);
+        verify(restaurantListService)
+                .copyList(userId, originalListId);
     }
 }

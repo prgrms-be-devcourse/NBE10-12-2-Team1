@@ -3,6 +3,7 @@ package com.whattoeat.domain.restaurantlist.controller;
 import com.whattoeat.domain.restaurant.entity.MoodTag;
 import com.whattoeat.domain.restaurantlist.dto.SavedRestaurantListResponse;
 import com.whattoeat.domain.restaurantlist.service.SavedRestaurantListService;
+import com.whattoeat.global.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -12,6 +13,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +31,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.core.MethodParameter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+
 class SavedRestaurantListControllerTest {
 
     private static final Long TEST_USER_ID = 2L;
@@ -34,17 +42,46 @@ class SavedRestaurantListControllerTest {
     private MockMvc mockMvc;
 
     private SavedRestaurantListService savedRestaurantListService;
+    private CustomUserDetails userDetails;
 
     @BeforeEach
     void setUp() {
-        savedRestaurantListService = Mockito.mock(SavedRestaurantListService.class);
+        savedRestaurantListService =
+                Mockito.mock(SavedRestaurantListService.class);
+
+        userDetails = Mockito.mock(CustomUserDetails.class);
+
+        given(userDetails.getUserId())
+                .willReturn(TEST_USER_ID);
 
         SavedRestaurantListController controller =
                 new SavedRestaurantListController(savedRestaurantListService);
 
+        HandlerMethodArgumentResolver authenticationPrincipalResolver =
+                new HandlerMethodArgumentResolver() {
+
+                    @Override
+                    public boolean supportsParameter(MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(
+                                AuthenticationPrincipal.class
+                        );
+                    }
+
+                    @Override
+                    public Object resolveArgument(
+                            MethodParameter parameter,
+                            ModelAndViewContainer mavContainer,
+                            NativeWebRequest webRequest,
+                            WebDataBinderFactory binderFactory
+                    ) {
+                        return userDetails;
+                    }
+                };
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setCustomArgumentResolvers(
+                        authenticationPrincipalResolver,
                         new PageableHandlerMethodArgumentResolver()
                 )
                 .build();
