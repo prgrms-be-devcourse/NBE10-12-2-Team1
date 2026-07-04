@@ -1,12 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, ImagePlus, Send, Lightbulb } from "lucide-react";
+import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { apiFetchJson } from "@/lib/api";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
+
+interface KakaoRestaurant {
+  kakaoPlaceId: string;
+  name: string;
+  category: string;
+  address: string;
+  roadAddress: string;
+  region1: string;
+  region2: string;
+  region3: string;
+  phone: string;
+  lat: number;
+  lng: number;
+}
 
 const recentPosts = [
   { id: "user1", author: "김푸디", content: "을지로 오면 무조건 여기! 곱창이 너무 부드럽고...", seed: "user1" },
@@ -23,12 +38,74 @@ export default function WritePostPage() {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [selectedMood, setSelectedMood] = useState("혼밥");
-  const [taggedRestaurant] = useState({ name: "을지로 순대곱창", category: "한식", seed: "euljiro" });
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<KakaoRestaurant[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<KakaoRestaurant | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setSearching(true);
+    const res = await apiFetchJson<KakaoRestaurant[]>(`/api/v1/restaurants/search?keyword=${encodeURIComponent(query.trim())}`);
+    if (res.ok && res.data) {
+      setSearchResults(res.data);
+    } else {
+      alert(res.message || "식당 검색에 실패했습니다.");
+      setSearchResults([]);
+    }
+    setSearching(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    router.push("/feed");
+    if (!selectedRestaurant) {
+      alert("식당을 선택해주세요.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
+      method: "POST",
+      body: JSON.stringify({
+        kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
+        name: selectedRestaurant.name,
+        categoryName: selectedRestaurant.category,
+        address: selectedRestaurant.address,
+        roadAddress: selectedRestaurant.roadAddress,
+        region1: selectedRestaurant.region1,
+        region2: selectedRestaurant.region2,
+        region3: selectedRestaurant.region3,
+        phone: selectedRestaurant.phone,
+        lat: selectedRestaurant.lat,
+        lng: selectedRestaurant.lng,
+      }),
+    });
+
+    if (!saveRes.ok || !saveRes.data) {
+      alert(saveRes.message || "식당 저장에 실패했습니다.");
+      setSubmitting(false);
+      return;
+    }
+
+    const feedRes = await apiFetchJson("/api/v1/feeds", {
+      method: "POST",
+      body: JSON.stringify({
+        content: content.trim(),
+        restaurantId: saveRes.data.id,
+      }),
+    });
+
+    if (feedRes.ok) {
+      router.push("/feed");
+    } else {
+      alert(feedRes.message || "피드 작성에 실패했습니다.");
+    }
+
+    setSubmitting(false);
   };
 
   return (
@@ -65,22 +142,56 @@ export default function WritePostPage() {
 
         <form onSubmit={handleSubmit} className="rounded-2xl bg-surface p-6 border border-hairline-soft shadow-sm space-y-5">
           {/* Tagged restaurant */}
-          <div>
+          <div className="space-y-3">
             <label className="text-xs font-bold text-muted mb-2 block">태그된 식당</label>
-            <div className="flex items-center justify-between rounded-xl bg-primary-soft p-3">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 overflow-hidden">
-                  <img src={`https://picsum.photos/seed/${taggedRestaurant.seed}/100/100`} alt="" className="h-full w-full object-cover" />
-                </div>
+            {selectedRestaurant ? (
+              <div className="flex items-center justify-between rounded-xl bg-primary-soft p-3">
                 <div>
-                  <p className="text-sm font-bold text-ink">{taggedRestaurant.name}</p>
-                  <p className="text-xs text-muted">{taggedRestaurant.category}</p>
+                  <p className="text-sm font-bold text-ink">{selectedRestaurant.name}</p>
+                  <p className="text-xs text-muted">{selectedRestaurant.roadAddress || selectedRestaurant.address}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRestaurant(null)}
+                  className="rounded-full p-1.5 text-muted hover:bg-white/50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button type="button" className="rounded-full p-1.5 text-muted hover:bg-white/50">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            ) : (
+              <>
+                <form onSubmit={handleSearch} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="식당명을 입력하세요"
+                    className="flex-1 rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                  />
+                  <button
+                    type="submit"
+                    disabled={searching}
+                    className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
+                  >
+                    <Search className="h-4 w-4" />
+                    {searching ? "검색 중..." : "검색"}
+                  </button>
+                </form>
+                <div className="space-y-2">
+                  {searchResults.map((r) => (
+                    <button
+                      key={r.kakaoPlaceId}
+                      type="button"
+                      onClick={() => setSelectedRestaurant(r)}
+                      className="w-full rounded-xl border border-hairline-soft bg-surface-soft p-3 text-left hover:border-primary/30 transition-colors"
+                    >
+                      <p className="text-sm font-bold text-ink">{r.name}</p>
+                      <p className="text-xs text-muted">{r.roadAddress || r.address}</p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Mood tags */}
@@ -135,10 +246,11 @@ export default function WritePostPage() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
               <Send className="h-4 w-4" />
-              포스트 올리기
+              {submitting ? "등록 중..." : "포스트 올리기"}
             </button>
           </div>
         </form>
