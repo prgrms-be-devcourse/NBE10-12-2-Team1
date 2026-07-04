@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Bookmark, GripVertical, Trash2, X } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
@@ -51,6 +51,7 @@ export default function ListsPage() {
   const [newDescription, setNewDescription] = useState("");
   const [newMoodTag, setNewMoodTag] = useState("DATE");
   const [copying, setCopying] = useState(false);
+  const initialized = useRef(false);
 
   const moodTags = ["DATE", "FRIENDS", "FAMILY", "SOLO"];
 
@@ -64,6 +65,8 @@ export default function ListsPage() {
     if (myRes.ok && myRes.data) {
       my = myRes.data;
       setMyLists(my);
+    } else {
+      setError(myRes.message || "내 리스트를 불러오지 못했습니다.");
     }
 
     if (publicRes.ok && publicRes.data) {
@@ -74,11 +77,12 @@ export default function ListsPage() {
   };
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const load = async () => {
       const my = await loadLists();
-      if (my.length > 0 && selectedId === null) {
-        setSelectedId(my[0].id);
-      }
+      setSelectedId((prev) => (prev === null && my.length > 0 ? my[0].id : prev));
       setLoading(false);
     };
 
@@ -125,12 +129,8 @@ export default function ListsPage() {
       setNewDescription("");
       setNewMoodTag("DATE");
       setShowCreateModal(false);
-      const my = await loadLists();
+      await loadLists();
       setSelectedId(res.data.id);
-      if (my.length === 0) {
-        // 새로 생성된 리스트가 첫 항목이면 즉시 선택
-        setSelectedId(res.data.id);
-      }
     } else {
       alert(res.message || "리스트 생성에 실패했습니다.");
     }
@@ -143,7 +143,7 @@ export default function ListsPage() {
       method: "POST",
     });
     if (res.ok) {
-      const my = await loadLists();
+      await loadLists();
       if (res.data) {
         setSelectedId(res.data.listId);
       }

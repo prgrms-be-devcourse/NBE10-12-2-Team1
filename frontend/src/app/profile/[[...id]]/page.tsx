@@ -345,19 +345,20 @@ function FollowListModal({ title, type, userId, onClose }: FollowListModalProps)
 
   const endpoint = type === "followers" ? `/api/v1/follows/users/${userId}/followers` : `/api/v1/follows/users/${userId}/followings`;
 
-  const load = async () => {
-    setLoading(true);
-    const res = await apiFetchJson<{ content: FollowUser[] }>(endpoint);
-    if (res.ok && res.data) {
-      setUsers(res.data.content);
-    } else {
-      setError(res.message || "목록을 불러오지 못했습니다.");
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    load();
+    let cancelled = false;
+    apiFetchJson<{ content: FollowUser[] }>(endpoint).then((res) => {
+      if (cancelled) return;
+      if (res.ok && res.data) {
+        setUsers(res.data.content);
+      } else {
+        setError(res.message || "목록을 불러오지 못했습니다.");
+      }
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [endpoint]);
 
   const handleToggle = async (targetUserId: number, currentlyFollowing: boolean) => {

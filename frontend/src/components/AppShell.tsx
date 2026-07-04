@@ -29,10 +29,9 @@ const fallbackUser: CurrentUser = {
 };
 
 export function SidebarProfile() {
-  const [user, setUser] = useState<CurrentUser>(fallbackUser);
+  const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
 
   useEffect(() => {
-    setUser(getStoredUser() ?? fallbackUser);
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
     window.addEventListener("login-state-change", handleChange);
     return () => window.removeEventListener("login-state-change", handleChange);
@@ -95,11 +94,10 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState<CurrentUser>(fallbackUser);
+  const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setUser(getStoredUser() ?? fallbackUser);
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
     window.addEventListener("login-state-change", handleChange);
     return () => window.removeEventListener("login-state-change", handleChange);
