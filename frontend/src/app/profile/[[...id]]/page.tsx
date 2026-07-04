@@ -28,15 +28,23 @@ interface FollowUser {
   isFollowedByMe: boolean;
 }
 
-const myLists = [
-  { id: 1, title: "을지로 데이트 코스", itemCount: 4, savedCount: 23, coverSeed: "date", moodTag: "데이트" },
-  { id: 2, title: "혼밥 명당", itemCount: 7, savedCount: 5, coverSeed: "solo", moodTag: "혼밥" },
-];
+interface ProfileList {
+  id: number;
+  title: string;
+  description: string;
+  moodTag: string;
+  itemCount: number;
+}
 
-const myPosts = [
-  { id: 1, restaurant: "을지로 칼국수", content: "면속 위로를 뜨거운 칼국수. 면이 최고였어요.", date: "2026-06-10" },
-  { id: 2, restaurant: "광화문 정육식당", content: "회식으로 가기 좋은 한우 오마카세", date: "2026-06-05" },
-];
+interface FeedListPageResponse {
+  feed: {
+    feedId: number;
+    content: string;
+    nickname: string;
+    likeCount: number;
+    createdAt: string;
+  }[];
+}
 
 const savedLists = [
   { id: 3, title: "홍대 회식 추천", author: "푸디맘", itemCount: 6, savedCount: 45, coverSeed: "hongdae", moodTag: "회식" },
@@ -59,6 +67,9 @@ export default function ProfilePage() {
   const [showFollowings, setShowFollowings] = useState(false);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
+  const [myLists, setMyLists] = useState<ProfileList[]>([]);
+  const [myPosts, setMyPosts] = useState<FeedListPageResponse["feed"]>([]);
+  const [tabLoading, setTabLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -95,6 +106,30 @@ export default function ProfilePage() {
 
     load();
   }, [targetUserId]);
+
+  useEffect(() => {
+    if (!targetUserId || !user) return;
+
+    const loadTab = async () => {
+      setTabLoading(true);
+
+      if (activeTab === "내 리스트" && user.ownProfile) {
+        const res = await apiFetchJson<ProfileList[]>("/api/v1/lists");
+        if (res.ok && res.data) {
+          setMyLists(res.data);
+        }
+      } else if (activeTab === "포스트") {
+        const res = await apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?userId=${targetUserId}`);
+        if (res.ok && res.data) {
+          setMyPosts(res.data.feed);
+        }
+      }
+
+      setTabLoading(false);
+    };
+
+    loadTab();
+  }, [activeTab, targetUserId, user]);
 
   const handleFollowToggle = async () => {
     if (!user || user.ownProfile) return;
@@ -209,67 +244,78 @@ export default function ProfilePage() {
 
         {/* Tab content */}
         <div>
-          {activeTab === "내 리스트" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {myLists.map((list) => (
-                <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
-                  <div className="h-36 bg-surface-strong">
-                    <img src={`https://picsum.photos/seed/${list.coverSeed}/400/220`} alt={list.title} className="h-full w-full object-cover" />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                      <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs text-muted-soft">
-                      <span>식당 {list.itemCount}개</span>
-                      <span className="flex items-center gap-1">
-                        <Bookmark className="h-3 w-3" />
-                        {list.savedCount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {tabLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-          )}
+          ) : (
+            <>
+              {activeTab === "내 리스트" && (
+                <>
+                  {user && !user.ownProfile ? (
+                    <p className="py-10 text-center text-sm text-muted">다른 사용자의 리스트는 조회할 수 없습니다.</p>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {myLists.map((list) => (
+                        <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                          <div className="h-36 bg-surface-strong">
+                            <img src={`https://picsum.photos/seed/list${list.id}/400/220`} alt={list.title} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="p-4">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-base font-bold text-ink">{list.title}</h3>
+                              <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                            </div>
+                            <div className="mt-2 text-xs text-muted-soft">
+                              <span>식당 {list.itemCount}개</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
 
-          {activeTab === "포스트" && (
-            <div className="space-y-4">
-              {myPosts.map((post) => (
-                <article key={post.id} className="rounded-2xl border border-hairline-soft bg-surface p-5">
-                  <h3 className="text-base font-bold text-ink">{post.restaurant}</h3>
-                  <p className="mt-2 text-sm leading-6 text-body">{post.content}</p>
-                  <p className="mt-2 text-xs text-muted-soft">{post.date}</p>
-                </article>
-              ))}
-            </div>
-          )}
-
-          {activeTab === "저장함" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {savedLists.map((list) => (
-                <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
-                  <div className="h-36 bg-surface-strong">
-                    <img src={`https://picsum.photos/seed/${list.coverSeed}/400/220`} alt={list.title} className="h-full w-full object-cover" />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                      <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
-                    </div>
-                    <p className="text-xs text-muted mt-1">by {list.author}</p>
-                    <div className="mt-2 flex items-center justify-between text-xs text-muted-soft">
-                      <span>식당 {list.itemCount}개</span>
-                      <span className="flex items-center gap-1">
-                        <Bookmark className="h-3 w-3" />
-                        {list.savedCount}
-                      </span>
-                    </div>
-                  </div>
+              {activeTab === "포스트" && (
+                <div className="space-y-4">
+                  {myPosts.map((post) => (
+                    <article key={post.feedId} className="rounded-2xl border border-hairline-soft bg-surface p-5">
+                      <p className="text-sm leading-6 text-body">{post.content}</p>
+                      <p className="mt-2 text-xs text-muted-soft">
+                        좋아요 {post.likeCount} · {new Date(post.createdAt).toLocaleDateString()}
+                      </p>
+                    </article>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {activeTab === "저장함" && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {savedLists.map((list) => (
+                    <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                      <div className="h-36 bg-surface-strong">
+                        <img src={`https://picsum.photos/seed/${list.coverSeed}/400/220`} alt={list.title} className="h-full w-full object-cover" />
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-base font-bold text-ink">{list.title}</h3>
+                          <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                        </div>
+                        <p className="text-xs text-muted mt-1">by {list.author}</p>
+                        <div className="mt-2 flex items-center justify-between text-xs text-muted-soft">
+                          <span>식당 {list.itemCount}개</span>
+                          <span className="flex items-center gap-1">
+                            <Bookmark className="h-3 w-3" />
+                            {list.savedCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
