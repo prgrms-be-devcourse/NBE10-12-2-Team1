@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Settings, Users, UserPlus, Bookmark, X, UserMinus } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
+import { getStoredUser } from "@/lib/user";
 
 const tabs = ["내 리스트", "포스트", "저장함"];
 
@@ -24,7 +25,7 @@ interface FollowUser {
   id: number;
   nickname: string;
   profileImage: string | null;
-  following: boolean;
+  isFollowedByMe: boolean;
 }
 
 const myLists = [
@@ -45,7 +46,8 @@ const savedLists = [
 export default function ProfilePage() {
   const params = useParams();
   const rawId = params.id;
-  const userId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const paramId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const targetUserId = paramId ? Number(paramId) : getStoredUser()?.userId;
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,27 +57,44 @@ export default function ProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowings, setShowFollowings] = useState(false);
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
+      if (!targetUserId) {
+        setError("로그인이 필요합니다.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError("");
 
-      const path = userId ? `/api/v1/users/${userId}` : "/api/v1/users/me";
-      const res = await apiFetchJson<UserProfile>(path);
+      const [profileRes, countRes] = await Promise.all([
+        apiFetchJson<UserProfile>(`/api/v1/users/${targetUserId}`),
+        apiFetchJson<{ userId: number; followerCount: number; followingCount: number }>(
+          `/api/v1/follows/users/${targetUserId}/count`
+        ),
+      ]);
 
-      if (res.ok && res.data) {
-        setUser(res.data);
-        setIsFollowing(res.data.following);
+      if (profileRes.ok && profileRes.data) {
+        setUser(profileRes.data);
+        setIsFollowing(profileRes.data.following);
       } else {
-        setError(res.message || "프로필을 불러오지 못했습니다.");
+        setError(profileRes.message || "프로필을 불러오지 못했습니다.");
+      }
+
+      if (countRes.ok && countRes.data) {
+        setFollowerCount(countRes.data.followerCount);
+        setFollowingCount(countRes.data.followingCount);
       }
 
       setLoading(false);
     };
 
     load();
-  }, [userId]);
+  }, [targetUserId]);
 
   const handleFollowToggle = async () => {
     if (!user || user.ownProfile) return;
@@ -134,11 +153,11 @@ export default function ProfilePage() {
                 <div className="mt-3 flex gap-4 text-sm">
                   <button onClick={() => setShowFollowers(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
                     <Users className="h-4 w-4 text-muted" />
-                    팔로워 <span className="font-bold text-ink">-</span>
+                    팔로워 <span className="font-bold text-ink">{followerCount ?? "-"}</span>
                   </button>
                   <button onClick={() => setShowFollowings(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
                     <UserPlus className="h-4 w-4 text-muted" />
-                    팔로잉 <span className="font-bold text-ink">-</span>
+                    팔로잉 <span className="font-bold text-ink">{followingCount ?? "-"}</span>
                   </button>
                 </div>
               </div>
@@ -255,15 +274,58 @@ export default function ProfilePage() {
         </div>
 
         {/* Followers modal */}
-        {showFollowers && <FollowListModal title="팔로워 목록" onClose={() => setShowFollowers(false)} />}
-        {showFollowings && <FollowListModal title="팔로잉 목록" onClose={() => setShowFollowings(false)} />}
+        {showFollowers && targetUserId && (
+          <FollowListModal title="팔로워 목록" type="followers" userId={targetUserId} onClose={() => setShowFollowers(false)} />
+        )}
+        {showFollowings && targetUserId && (
+          <FollowListModal title="팔로잉 목록" type="followings" userId={targetUserId} onClose={() => setShowFollowings(false)} />
+        )}
       </div>
     </AppShell>
   );
 }
 
-function FollowListModal({ title, onClose }: { title: string; onClose: () => void }) {
-  const users: FollowUser[] = [];
+interface FollowListModalProps {
+  title: string;
+  type: "followers" | "followings";
+  userId: number;
+  onClose: () => void;
+}
+
+function FollowListModal({ title, type, userId, onClose }: FollowListModalProps) {
+  const [users, setUsers] = useState<FollowUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const endpoint = type === "followers" ? `/api/v1/follows/users/${userId}/followers` : `/api/v1/follows/users/${userId}/followings`;
+
+  const load = async () => {
+    setLoading(true);
+    const res = await apiFetchJson<{ content: FollowUser[] }>(endpoint);
+    if (res.ok && res.data) {
+      setUsers(res.data.content);
+    } else {
+      setError(res.message || "목록을 불러오지 못했습니다.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+  }, [endpoint]);
+
+  const handleToggle = async (targetUserId: number, currentlyFollowing: boolean) => {
+    const res = await apiFetchJson(`/api/v1/follows/${targetUserId}`, {
+      method: currentlyFollowing ? "DELETE" : "POST",
+    });
+    if (res.ok) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUserId ? { ...u, isFollowedByMe: !currentlyFollowing } : u))
+      );
+    } else {
+      alert(res.message || "팔로우 처리에 실패했습니다.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in-50">
@@ -275,18 +337,29 @@ function FollowListModal({ title, onClose }: { title: string; onClose: () => voi
           </button>
         </div>
         <ul className="mt-4 max-h-60 overflow-y-auto space-y-3">
-          {users.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">목록을 불러올 수 없습니다. (API 미연동)</p>
+          {loading ? (
+            <li className="py-6 text-center text-sm text-muted">불러오는 중...</li>
+          ) : error ? (
+            <li className="py-6 text-center text-sm text-red-500">{error}</li>
+          ) : users.length === 0 ? (
+            <li className="py-6 text-center text-sm text-muted">목록이 비어있습니다.</li>
           ) : (
             users.map((f) => (
               <li key={f.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={f.profileImage || `https://picsum.photos/seed/user${f.id}/80/80`} alt={f.nickname} className="h-9 w-9 rounded-full object-cover" />
-                  <span className="text-sm font-bold text-ink">{f.nickname}</span>
-                </div>
-                <button className="flex items-center gap-1 rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-muted hover:text-primary">
+                <Link href={`/profile/${f.id}`} onClick={onClose} className="flex items-center gap-3">
+                  <img
+                    src={f.profileImage || `https://picsum.photos/seed/user${f.id}/80/80`}
+                    alt={f.nickname}
+                    className="h-9 w-9 rounded-full object-cover"
+                  />
+                  <span className="text-sm font-bold text-ink hover:text-primary">{f.nickname}</span>
+                </Link>
+                <button
+                  onClick={() => handleToggle(f.id, f.isFollowedByMe)}
+                  className="flex items-center gap-1 rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-muted hover:text-primary"
+                >
                   <UserMinus className="h-3 w-3" />
-                  {title === "팔로워 목록" ? "삭제" : "언팔로우"}
+                  {f.isFollowedByMe ? "언팔로우" : "팔로우"}
                 </button>
               </li>
             ))
