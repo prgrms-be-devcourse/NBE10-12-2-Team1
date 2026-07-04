@@ -4,6 +4,7 @@ import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
+import { CurrentUser, getStoredUser } from "@/lib/user";
 
 interface AppShellProps {
   children: ReactNode;
@@ -19,24 +20,6 @@ const mainNav = [
   { href: "/recommend", label: "추천", icon: Sparkles },
   { href: "/profile", label: "프로필", icon: User },
 ];
-
-interface CurrentUser {
-  userId: number;
-  nickname: string;
-  profileImage: string | null;
-  email: string;
-}
-
-function getStoredUser(): CurrentUser | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem("user");
-    if (!raw) return null;
-    return JSON.parse(raw) as CurrentUser;
-  } catch {
-    return null;
-  }
-}
 
 const fallbackUser: CurrentUser = {
   userId: 0,
