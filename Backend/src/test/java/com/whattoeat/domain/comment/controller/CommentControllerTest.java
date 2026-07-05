@@ -15,18 +15,30 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.whattoeat.domain.comment.dto.CommentRequest;
 import com.whattoeat.domain.comment.dto.CommentResponse;
 import com.whattoeat.domain.comment.service.CommentService;
+import com.whattoeat.domain.user.entity.Provider;
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.data.redis.core.RedisTemplate;
+
 import java.time.LocalDateTime;
 import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
@@ -51,6 +63,28 @@ class CommentControllerTest {
 
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
+
+    @BeforeEach
+    void setupSecurityContext() {
+        User user = User.builder()
+                .nickname("testUser")
+                .email("test@test.com")
+                .provider(Provider.LOCAL)
+                .role(Role.USER)
+                .build();
+        ReflectionTestUtils.setField(user,"id",1L);
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()));
+        SecurityContextHolder.setContext(context);
+    }
+
+    @AfterEach
+    void cleanSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private CommentResponse createResponse(Long id, String content, Long userId, String nickname) {
         return new CommentResponse(id, content, userId, nickname, LocalDateTime.now());
@@ -87,7 +121,6 @@ class CommentControllerTest {
         given(commentService.createComment(eq(1L), eq(1L), any(CommentRequest.class))).willReturn(response);
 
         mockMvc.perform(post("/api/v1/feeds/1/comments")
-                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
