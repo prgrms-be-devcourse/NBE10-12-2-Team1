@@ -19,8 +19,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/restaurant_lists")
 public class SavedRestaurantListController {
 
-    private static final Long TEMP_USER_ID = 2L; // TODO: JWT 적용 후 userDetails.getUserId()로 변경
-
     private final SavedRestaurantListService savedRestaurantListService;
 
     @PostMapping("/{id}/save")
