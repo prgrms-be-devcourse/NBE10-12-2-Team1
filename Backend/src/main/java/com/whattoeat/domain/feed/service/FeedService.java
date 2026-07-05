@@ -1,5 +1,6 @@
 package com.whattoeat.domain.feed.service;
 
+import com.whattoeat.domain.comment.repository.CommentRepository;
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
@@ -28,6 +29,7 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final RestaurantRepository restaurantRepository;
     private final FollowRepository followRepository;
+    private final CommentRepository commentRepository;
 
 
     @Transactional
@@ -49,7 +51,7 @@ public class FeedService {
         } else {
             feeds = feedRepository.findAllByOrderByIdDesc(pageable);
         }
-        return feeds.map(FeedListResponse::from);
+        return feeds.map(feed -> FeedListResponse.from(feed, commentRepository.countByFeedId(feed.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +66,7 @@ public class FeedService {
         }
 
         return feedRepository.findByUser_IdIn(followingUserIds, pageable)
-                .map(FeedListResponse::from);
+                .map(feed -> FeedListResponse.from(feed, commentRepository.countByFeedId(feed.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +95,8 @@ public class FeedService {
 
         List<FeedListResponse> responses = feeds.subList(start, end)
                 .stream()
-                .map(FeedListResponse::from)
+                .map(feed -> FeedListResponse
+                        .from(feed, commentRepository.countByFeedId(feed.getId())))
                 .toList();
 
         return new PageImpl<>(responses, pageable, feeds.size());

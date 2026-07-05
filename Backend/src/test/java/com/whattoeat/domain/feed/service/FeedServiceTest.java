@@ -1,5 +1,6 @@
 package com.whattoeat.domain.feed.service;
 
+import com.whattoeat.domain.comment.repository.CommentRepository;
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
@@ -46,6 +47,9 @@ public class FeedServiceTest {
 
     @MockitoBean
     FollowRepository followRepository;
+
+    @MockitoBean
+    CommentRepository commentRepository;
 
     @Autowired
     FeedService feedService;
@@ -109,6 +113,7 @@ public class FeedServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
+        given(commentRepository.countByFeedId(any())).willReturn(0L);
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
 
@@ -122,6 +127,7 @@ public class FeedServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(), pageable, 0));
+        given(commentRepository.countByFeedId(any())).willReturn(0L);
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
         assertThat(result.getContent().isEmpty());
@@ -190,6 +196,8 @@ public class FeedServiceTest {
         given(feedRepository.findByUser_IdIn(List.of(2L), pageable))
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
 
+        given(commentRepository.countByFeedId(any())).willReturn(0L);
+
         Page<FeedListResponse> result = feedService.getFollowingFeeds(user1.getId(), pageable);
 
         assertThat(result.getContent()).hasSize(1);
@@ -224,6 +232,8 @@ public class FeedServiceTest {
 
         given(feedRepository.findByUser_IdNotIn(List.of(1L, 2L)))
                 .willReturn(List.of(user3Feed));
+
+        given(commentRepository.countByFeedId(any())).willReturn(0L);
 
         Page<FeedListResponse> result = feedService.getRandomRecommendedFeeds(user1.getId(), pageable);
 
