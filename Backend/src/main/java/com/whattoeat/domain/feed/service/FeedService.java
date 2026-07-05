@@ -12,6 +12,7 @@ import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -56,7 +57,7 @@ public class FeedService {
 
     @Transactional(readOnly = true)
     public Page<FeedListResponse> getFollowingFeeds(Long userId, Pageable pageable) {
-        List<Long> followingUserIds = followRepository.findByFollower_Id(userId,Pageable.unpaged())
+        List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
                 .stream()
                 .map(follow -> follow.getFollowing().getId())
                 .toList();
@@ -75,7 +76,7 @@ public class FeedService {
 
         excludedUserIds.add(userId);
 
-        List<Long> followingUserIds = followRepository.findByFollower_Id(userId,Pageable.unpaged())
+        List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
                 .stream()
                 .map(follow -> follow.getFollowing().getId())
                 .toList();
@@ -103,9 +104,14 @@ public class FeedService {
     }
 
     @Transactional
-    public FeedDetailResponse updateFeed(Long feedId, FeedUpdateRequest request) {
+    public FeedDetailResponse updateFeed(Long feedId, Long currentUserId, FeedUpdateRequest request) {
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        if (!feed.getUser().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("본인 피드만 수정할 수 있습니다.");
+        }
+
         Restaurant restaurant = request.restaurantId() != null
                 ? restaurantRepository.findById(request.restaurantId()).orElse(null)
                 : null;
@@ -116,9 +122,14 @@ public class FeedService {
     }
 
     @Transactional
-    public void deleteFeed(Long feedId) {
+    public void deleteFeed(Long feedId, Long currentUserId) {
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(()-> new FeedNotFoundException(feedId));
+                .orElseThrow(() -> new FeedNotFoundException(feedId));
+
+        if (!feed.getUser().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("본인 피드만 삭제할 수 있습니다.");
+        }
+
         feedRepository.delete(feed);
     }
 

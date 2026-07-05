@@ -24,7 +24,7 @@ public class FeedController {
     @PostMapping
     public RsData<FeedDetailResponse> createFeed(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody FeedCreateRequest feedCreateRequest){
+            @Valid @RequestBody FeedCreateRequest feedCreateRequest) {
         FeedDetailResponse response = feedService.createFeed(userDetails.getUser(), feedCreateRequest);
         return RsData.success(response, "피드가 생성되었습니다.");
     }
@@ -36,7 +36,7 @@ public class FeedController {
             Pageable pageable
     ) {
         Page<FeedListResponse> page = feedService.getFeeds(userId, restaurantId, pageable);
-        return RsData.success(FeedListPageResponse.from(page),"피드 목록 조회가 완료되었습니다.");
+        return RsData.success(FeedListPageResponse.from(page), "피드 목록 조회가 완료되었습니다.");
     }
 
     @GetMapping("/following")
@@ -45,7 +45,7 @@ public class FeedController {
             Pageable pageable
     ) {
         Page<FeedListResponse> page = feedService.getFollowingFeeds(userDetails.getUserId(), pageable);
-        return RsData.success(FeedListPageResponse.from(page),"팔로잉 피드 조회가 완료되었습니다.");
+        return RsData.success(FeedListPageResponse.from(page), "팔로잉 피드 조회가 완료되었습니다.");
     }
 
     @GetMapping("/recommend")
@@ -54,22 +54,25 @@ public class FeedController {
             Pageable pageable
     ) {
         Page<FeedListResponse> page = feedService.getRandomRecommendedFeeds(userDetails.getUserId(), pageable);
-        return RsData.success(FeedListPageResponse.from(page),"추천 피드 조회가 완료되었습니다.");
+        return RsData.success(FeedListPageResponse.from(page), "추천 피드 조회가 완료되었습니다.");
     }
 
     @PutMapping("/{id}")
     public RsData<FeedDetailResponse> updateFeed(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
             @Valid @RequestBody FeedUpdateRequest feedUpdateRequest
-    ){
-        FeedDetailResponse response = feedService.updateFeed(id, feedUpdateRequest);
+    ) {
+        FeedDetailResponse response = feedService.updateFeed(id, userDetails.getUserId(), feedUpdateRequest);
         return RsData.success(response, "피드가 수정되었습니다.");
     }
 
     @DeleteMapping("/{id}")
-    public RsData<Void> deleteFeed(@PathVariable Long id){
-        feedService.deleteFeed(id);
-        return RsData.success(null,"피드가 삭제되었습니다.");
+    public RsData<Void> deleteFeed(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        feedService.deleteFeed(id, userDetails.getUserId());
+        return RsData.success(null, "피드가 삭제되었습니다.");
     }
 
 }
