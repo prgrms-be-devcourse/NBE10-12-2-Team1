@@ -15,6 +15,7 @@ const hotPlaces = [
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
 
 interface KakaoRestaurant {
+  id?: number; // DB 식당 ID (6번 추가). 없으면 아직 저장되지 않은 카카오 장소
   kakaoPlaceId: string;
   name: string;
   category: string;
@@ -157,7 +158,7 @@ export default function SearchPage() {
 
                 <div className="flex gap-4 overflow-x-auto pb-2">
                   {filtered.map((r) => (
-                    <Link key={r.kakaoPlaceId} href={`/restaurant/${r.kakaoPlaceId}`} className="shrink-0">
+                    <Link key={r.kakaoPlaceId} href={`/restaurant/${r.id || r.kakaoPlaceId}`} className="shrink-0">
                       <article className="group w-64 overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
                         <div className="h-32 w-full overflow-hidden bg-surface-strong">
                           <img
