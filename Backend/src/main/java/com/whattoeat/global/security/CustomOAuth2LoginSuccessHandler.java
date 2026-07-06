@@ -54,6 +54,6 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             );
             redirectUri = decodeState.split("#", 2)[0];
         }
-        response.sendRedirect(redirectUri);
+        response.sendRedirect(redirectUri + "/feed");
     }
 }
