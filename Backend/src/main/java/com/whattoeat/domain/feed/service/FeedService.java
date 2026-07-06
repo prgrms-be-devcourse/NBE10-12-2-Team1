@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +54,22 @@ public class FeedService {
         } else {
             feeds = feedRepository.findAllByOrderByIdDesc(pageable);
         }
-        return feeds.map(feed -> FeedListResponse.from(feed, commentRepository.countByFeedId(feed.getId())));
+
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.getContent());
+
+        return feeds.map(feed -> FeedListResponse
+                .from(feed, commentCounts.getOrDefault(feed.getId(),0L)));
+    }
+
+    private Map<Long, Long> countCommentByFeedIds(List<Feed> feeds) {
+        List<Long> feedIds = feeds.stream().map(Feed::getId).toList();
+        if (feedIds.isEmpty()) return Map.of();
+        return commentRepository.countByFeedIds(feedIds)
+                .stream().collect(Collectors.toMap(
+                                row -> (Long) row[0],
+                                row -> row[1] == null ? 0L : ((Number) row[1]).longValue()
+                        )
+                );
     }
 
     @Transactional(readOnly = true)
@@ -66,12 +83,17 @@ public class FeedService {
             return Page.empty(pageable);
         }
 
-        return feedRepository.findByUser_IdIn(followingUserIds, pageable)
-                .map(feed -> FeedListResponse.from(feed, commentRepository.countByFeedId(feed.getId())));
+        Page<Feed> feeds = feedRepository.findByUser_IdIn(followingUserIds, pageable);
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.getContent());
+
+        return feeds.map(feed -> FeedListResponse
+                .from(feed, commentCounts.getOrDefault(feed.getId(),0L)));
     }
 
     @Transactional(readOnly = true)
     public Page<FeedListResponse> getRandomRecommendedFeeds(Long userId, Pageable pageable) {
+        if(userId == null) return Page.empty(pageable);
+
         List<Long> excludedUserIds = new ArrayList<>();
 
         excludedUserIds.add(userId);
@@ -94,10 +116,12 @@ public class FeedService {
             return Page.empty(pageable);
         }
 
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.subList(start, end));
+
         List<FeedListResponse> responses = feeds.subList(start, end)
                 .stream()
                 .map(feed -> FeedListResponse
-                        .from(feed, commentRepository.countByFeedId(feed.getId())))
+                        .from(feed, commentCounts.getOrDefault(feed.getId(),0L)))
                 .toList();
 
         return new PageImpl<>(responses, pageable, feeds.size());
