@@ -102,41 +102,43 @@ export default function WritePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    if (!selectedRestaurant) {
-      alert("식당을 선택해주세요.");
-      return;
-    }
 
     setSubmitting(true);
 
-    const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
-      method: "POST",
-      body: JSON.stringify({
-        kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
-        name: selectedRestaurant.name,
-        categoryName: selectedRestaurant.category,
-        address: selectedRestaurant.address,
-        roadAddress: selectedRestaurant.roadAddress,
-        region1: selectedRestaurant.region1,
-        region2: selectedRestaurant.region2,
-        region3: selectedRestaurant.region3,
-        phone: selectedRestaurant.phone,
-        lat: selectedRestaurant.lat,
-        lng: selectedRestaurant.lng,
-      }),
-    });
+    let restaurantId: number | null = null;
 
-    if (!saveRes.ok || !saveRes.data) {
-      alert(saveRes.message || "식당 저장에 실패했습니다.");
-      setSubmitting(false);
-      return;
+    if (selectedRestaurant) {
+      const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
+        method: "POST",
+        body: JSON.stringify({
+          kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
+          name: selectedRestaurant.name,
+          categoryName: selectedRestaurant.category,
+          address: selectedRestaurant.address,
+          roadAddress: selectedRestaurant.roadAddress,
+          region1: selectedRestaurant.region1,
+          region2: selectedRestaurant.region2,
+          region3: selectedRestaurant.region3,
+          phone: selectedRestaurant.phone,
+          lat: selectedRestaurant.lat,
+          lng: selectedRestaurant.lng,
+        }),
+      });
+
+      if (!saveRes.ok || !saveRes.data) {
+        alert(saveRes.message || "식당 저장에 실패했습니다.");
+        setSubmitting(false);
+        return;
+      }
+
+      restaurantId = saveRes.data.id;
     }
 
     const feedRes = await apiFetchJson("/api/v1/feeds", {
       method: "POST",
       body: JSON.stringify({
         content: content.trim(),
-        restaurantId: saveRes.data.id,
+        restaurantId,
       }),
     });
 
@@ -184,7 +186,7 @@ export default function WritePostPage() {
         <form onSubmit={handleSubmit} className="rounded-2xl bg-surface p-6 border border-hairline-soft shadow-sm space-y-5">
           {/* Tagged restaurant */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-muted mb-2 block">태그된 식당</label>
+            <label className="text-xs font-bold text-muted mb-2 block">태그된 식당 (선택)</label>
             {selectedRestaurant ? (
               <div className="flex items-center justify-between rounded-xl bg-primary-soft p-3">
                 <div>
@@ -231,6 +233,7 @@ export default function WritePostPage() {
                     </button>
                   ))}
                 </div>
+                <p className="text-xs text-muted">식당을 선택하지 않아도 포스트를 작성할 수 있어요.</p>
               </>
             )}
           </div>
