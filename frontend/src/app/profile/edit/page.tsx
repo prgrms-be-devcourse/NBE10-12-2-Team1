@@ -1,24 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Eye, EyeOff } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { apiFetchJson } from "@/lib/api";
+import { getStoredUser } from "@/lib/user";
+
+interface UserProfile {
+  id: number;
+  nickname: string;
+  profileImage: string | null;
+  email: string;
+  provider: string;
+}
 
 export default function EditProfilePage() {
   const router = useRouter();
 
-  // mock 로그인 방식: "kakao" | "email"
-  const [loginType] = useState<"kakao" | "email">("email");
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [nickname, setNickname] = useState("오늘의푸디");
-  const [email, setEmail] = useState("foodie@example.com");
+  const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [previewImage, setPreviewImage] = useState("https://picsum.photos/seed/myprofile/120/120");
+  const [previewImage, setPreviewImage] = useState("");
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    if (!stored) {
+      router.push("/login");
+      return;
+    }
+
+    const load = async () => {
+      const res = await apiFetchJson<UserProfile>(`/api/v1/users/${stored.userId}`);
+      if (res.ok && res.data) {
+        setUser(res.data);
+        setNickname(res.data.nickname);
+        setEmail(res.data.email);
+        setPreviewImage(res.data.profileImage || `https://picsum.photos/seed/${res.data.nickname}/120/120`);
+      } else {
+        alert(res.message || "프로필 정보를 불러오지 못했습니다.");
+      }
+      setLoading(false);
+    };
+
+    load();
+  }, [router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,15 +61,59 @@ export default function EditProfilePage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginType === "email" && newPassword && newPassword !== confirmPassword) {
+    if (!user) return;
+
+    if (user.provider === "LOCAL" && newPassword && newPassword !== confirmPassword) {
       alert("새 비밀번호가 일치하지 않습니다.");
       return;
     }
-    alert("프로필이 수정되었습니다. (API 연동 예정)");
-    router.push("/profile");
+
+    const body: Record<string, string | null> = {
+      nickname,
+      profileImage: previewImage,
+    };
+
+    if (user.provider === "LOCAL") {
+      body.email = email;
+      if (newPassword) {
+        body.currentPassword = currentPassword;
+        body.newPassword = newPassword;
+      }
+    }
+
+    const res = await apiFetchJson<UserProfile>(`/api/v1/users/${user.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      alert("프로필이 수정되었습니다.");
+      router.push("/profile");
+    } else {
+      alert(res.message || "프로필 수정에 실패했습니다.");
+    }
   };
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-xl space-y-5">
+          <div className="h-8 w-40 rounded-lg bg-surface-soft animate-pulse" />
+          <div className="h-96 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppShell>
+        <p className="py-20 text-center text-sm text-muted">프로필 정보를 불러오지 못했습니다.</p>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -78,7 +155,7 @@ export default function EditProfilePage() {
           </div>
 
           {/* Email login only */}
-          {loginType === "email" && (
+          {user.provider === "LOCAL" ? (
             <>
               <div>
                 <label className="text-xs font-bold text-muted mb-1.5 block">이메일</label>
@@ -137,10 +214,7 @@ export default function EditProfilePage() {
                 </div>
               </div>
             </>
-          )}
-
-          {/* Kakao login notice */}
-          {loginType === "kakao" && (
+          ) : (
             <div className="rounded-xl bg-surface-soft p-4 text-sm text-muted">
               카카오 로그인 계정은 닉네임과 프로필 사진만 변경할 수 있습니다.
               <br />

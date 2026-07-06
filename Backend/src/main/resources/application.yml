@@ -1,6 +1,4 @@
 spring:
-  profiles:
-    active: dev
   datasource:
     url: jdbc:h2:mem:whattoeat
     driver-class-name: org.h2.Driver
@@ -28,6 +26,3 @@ jwt:
   refresh-expiration: 604800000
   # 1000(밀리초) × 60(초) × 60(분) × 24(시간) × 7(일) = 7일
 
-kakao:
-  map:
-    rest-api-key: ${KAKAO_MAP_REST_API_KEY}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, User } from "lucide-react";
+import { CurrentUser, getStoredUser } from "@/lib/user";
 
 const protectedPaths = ["/feed", "/profile", "/search", "/recommend", "/lists", "/restaurant"];
 
@@ -19,17 +20,15 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ nickname: string; profileImage: string } | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     const checkLoginStatus = () => {
       const logged = localStorage.getItem("isLoggedIn") === "true";
+      const storedUser = getStoredUser();
       setIsLoggedIn(logged);
-      if (logged) {
-        setUser({
-          nickname: "오늘의푸디",
-          profileImage: "https://picsum.photos/seed/myprofile/80/80",
-        });
+      if (logged && storedUser) {
+        setUser(storedUser);
       } else {
         setUser(null);
         // 보호된 페이지일 때 로그인 페이지로 리다이렉트
@@ -54,13 +53,23 @@ export default function Header() {
     router.push("/login");
   };
 
-  // 로그아웃 수행 시뮬레이션
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    setIsLoggedIn(false);
-    setUser(null);
-    window.dispatchEvent(new Event("login-state-change"));
-    router.push("/");
+  // 로그아웃
+  const handleLogout = async () => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/api/v1/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // 서버 요청 실패핏 localStorage 클리어 및 이동
+    } finally {
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("user");
+      setIsLoggedIn(false);
+      setUser(null);
+      window.dispatchEvent(new Event("login-state-change"));
+      router.push("/");
+    }
   };
 
   return (

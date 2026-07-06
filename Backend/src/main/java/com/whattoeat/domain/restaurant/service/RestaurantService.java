@@ -27,6 +27,13 @@ public class RestaurantService {
         return restaurants.get(random.nextInt(restaurants.size()));
     }
 
+    @Transactional(readOnly = true)
+    public Restaurant findByKakaoPlaceId(String kakaoPlaceId) {
+        return restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+                .orElseThrow(()-> new RestaurantNotFoundException("DB에 없는 식당입니다."));
+    }
+
+
     @Transactional
     public Restaurant saveGetKakao(RestaurantRequest.FromKakao request) {
         return restaurantRepository.findByKakaoPlaceId(request.kakaoPlaceId())

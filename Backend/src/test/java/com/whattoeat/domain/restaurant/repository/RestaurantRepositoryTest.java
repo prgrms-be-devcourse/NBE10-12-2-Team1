@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.global.config.JpaConfig;
+
 import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,5 +101,19 @@ class RestaurantRepositoryTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getRegion2()).isEqualTo("강남구");
+    }
+
+    @Test
+    void findByKakaoPlaceId_성공() {
+        Optional<Restaurant> result = restaurantRepository.findByKakaoPlaceId("kakao-1");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("서울한식당");
+    }
+
+    @Test
+    void findByKakaoPlaceId_없으면_empty(){
+        Optional<Restaurant> result = restaurantRepository.findByKakaoPlaceId("unknown");
+        assertThat(result).isEmpty();
     }
 }

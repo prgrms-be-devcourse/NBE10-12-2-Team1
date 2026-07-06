@@ -4,7 +4,6 @@ import com.whattoeat.domain.restaurant.dto.RestaurantRequest;
 import com.whattoeat.domain.restaurant.dto.RestaurantResponse;
 import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
-import com.whattoeat.domain.restaurant.service.RestaurantKakaoService;
 import com.whattoeat.domain.restaurant.service.RestaurantService;
 import com.whattoeat.global.rsData.RsData;
 import jakarta.validation.Valid;
@@ -19,7 +18,6 @@ import java.util.List;
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
-    private final RestaurantKakaoService restaurantKakaoService;
 
     //식당 추천조회
     @GetMapping("/recommend")
@@ -35,24 +33,21 @@ public class RestaurantController {
         return RsData.success(restaurant, "식당 추천이 완료되었습니다.");
     }
 
-    // 카카오 검색만 하고, DB 저장 안함
-    @GetMapping("/search")
-    public RsData<List<RestaurantResponse.KakaoRestaurant>> searchFromKakao(
-            @RequestParam String keyword,
-            @RequestParam(required = false) Double lng,
-            @RequestParam(required = false) Double lat,
-            @RequestParam(defaultValue = "1000") Integer radius,
-            @RequestParam(defaultValue = "1") Integer page
-    ) {
-        List<RestaurantResponse.KakaoRestaurant> result = restaurantKakaoService.searchByKeyword(
-                keyword,
-                lng,
-                lat,
-                radius,
-                page
-        );
+    // 식당 조회 (kakaoPlaceId로 단건 조회 or 전체 목록)
+    @GetMapping
+    public RsData<?> getRestaurants(@RequestParam(required = false) String kakaoPlaceId){
+        if(kakaoPlaceId != null && !kakaoPlaceId.isBlank()){
+            Restaurant restaurant = restaurantService.findByKakaoPlaceId(kakaoPlaceId);
+            return RsData.success(
+                    new RestaurantResponse.Recommend(restaurant),"식당 조회가 완료되었습니다.");
+        }
 
-        return RsData.success(result, "카카오 장소 검색 결과입니다.");
+        List<RestaurantResponse.Recommend> result = restaurantService.findAll()
+                .stream()
+                .map(RestaurantResponse.Recommend::new)
+                .toList();
+
+        return RsData.success(result, "저장된 식당 목록입니다.");
     }
 
     // 프론트에서 선택한 식당만 저장
@@ -68,16 +63,7 @@ public class RestaurantController {
         );
     }
 
-    // 식당 저장된건지 확인용
-    @GetMapping
-    public RsData<List<RestaurantResponse.Recommend>> getRestaurants() {
-        List<RestaurantResponse.Recommend> result = restaurantService.findAll()
-                .stream()
-                .map(RestaurantResponse.Recommend::new)
-                .toList();
-
-        return RsData.success(result, "저장된 식당 목록입니다.");
-    }
+    //식당 상세 조회
     @GetMapping("/{id}")
     public RsData<RestaurantResponse.Recommend> getRestaurantById(@PathVariable Long id) {
         Restaurant restaurant = restaurantService.findById(id);
