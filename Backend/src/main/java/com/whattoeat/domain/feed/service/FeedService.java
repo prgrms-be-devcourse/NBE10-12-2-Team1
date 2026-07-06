@@ -6,6 +6,7 @@ import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
 import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
+import com.whattoeat.domain.feed.event.FeedCreatedEvent;
 import com.whattoeat.domain.feed.repository.FeedRepository;
 import com.whattoeat.domain.follow.repository.FollowRepository;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
@@ -14,6 +15,7 @@ import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,7 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final RestaurantRepository restaurantRepository;
     private final FollowRepository followRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final CommentRepository commentRepository;
 
 
@@ -41,6 +44,7 @@ public class FeedService {
                 ? restaurantRepository.findById(feedCreateRequest.restaurantId()).orElse(null)
                 : null;
         Feed feed = feedRepository.save(feedCreateRequest.toEntity(user, restaurant));
+        eventPublisher.publishEvent(new FeedCreatedEvent(feed.getId(), user.getId()));
         return FeedDetailResponse.from(feed);
     }
 
