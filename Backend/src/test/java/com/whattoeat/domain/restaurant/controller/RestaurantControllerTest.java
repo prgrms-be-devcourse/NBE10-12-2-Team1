@@ -13,6 +13,7 @@ import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetailsService;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -115,5 +116,29 @@ class RestaurantControllerTest {
         mockMvc.perform(get("/api/v1/restaurants/recommend")
                         .param("category", "INVALID_CATEGORY"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("존재하는 id로 식당 상세 조회 시 200과 식당 정보를 반환한다")
+    void getRestaurantById_성공() throws Exception {
+        Restaurant restaurant = createRestaurant("kakao-99", "을지삼겹", Category.KOREAN);
+        given(restaurantService.findById(1L)).willReturn(restaurant);
+
+        mockMvc.perform(get("/api/v1/restaurants/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.name").value("을지삼겹"))
+                .andExpect(jsonPath("$.data.category").value("KOREAN"))
+                .andExpect(jsonPath("$.message").value("식당 조회가 완료 되었습니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 id로 식당 상세 조회 시 404를 반환한다")
+    void getRestaurantById_존재하지_않는_id_404() throws Exception {
+        given(restaurantService.findById(999L))
+                .willThrow(new RestaurantNotFoundException(999L));
+
+        mockMvc.perform(get("/api/v1/restaurants/999"))
+                .andExpect(status().isNotFound());
     }
 }
