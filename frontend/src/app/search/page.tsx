@@ -63,7 +63,10 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || typeof window === "undefined") return;
+
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
+    console.log("[KakaoMap] NEXT_PUBLIC_KAKAO_MAP_JS_KEY:", kakaoKey);
 
     const initMap = () => {
       if (!mapRef.current || !window.kakao?.maps) return;
@@ -75,6 +78,7 @@ export default function SearchPage() {
     };
 
     const loadMap = () => {
+      console.log("[KakaoMap] loadMap called. kakao.maps exists:", !!window.kakao?.maps);
       if (window.kakao?.maps) {
         window.kakao.maps.load(initMap);
       }
@@ -85,8 +89,9 @@ export default function SearchPage() {
       return;
     }
 
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
+    const existing = document.getElementById("kakao-map-sdk") as HTMLScriptElement | null;
     if (existing) {
+      console.log("[KakaoMap] existing script found. src:", existing.src);
       existing.addEventListener("load", loadMap);
       const check = setInterval(() => {
         if (window.kakao?.maps) {
@@ -97,11 +102,18 @@ export default function SearchPage() {
       return () => clearInterval(check);
     }
 
+    if (!kakaoKey) {
+      setError("카카오맵 JS 키가 설정되지 않았습니다. .env.local을 확인하세요.");
+      return;
+    }
+
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services&autoload=false`;
+    script.id = "kakao-map-sdk";
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`;
     script.async = true;
     script.onload = loadMap;
     script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
+    console.log("[KakaoMap] injecting script:", script.src);
     document.head.appendChild(script);
   }, []);
 
