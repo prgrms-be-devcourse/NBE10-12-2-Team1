@@ -16,8 +16,13 @@ const recommendFoodies = [
 interface Feed {
   feedId: number;
   content: string;
+  userId: number;
   nickname: string;
+  profileImage: string | null;
   likeCount: number;
+  commentCount: number;
+  restaurantId: number | null;
+  restaurantName: string | null;
   createdAt: string;
 }
 
@@ -136,22 +141,22 @@ function FeedContent() {
               <article key={post.feedId} className="rounded-2xl bg-surface p-5 border border-hairline-soft shadow-sm">
                 {/* Author */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <Link href={`/profile/${post.userId}`} className="flex items-center gap-3 group">
                     <img
-                      src={`https://picsum.photos/seed/${post.nickname}/80/80`}
+                      src={post.profileImage || `https://picsum.photos/seed/${post.nickname}/80/80`}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover ring-1 ring-hairline-soft"
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-ink">{post.nickname}</p>
+                        <p className="text-sm font-bold text-ink group-hover:text-primary transition-colors">{post.nickname}</p>
                         <span className="text-xs text-primary font-semibold">
                           {activeTab === "following" ? "팔로잉" : "추천"}
                         </span>
                       </div>
                       <p className="text-xs text-muted-soft">{new Date(post.createdAt).toLocaleString()}</p>
                     </div>
-                  </div>
+                  </Link>
                   <button className="rounded-full p-1.5 text-muted hover:bg-surface-soft">
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
@@ -159,6 +164,18 @@ function FeedContent() {
 
                 {/* Content */}
                 <p className="mt-4 text-sm leading-relaxed text-body">{post.content}</p>
+
+                {/* Restaurant */}
+                {post.restaurantId && post.restaurantName && (
+                  <div className="mt-3">
+                    <Link
+                      href={`/restaurant/${post.restaurantId}`}
+                      className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      🍴 {post.restaurantName}
+                    </Link>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="mt-4 flex items-center gap-5 border-t border-hairline-soft pt-3">
@@ -168,7 +185,7 @@ function FeedContent() {
                   </button>
                   <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors">
                     <MessageCircle className="h-4 w-4" />
-                    <span>댓글</span>
+                    <span>댓글 {post.commentCount}</span>
                   </button>
                 </div>
               </article>
