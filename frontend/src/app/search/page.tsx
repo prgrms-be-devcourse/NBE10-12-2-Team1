@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, Navigation } from "lucide-react";
+import { Search, Navigation } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
@@ -53,6 +53,19 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<any>(null);
+  const markersRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    if (!mapRef.current || !window.kakao?.maps) return;
+
+    const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
+      center: new window.kakao.maps.LatLng(37.5665, 126.978),
+      level: 5,
+    });
+    setMap(kakaoMap);
+  }, []);
 
   useEffect(() => {
     const loadHotPlaces = async () => {
@@ -64,6 +77,38 @@ export default function SearchPage() {
 
     loadHotPlaces();
   }, []);
+
+  useEffect(() => {
+    if (!map) return;
+
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    const filtered = results.filter((r) => matchesCategory(r, activeCategory));
+    if (filtered.length === 0) return;
+
+    const bounds = new window.kakao.maps.LatLngBounds();
+    filtered.forEach((r) => {
+      const position = new window.kakao.maps.LatLng(r.lat, r.lng);
+      const marker = new window.kakao.maps.Marker({ position, map });
+      markersRef.current.push(marker);
+      bounds.extend(position);
+    });
+    map.setBounds(bounds);
+  }, [map, results, activeCategory]);
+
+  const handleCurrentLocation = () => {
+    if (!navigator.geolocation || !map) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const center = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        map.setCenter(center);
+      },
+      () => {
+        alert("현재 위치를 가져올 수 없습니다.");
+      }
+    );
+  };
 
   const fetchSearch = async () => {
     if (!query.trim()) return;
@@ -183,14 +228,12 @@ export default function SearchPage() {
     >
       <div className="relative h-[calc(100vh-6.5rem)] overflow-hidden rounded-2xl border border-hairline-soft">
         {/* Map — full main background */}
-        <div className="absolute inset-0 flex items-center justify-center bg-surface-strong">
-          <div className="text-center text-muted">
-            <MapPin className="mx-auto mb-3 h-12 w-12 text-primary" />
-            <p className="text-sm">Kakao Map 연동 예정</p>
-          </div>
-        </div>
+        <div ref={mapRef} className="absolute inset-0 bg-surface-strong" />
 
-        <button className="absolute bottom-4 right-4 flex items-center justify-center gap-1.5 rounded-lg border border-hairline bg-surface-soft px-4 py-2 text-xs font-bold text-ink shadow-sm transition-colors hover:bg-white">
+        <button
+          onClick={handleCurrentLocation}
+          className="absolute bottom-4 right-4 flex items-center justify-center gap-1.5 rounded-lg border border-hairline bg-surface-soft px-4 py-2 text-xs font-bold text-ink shadow-sm transition-colors hover:bg-white"
+        >
           <Navigation className="h-3.5 w-3.5 text-primary" />
           현재 위치
         </button>
@@ -256,7 +299,7 @@ export default function SearchPage() {
                       <article className="group w-64 overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
                         <div className="h-32 w-full overflow-hidden bg-surface-strong">
                           <img
-                            src={`https://picsum.photos/seed/${r.kakaoPlaceId}/400/240`}
+                            src="/restaurant-placeholder.png"
                             alt={r.name}
                             className="h-full w-full object-cover transition-transform group-hover:scale-105"
                           />
