@@ -8,7 +8,7 @@ import { apiFetchJson } from "@/lib/api";
 type Tab = "kakao" | "email";
 type Mode = "login" | "signup";
 
-const API_BASE = "/api";
+const API_BASE = "";
 const OAUTH_BASE = "http://localhost:8080";
 
 interface HotPlace {
