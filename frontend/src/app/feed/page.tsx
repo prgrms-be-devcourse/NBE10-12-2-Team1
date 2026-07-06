@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
+import { getStoredUser, setStoredUser } from "@/lib/user";
 
 interface Feed {
   feedId: number;
@@ -39,6 +40,25 @@ function FeedContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>([]);
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    if (stored?.userId) return;
+
+    apiFetchJson<{ id: number; nickname: string; profileImage: string | null; email: string }>(
+      "/api/v1/users/me"
+    ).then((res) => {
+      if (res.ok && res.data) {
+        setStoredUser({
+          userId: res.data.id,
+          nickname: res.data.nickname,
+          profileImage: res.data.profileImage,
+          email: res.data.email,
+        });
+        window.dispatchEvent(new Event("login-state-change"));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const load = async () => {
