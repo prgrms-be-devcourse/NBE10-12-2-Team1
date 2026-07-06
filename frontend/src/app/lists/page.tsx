@@ -215,8 +215,6 @@ export default function ListsPage() {
     setSaving(false);
   };
 
-  const isSavedList = (listId: number) => savedLists.some((l) => l.listId === listId);
-
   const handleDeleteItem = async (item: ListItem) => {
     if (!selectedDetail) return;
     if (!confirm("식당을 리스트에서 삭제할까요?")) return;

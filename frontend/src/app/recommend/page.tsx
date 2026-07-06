@@ -26,6 +26,27 @@ interface HotPlace {
   region2: string;
 }
 
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  panTo: (center: unknown) => void;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        Map: new (container: HTMLElement, options: object) => KakaoMap;
+        LatLng: new (lat: number, lng: number) => unknown;
+        Marker: new (options: { position: unknown; map?: unknown }) => KakaoMarker;
+      };
+    };
+  }
+}
+
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
@@ -112,8 +133,8 @@ export default function RecommendPage() {
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
 
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markerRef = useRef<any>(null);
+  const [map, setMap] = useState<KakaoMap | null>(null);
+  const markerRef = useRef<KakaoMarker | null>(null);
 
   const locationLabel =
     selectedCity +
