@@ -53,8 +53,8 @@ export default function WritePostPage() {
     loadRecent();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    e?.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
 
@@ -203,23 +203,30 @@ export default function WritePostPage() {
               </div>
             ) : (
               <>
-                <form onSubmit={handleSearch} className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="식당명을 입력하세요"
                     className="flex-1 rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearch(e);
+                      }
+                    }}
                   />
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSearch}
                     disabled={searching}
                     className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
                   >
                     <Search className="h-4 w-4" />
                     {searching ? "검색 중..." : "검색"}
                   </button>
-                </form>
+                </div>
                 <div className="space-y-2">
                   {searchResults.map((r) => (
                     <button
