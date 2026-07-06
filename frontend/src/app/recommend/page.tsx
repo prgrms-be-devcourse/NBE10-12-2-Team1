@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin,
@@ -111,6 +111,10 @@ export default function RecommendPage() {
   const [current, setCurrent] = useState<RecommendRestaurant | null>(null);
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
 
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<any>(null);
+  const markerRef = useRef<any>(null);
+
   const locationLabel =
     selectedCity +
     (selectedDistrict === "전체" ? "" : ` ${selectedDistrict}`) +
@@ -126,6 +130,26 @@ export default function RecommendPage() {
 
     loadHotPlaces();
   }, []);
+
+  useEffect(() => {
+    if (!resultModalOpen || !current || !mapRef.current || !window.kakao?.maps) return;
+
+    const center = new window.kakao.maps.LatLng(current.lat, current.lng);
+    const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
+      center,
+      level: 3,
+    });
+    setMap(kakaoMap);
+
+    markerRef.current?.setMap(null);
+    const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap });
+    markerRef.current = marker;
+
+    return () => {
+      markerRef.current?.setMap(null);
+      setMap(null);
+    };
+  }, [resultModalOpen, current]);
 
   const fetchRecommend = async () => {
     setRecommendLoading(true);
@@ -381,6 +405,30 @@ export default function RecommendPage() {
               </div>
             ) : (
               <>
+                {/* Map */}
+                <div className="relative mb-5 h-48 w-full overflow-hidden rounded-2xl border border-hairline-soft">
+                  <div ref={mapRef} className="absolute inset-0 bg-surface-strong" />
+                  <button
+                    onClick={() => {
+                      if (!map || !navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const center = new window.kakao.maps.LatLng(
+                            pos.coords.latitude,
+                            pos.coords.longitude
+                          );
+                          map.setCenter(center);
+                        },
+                        () => alert("현재 위치를 가져올 수 없습니다.")
+                      );
+                    }}
+                    className="absolute bottom-2 right-2 flex items-center justify-center rounded-lg border border-hairline bg-surface/90 p-1.5 text-muted shadow-sm hover:bg-white"
+                    aria-label="현재 위치"
+                  >
+                    <Navigation className="h-4 w-4" />
+                  </button>
+                </div>
+
                 {/* Draft card */}
                 <div className="rounded-2xl bg-surface border border-hairline-soft overflow-hidden shadow-sm">
                   <div className="aspect-[16/10] w-full bg-primary-soft flex items-center justify-center text-7xl">
