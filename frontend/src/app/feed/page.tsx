@@ -31,12 +31,6 @@ interface RecommendFoodie {
   profileImage: string | null;
 }
 
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
 function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,11 +45,8 @@ function FeedContent() {
     const stored = getStoredUser();
     if (stored?.userId) return;
 
-    const userIdCookie = getCookie("userId");
-    if (!userIdCookie) return;
-
     apiFetchJson<{ id: number; nickname: string; profileImage: string | null; email: string }>(
-      `/api/v1/users/${userIdCookie}`
+      "/api/v1/users/me"
     ).then((res) => {
       if (res.ok && res.data) {
         setStoredUser({
