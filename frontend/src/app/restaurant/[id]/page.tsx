@@ -130,7 +130,7 @@ export default function RestaurantDetailPage() {
         <div className="rounded-2xl bg-surface border border-hairline-soft overflow-hidden shadow-sm">
           <div className="aspect-[21/9] w-full bg-surface-strong">
             <img
-              src={`https://picsum.photos/seed/${restaurant.kakaoPlaceId}/800/340`}
+              src="/restaurant-placeholder.png"
               alt={restaurant.name}
               className="h-full w-full object-cover"
             />
@@ -177,7 +177,7 @@ export default function RestaurantDetailPage() {
                   <div className="flex items-center justify-between">
                     <Link href={`/profile/${post.userId}`} className="flex items-center gap-3 group">
                       <img
-                        src={post.profileImage || `https://picsum.photos/seed/${post.nickname}/80/80`}
+                        src={post.profileImage || "/default-profile.png"}
                         alt=""
                         className="h-9 w-9 rounded-full object-cover group-hover:ring-2 group-hover:ring-primary/30 transition-all"
                       />

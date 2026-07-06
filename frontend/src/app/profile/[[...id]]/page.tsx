@@ -406,7 +406,7 @@ function FollowListModal({ title, type, userId, onClose }: FollowListModalProps)
               <li key={f.id} className="flex items-center justify-between">
                 <Link href={`/profile/${f.id}`} onClick={onClose} className="flex items-center gap-3">
                   <img
-                    src={f.profileImage || `https://picsum.photos/seed/user${f.id}/80/80`}
+                    src={f.profileImage || "/default-profile.png"}
                     alt={f.nickname}
                     className="h-9 w-9 rounded-full object-cover"
                   />
