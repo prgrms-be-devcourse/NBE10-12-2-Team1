@@ -1,5 +1,6 @@
 package com.whattoeat.domain.follow.controller;
 
+import com.whattoeat.domain.follow.dto.FollowCountResponse;
 import com.whattoeat.global.rsData.RsData;
 import com.whattoeat.domain.follow.dto.FollowResponse;
 import com.whattoeat.domain.follow.dto.FollowUserResponse;
@@ -61,6 +62,38 @@ public class FollowController {
             Pageable pageable) {
         Long currentUserId = userDetails.getUserId();
         Page<FollowUserResponse> response = followService.getFollowers(currentUserId, pageable)
+                .map(follow -> toUserResponse(follow.getFollower(), currentUserId));
+        return ResponseEntity.ok(RsData.success(response));
+    }
+
+    @GetMapping("/users/{userId}/count")
+    public ResponseEntity<RsData<FollowCountResponse>> getFollowerCounts(@PathVariable Long userId) {
+        long followerCount = followService.getFollowerCount(userId);
+        long followingCount = followService.getFollowingCount(userId);
+        return ResponseEntity.ok(RsData.success(
+                new FollowCountResponse(userId, followerCount, followingCount)));
+    }
+
+    @GetMapping("/users/{userId}/followings")
+    public ResponseEntity<RsData<Page<FollowUserResponse>>> getUserFollowings(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long userId,
+            Pageable pageable
+    ){
+        Long currentUserId = userDetails.getUserId();
+        Page<FollowUserResponse> response = followService.getFollowings(userId,pageable)
+                .map(follow -> toUserResponse(follow.getFollowing(), currentUserId));
+        return ResponseEntity.ok(RsData.success(response));
+    }
+
+    @GetMapping("/users/{userId}/followers")
+    public ResponseEntity<RsData<Page<FollowUserResponse>>> getUserFollowers(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long userId,
+            Pageable pageable
+    ){
+        Long currentUserId = userDetails.getUserId();
+        Page<FollowUserResponse> response = followService.getFollowers(userId,pageable)
                 .map(follow -> toUserResponse(follow.getFollower(), currentUserId));
         return ResponseEntity.ok(RsData.success(response));
     }

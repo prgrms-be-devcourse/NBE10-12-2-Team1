@@ -1,38 +1,238 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Bookmark, GripVertical, Trash2 } from "lucide-react";
+import { Plus, Bookmark, GripVertical, Trash2, X } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+import { apiFetchJson } from "@/lib/api";
 
-const recentLists = [
-  { id: 10, title: "을지로 데이트 코스", author: "푸디맘", moodTag: "데이트", itemCount: 4 },
-  { id: 11, title: "혼밥 명당 모음", author: "혼밥러", moodTag: "혼밥", itemCount: 7 },
-  { id: 12, title: "성수동 브런치", author: "브런치퀸", moodTag: "데이트", itemCount: 4 },
-];
+interface ListSummary {
+  id: number;
+  userId: number;
+  nickname: string;
+  title: string;
+  description: string;
+  moodTag: string;
+  itemCount: number;
+  createdAt: string;
+}
 
-const myLists = [
-  { id: 1, title: "을지로 데이트 코스", description: "분위기 좋은 을지로 맛집 모음", moodTag: "데이트", itemCount: 4, savedCount: 23, seed: "date" },
-  { id: 2, title: "혼밥 명당", description: "혼자서도 편하게 먹을 수 있는 곳", moodTag: "혼밥", itemCount: 7, savedCount: 0, seed: "solo" },
-  { id: 3, title: "회식 추천", description: "회식하기 좋은 음식점들", moodTag: "회식", itemCount: 5, savedCount: 12, seed: "hoesik" },
-];
+interface ListItem {
+  id: number;
+  listId: number;
+  restaurantId: number;
+  restaurantName: string;
+  category: string;
+  orderIndex: number;
+  memo: string;
+  createdAt: string;
+}
 
-const selectedListItems = [
-  { id: 101, name: "을지로 칼국수", memo: "이 집 칼국수 최고! 면이 쫄깃해요.", order: 1 },
-  { id: 102, name: "연남동 스시 오마카세", memo: "데이트할 때 예약 필수인 핫플", order: 2 },
-  { id: 103, name: "이태원 양식당", memo: "앤티크한 분위기에 와인 한 잔 하기 좋음", order: 3 },
-  { id: 104, name: "망원동 중국집", memo: "바삭한 탕수육과 짬뽕 국물이 일품", order: 4 },
-];
+interface ListDetail {
+  listId: number;
+  userId: number;
+  nickname: string;
+  title: string;
+  description: string;
+  moodTag: string;
+  items: ListItem[];
+  createdAt: string;
+}
 
-const publicLists = [
-  { id: 4, title: "홍대 회식 추천", author: "푸디맘", moodTag: "회식", itemCount: 6, savedCount: 45, seed: "hongdae" },
-  { id: 5, title: "망원동 카페 투어", author: "카페인 중독", moodTag: "데이트", itemCount: 5, savedCount: 128, seed: "cafe" },
-  { id: 6, title: "성수동 브런치", author: "브런치퀸", moodTag: "데이트", itemCount: 4, savedCount: 67, seed: "brunch" },
-];
+interface SavedListDetail {
+  listId: number;
+  userId: number;
+  nickname: string;
+  title: string;
+  description: string;
+  moodTag: string;
+  items: ListItem[];
+  savedAt: string;
+}
 
 export default function ListsPage() {
-  const [selectedId, setSelectedId] = useState(1);
-  const selectedList = myLists.find((l) => l.id === selectedId);
+  const [myLists, setMyLists] = useState<ListSummary[]>([]);
+  const [publicLists, setPublicLists] = useState<ListSummary[]>([]);
+  const [savedLists, setSavedLists] = useState<SavedListDetail[]>([]);
+  const [activeTab, setActiveTab] = useState<"my" | "saved">("my");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<ListDetail | SavedListDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newMoodTag, setNewMoodTag] = useState("DATE");
+  const [copying, setCopying] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const initialized = useRef(false);
+
+  const moodTags = ["DATE", "FRIENDS", "FAMILY", "SOLO"];
+
+  const loadLists = async () => {
+    const [myRes, publicRes, savedRes] = await Promise.all([
+      apiFetchJson<ListSummary[]>("/api/v1/lists"),
+      apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
+      apiFetchJson<{ content: SavedListDetail[] }>("/api/v1/restaurant_lists/saved"),
+    ]);
+
+    let my: ListSummary[] = [];
+    if (myRes.ok && myRes.data) {
+      my = myRes.data;
+      setMyLists(my);
+    } else {
+      setError(myRes.message || "내 리스트를 불러오지 못했습니다.");
+    }
+
+    if (publicRes.ok && publicRes.data) {
+      setPublicLists(publicRes.data);
+    }
+
+    if (savedRes.ok && savedRes.data) {
+      setSavedLists(savedRes.data.content);
+    }
+
+    return my;
+  };
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const load = async () => {
+      const my = await loadLists();
+      setSelectedId((prev) => (prev === null && my.length > 0 ? my[0].id : prev));
+      setLoading(false);
+    };
+
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const loadDetail = async () => {
+      setSelectedDetail(null);
+
+      if (activeTab === "saved") {
+        const saved = savedLists.find((l) => l.listId === selectedId);
+        if (saved) {
+          setSelectedDetail(saved);
+        }
+        return;
+      }
+
+      const isMine = myLists.some((l) => l.id === selectedId);
+      const res = await apiFetchJson<ListDetail>(
+        isMine ? `/api/v1/lists/${selectedId}` : `/api/v1/lists/all/${selectedId}`
+      );
+      if (res.ok && res.data) {
+        setSelectedDetail(res.data);
+      }
+    };
+
+    loadDetail();
+  }, [selectedId, myLists, savedLists, activeTab]);
+
+  const recentLists = [...publicLists].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    const res = await apiFetchJson<ListSummary>("/api/v1/lists", {
+      method: "POST",
+      body: JSON.stringify({
+        title: newTitle.trim(),
+        description: newDescription.trim(),
+        moodTag: newMoodTag,
+      }),
+    });
+
+    if (res.ok && res.data) {
+      setNewTitle("");
+      setNewDescription("");
+      setNewMoodTag("DATE");
+      setShowCreateModal(false);
+      await loadLists();
+      setSelectedId(res.data.id);
+    } else {
+      alert(res.message || "리스트 생성에 실패했습니다.");
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!selectedDetail) return;
+    setCopying(true);
+    const res = await apiFetchJson<ListDetail>(`/api/v1/lists/${selectedDetail.listId}/copy`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      await loadLists();
+      if (res.data) {
+        setSelectedId(res.data.listId);
+      }
+      alert("내 리스트에 저장되었습니다.");
+    } else {
+      alert(res.message || "리스트 저장에 실패했습니다.");
+    }
+    setCopying(false);
+  };
+
+  const handleSave = async () => {
+    if (!selectedDetail) return;
+    setSaving(true);
+    const res = await apiFetchJson(`/api/v1/restaurant_lists/${selectedDetail.listId}/save`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      await loadLists();
+      setActiveTab("saved");
+      setSelectedId(selectedDetail.listId);
+      alert("리스트를 저장했습니다.");
+    } else {
+      alert(res.message || "리스트 저장에 실패했습니다.");
+    }
+    setSaving(false);
+  };
+
+  const handleUnsave = async () => {
+    if (!selectedDetail) return;
+    setSaving(true);
+    const res = await apiFetchJson(`/api/v1/restaurant_lists/${selectedDetail.listId}/save`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      await loadLists();
+      setSelectedId(null);
+      setSelectedDetail(null);
+      alert("리스트 저장을 취소했습니다.");
+    } else {
+      alert(res.message || "저장 취소에 실패했습니다.");
+    }
+    setSaving(false);
+  };
+
+  const isSavedList = (listId: number) => savedLists.some((l) => l.listId === listId);
+
+  const handleDeleteItem = async (item: ListItem) => {
+    if (!selectedDetail) return;
+    if (!confirm("식당을 리스트에서 삭제할까요?")) return;
+
+    const res = await apiFetchJson(`/api/v1/lists/${selectedDetail.listId}/items/${item.id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      setSelectedDetail((prev) =>
+        prev ? { ...prev, items: prev.items.filter((i) => i.id !== item.id) } : null
+      );
+    } else {
+      alert(res.message || "삭제에 실패했습니다.");
+    }
+  };
 
   return (
     <AppShell
@@ -41,27 +241,27 @@ export default function ListsPage() {
           <SidebarProfile />
           <SidebarCard title="인기 맛집 리스트">
             <div className="space-y-4">
-              {publicLists.map((l) => (
-                <div key={l.id} className="rounded-xl bg-surface-soft p-4">
+              {publicLists.slice(0, 5).map((l) => (
+                <Link key={l.id} href={`/lists?selected=${l.id}`} className="block rounded-xl bg-surface-soft p-4 hover:bg-hairline-soft/50 transition-colors">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-base font-bold text-ink">{l.title}</p>
                     <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{l.moodTag}</span>
                   </div>
-                  <p className="text-sm text-muted mt-1.5">by {l.author} · 식당 {l.itemCount}개</p>
-                </div>
+                  <p className="text-sm text-muted mt-1.5">by {l.nickname} · 식당 {l.itemCount}개</p>
+                </Link>
               ))}
             </div>
           </SidebarCard>
           <SidebarCard title="최근 생성된 리스트">
             <div className="space-y-4">
-              {recentLists.map((l) => (
-                <div key={l.id} className="rounded-xl bg-surface-soft p-4">
+              {recentLists.slice(0, 5).map((l) => (
+                <Link key={l.id} href={`/lists?selected=${l.id}`} className="block rounded-xl bg-surface-soft p-4 hover:bg-hairline-soft/50 transition-colors">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-base font-bold text-ink">{l.title}</p>
                     <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{l.moodTag}</span>
                   </div>
-                  <p className="text-sm text-muted mt-1.5">by {l.author} · 식당 {l.itemCount}개</p>
-                </div>
+                  <p className="text-sm text-muted mt-1.5">by {l.nickname} · 식당 {l.itemCount}개</p>
+                </Link>
               ))}
             </div>
           </SidebarCard>
@@ -71,92 +271,265 @@ export default function ListsPage() {
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-ink">맛집 리스트</h2>
-          <button className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-active transition-colors">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+          >
             <Plus className="h-4 w-4" />
             리스트 만들기
           </button>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-          {/* My lists */}
-          <div className="space-y-3">
-            <p className="text-sm font-bold text-muted">내 리스트</p>
-            {myLists.map((list) => (
-              <button
-                key={list.id}
-                onClick={() => setSelectedId(list.id)}
-                className={`w-full rounded-2xl border p-5 text-left transition-all ${
-                  selectedId === list.id
-                    ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
-                    : "border-hairline-soft bg-surface hover:bg-surface-soft"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
-                    <img
-                      src={`https://picsum.photos/seed/${list.seed}/120/120`}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-base font-bold text-ink truncate">{list.title}</p>
-                      <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{list.moodTag}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
-                    <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
-                      <span>식당 {list.itemCount}개</span>
-                      <span>저장 {list.savedCount}</span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
+        {loading ? (
+          <div className="space-y-4">
+            <div className="h-24 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
+            <div className="h-24 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
           </div>
+        ) : error ? (
+          <p className="text-center text-sm text-red-500">{error}</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
+            {/* List tabs */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveTab("my");
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
+                    activeTab === "my" ? "bg-primary text-white" : "bg-surface-soft text-muted hover:text-ink"
+                  }`}
+                >
+                  내 리스트
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("saved");
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
+                    activeTab === "saved" ? "bg-primary text-white" : "bg-surface-soft text-muted hover:text-ink"
+                  }`}
+                >
+                  저장한 리스트
+                </button>
+              </div>
 
-          {/* Selected list detail */}
-          <div className="rounded-2xl bg-surface p-6 border border-hairline-soft min-h-[520px]">
-            {selectedList ? (
-              <>
-                <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold text-ink">{selectedList.title}</h3>
-                      <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">{selectedList.moodTag}</span>
+              {activeTab === "my" ? (
+                myLists.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-muted">등록된 리스트가 없습니다.</p>
+                ) : (
+                  myLists.map((list) => (
+                    <button
+                      key={list.id}
+                      onClick={() => setSelectedId(list.id)}
+                      className={`w-full rounded-2xl border p-5 text-left transition-all ${
+                        selectedId === list.id
+                          ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
+                          : "border-hairline-soft bg-surface hover:bg-surface-soft"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
+                          <img
+                            src={`https://picsum.photos/seed/${list.id}/120/120`}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-base font-bold text-ink truncate">{list.title}</p>
+                            <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{list.moodTag}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
+                          <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
+                            <span>식당 {list.itemCount}개</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )
+              ) : savedLists.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted">저장한 리스트가 없습니다.</p>
+              ) : (
+                savedLists.map((list) => (
+                  <button
+                    key={list.listId}
+                    onClick={() => setSelectedId(list.listId)}
+                    className={`w-full rounded-2xl border p-5 text-left transition-all ${
+                      selectedId === list.listId
+                        ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
+                        : "border-hairline-soft bg-surface hover:bg-surface-soft"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
+                        <img
+                          src={`https://picsum.photos/seed/${list.listId}/120/120`}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-base font-bold text-ink truncate">{list.title}</p>
+                          <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{list.moodTag}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
+                        <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
+                          <span>by {list.nickname}</span>
+                          <span>·</span>
+                          <span>식당 {list.items.length}개</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="mt-1.5 text-base text-muted">{selectedList.description}</p>
-                  </div>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors">
-                    <Bookmark className="h-4 w-4" />
-                    저장
                   </button>
-                </div>
+                ))
+              )}
+            </div>
 
-                <div className="mt-6 space-y-4">
-                  {selectedListItems.map((item, idx) => (
-                    <div key={item.id} className="flex items-start gap-4 rounded-xl border border-hairline-soft bg-surface-soft p-4">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                        {idx + 1}
+            {/* Selected list detail */}
+            <div className="rounded-2xl bg-surface p-6 border border-hairline-soft min-h-[520px]">
+              {selectedDetail ? (
+                <>
+                  <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-ink">{selectedDetail.title}</h3>
+                        <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">{selectedDetail.moodTag}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-bold text-ink">{item.name}</p>
-                        <p className="mt-1 text-sm text-muted line-clamp-2">{item.memo}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted">
-                        <button className="p-1 hover:text-primary"><GripVertical className="h-4 w-4" /></button>
-                        <button className="p-1 hover:text-primary"><Trash2 className="h-4 w-4" /></button>
-                      </div>
+                      <p className="mt-1.5 text-base text-muted">{selectedDetail.description}</p>
                     </div>
+                    <div className="flex items-center gap-2">
+                      {activeTab === "saved" ? (
+                        <button
+                          onClick={handleUnsave}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-100 transition-colors disabled:opacity-70"
+                        >
+                          <Bookmark className="h-4 w-4" />
+                          {saving ? "취소 중..." : "저장 취소"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
+                        >
+                          <Bookmark className="h-4 w-4" />
+                          {saving ? "저장 중..." : "저장"}
+                        </button>
+                      )}
+                      <button
+                        onClick={handleCopy}
+                        disabled={copying}
+                        className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
+                      >
+                        {copying ? "복사 중..." : "내 리스트로 복사"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 space-y-4">
+                    {selectedDetail.items.map((item, idx) => (
+                      <div key={item.id} className="flex items-start gap-4 rounded-xl border border-hairline-soft bg-surface-soft p-4">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-bold text-ink">{item.restaurantName}</p>
+                          <p className="mt-1 text-sm text-muted line-clamp-2">{item.memo}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-muted">
+                          <button className="p-1 hover:text-primary"><GripVertical className="h-4 w-4" /></button>
+                          <button onClick={() => handleDeleteItem(item)} className="p-1 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="py-20 text-center text-base text-muted">리스트를 선택해주세요</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl animate-in fade-in-50 zoom-in-95">
+            <div className="flex items-center justify-between border-b border-hairline-soft pb-3">
+              <h3 className="text-base font-bold text-ink">새 맛집 리스트</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-ink">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">제목</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="예: 을지로 데이트 코스"
+                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">설명</label>
+                <input
+                  type="text"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="리스트에 대한 간단한 설명"
+                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted mb-1.5 block">분위기</label>
+                <div className="flex flex-wrap gap-2">
+                  {moodTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setNewMoodTag(tag)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                        newMoodTag === tag
+                          ? "bg-primary text-white"
+                          : "bg-surface-soft text-muted hover:bg-hairline-soft"
+                      }`}
+                    >
+                      {tag}
+                    </button>
                   ))}
                 </div>
-              </>
-            ) : (
-              <p className="py-20 text-center text-base text-muted">리스트를 선택해주세요</p>
-            )}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 rounded-xl border border-hairline bg-surface-soft py-2.5 text-sm font-bold text-ink hover:bg-white transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+                >
+                  만들기
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </AppShell>
   );
 }

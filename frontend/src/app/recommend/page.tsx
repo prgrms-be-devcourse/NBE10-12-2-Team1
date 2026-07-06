@@ -15,6 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
+import { apiFetchJson } from "@/lib/api";
 
 const hotPlaces = [
   { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
@@ -34,6 +35,18 @@ const categoryEmoji: Record<string, string> = {
   "피자": "🍕",
   "치킨": "🍗",
 };
+const categoryToEnum: Record<string, string> = {
+  "한식": "KOREAN",
+  "일식": "JAPANESE",
+  "양식": "WESTERN",
+  "중식": "CHINESE",
+  "분식": "SNACK",
+  "카페": "CAFE",
+  "아시안": "ASIAN",
+  "피자": "ETC",
+  "치킨": "ETC",
+};
+
 const moods = ["데이트", "혼밥", "회식", "야식", "가족", "친구"];
 const sorts = [
   { key: "random", label: "랜덤", icon: Shuffle },
@@ -42,7 +55,7 @@ const sorts = [
 
 const locationData: Record<string, string[]> = {
   서울: ["전체", "강남구", "강동구", "마포구", "종로구", "용산구", "중구"],
-  부산: ["전체", "해운대구", "수영구", "남구", "북구"],
+  부산: ["전체", "해울대구", "수영구", "남구", "북구"],
   대구: ["전체", "중구", "동구", "서구", "남구"],
   경기: ["수원시", "고양시", "용인시", "성남시", "부천시"],
   강원: ["춘천시", "원주시", "강릉시"],
@@ -57,47 +70,26 @@ const towns: Record<string, string[]> = {
   "서울 중구": ["전체", "시탐워", "을지로동"],
 };
 
-const mockRecommendations = [
-  {
-    id: 1,
-    name: "을지로 칼국수",
-    category: "한식",
-    mood: "혼밥",
-    location: "서울 중구 을지로3가",
-    address: "서울 중구 을지로 12",
-    roadAddress: "서울 중구 을지로 12길 5",
-    phone: "02-1234-5678",
-    distance: "120m",
-    postCount: 128,
-    tags: ["#45대 칼국수", "#을지로핫플", "#혼밥"],
-  },
-  {
-    id: 2,
-    name: "연남동 스시 오마카세",
-    category: "일식",
-    mood: "데이트",
-    location: "서울 마포구 연남동",
-    address: "서울 마포구 연남동 123",
-    roadAddress: "서울 마포구 성미산로 17",
-    phone: "02-2345-6789",
-    distance: "450m",
-    postCount: 86,
-    tags: ["#30천원대 오마카세", "#데이트", "#연남동"],
-  },
-  {
-    id: 3,
-    name: "이태원 양식당",
-    category: "양식",
-    mood: "회식",
-    location: "서울 용산구 이태원동",
-    address: "서울 용산구 이태원동 45",
-    roadAddress: "서울 용산구 이태원로 123",
-    phone: "02-3456-7890",
-    distance: "890m",
-    postCount: 54,
-    tags: ["#60대 양식", "#회식", "#이태원"],
-  },
-];
+interface RecommendRestaurant {
+  id: number;
+  kakaoPlaceId: string;
+  name: string;
+  category: string;
+  address: string;
+  roadAddress: string;
+  region1: string;
+  region2: string;
+  region3: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  createdAt: string;
+}
+
+function categoryLabel(enumValue: string): string {
+  const found = Object.entries(categoryToEnum).find(([, v]) => v === enumValue);
+  return found ? found[0] : enumValue;
+}
 
 export default function RecommendPage() {
   const router = useRouter();
@@ -112,20 +104,50 @@ export default function RecommendPage() {
   const [selectedTown, setSelectedTown] = useState("을지로동");
 
   const [resultModalOpen, setResultModalOpen] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendError, setRecommendError] = useState("");
+  const [current, setCurrent] = useState<RecommendRestaurant | null>(null);
 
   const locationLabel =
     selectedCity +
     (selectedDistrict === "전체" ? "" : ` ${selectedDistrict}`) +
     (selectedTown === "전체" ? "" : ` ${selectedTown}`);
 
-  const current = mockRecommendations[currentIndex];
+  const fetchRecommend = async () => {
+    setRecommendLoading(true);
+    setRecommendError("");
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % mockRecommendations.length);
+    const params = new URLSearchParams();
+    params.set("category", categoryToEnum[selectedCategory]);
+    if (selectedCity && selectedCity !== "전체") params.set("region1", selectedCity);
+    if (selectedDistrict && selectedDistrict !== "전체") params.set("region2", selectedDistrict);
+    if (selectedTown && selectedTown !== "전체") params.set("region3", selectedTown);
+
+    const res = await apiFetchJson<RecommendRestaurant>(
+      `/api/v1/restaurants/recommend?${params.toString()}`
+    );
+
+    if (res.ok && res.data) {
+      setCurrent(res.data);
+    } else {
+      setRecommendError(res.message || "추천을 불러오지 못했습니다.");
+      setCurrent(null);
+    }
+
+    setRecommendLoading(false);
+  };
+
+  const handleRecommend = async () => {
+    await fetchRecommend();
+    setResultModalOpen(true);
+  };
+
+  const handleNext = async () => {
+    await fetchRecommend();
   };
 
   const handleDecide = () => {
+    if (!current) return;
     setResultModalOpen(false);
     router.push(`/restaurant/${current.id}`);
   };
@@ -242,13 +264,11 @@ export default function RecommendPage() {
               ))}
             </div>
             <button
-              onClick={() => {
-                setResultModalOpen(true);
-                setCurrentIndex(0);
-              }}
-              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+              onClick={handleRecommend}
+              disabled={recommendLoading}
+              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
-              추천 받기
+              {recommendLoading ? "추천 중..." : "추천 받기"}
             </button>
           </div>
         </div>
@@ -327,7 +347,7 @@ export default function RecommendPage() {
       )}
 
       {/* Result modal */}
-      {resultModalOpen && current && (
+      {resultModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl bg-surface p-8 shadow-2xl animate-in fade-in-50 zoom-in-95">
             <div className="text-center mb-6">
@@ -335,70 +355,68 @@ export default function RecommendPage() {
               <h3 className="text-xl font-bold text-ink">이런 곳은 어때요?</h3>
             </div>
 
-            {/* Draft card */}
-            <div className="rounded-2xl bg-surface border border-hairline-soft overflow-hidden shadow-sm">
-              <div className="aspect-[16/10] w-full bg-primary-soft flex items-center justify-center text-7xl">
-                {categoryEmoji[current.category] || "🍽\uFE0F"}
+            {recommendError ? (
+              <p className="text-center text-sm text-red-500 py-10">{recommendError}</p>
+            ) : !current ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary-active">
-                    {current.category}
-                  </span>
-                  <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
-                    {current.mood}
-                  </span>
-                </div>
-                <h4 className="text-2xl font-bold text-ink">{current.name}</h4>
-                <p className="mt-1 text-sm text-muted">
-                  {current.location} · {current.distance}
-                </p>
+            ) : (
+              <>
+                {/* Draft card */}
+                <div className="rounded-2xl bg-surface border border-hairline-soft overflow-hidden shadow-sm">
+                  <div className="aspect-[16/10] w-full bg-primary-soft flex items-center justify-center text-7xl">
+                    {categoryEmoji[categoryLabel(current.category)] || "🍽\uFE0F"}
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary-active">
+                        {categoryLabel(current.category)}
+                      </span>
+                      <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
+                        {selectedMood}
+                      </span>
+                    </div>
+                    <h4 className="text-2xl font-bold text-ink">{current.name}</h4>
+                    <p className="mt-1 text-sm text-muted">
+                      {current.region1} {current.region2} {current.region3}
+                    </p>
 
-                {/* Tags */}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {current.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-surface-soft px-2.5 py-1 text-xs font-semibold text-primary"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                    <div className="mt-4 space-y-1.5 text-sm text-body">
+                      <p>{current.roadAddress}</p>
+                      <p className="text-muted-soft">{current.address}</p>
+                      <p>전화: {current.phone}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-4 space-y-1.5 text-sm text-body">
-                  <p>{current.roadAddress}</p>
-                  <p className="text-muted-soft">{current.address}</p>
-                  <p>전화: {current.phone}</p>
-                  <p>포스트 {current.postCount}개</p>
+                {/* Action buttons */}
+                <div className="mt-6 grid grid-cols-3 gap-3">
+                  <button
+                    onClick={handleDecide}
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+                  >
+                    <Check className="h-4 w-4" />
+                    여기로 결정
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    disabled={recommendLoading}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface py-3 text-sm font-bold text-ink hover:bg-surface-soft transition-colors disabled:opacity-70"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    다른곳 추천
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface py-3 text-sm font-bold text-ink hover:bg-surface-soft transition-colors"
+                  >
+                    <Bookmark className="h-4 w-4" />
+                    리스트 저장
+                  </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <button
-                onClick={handleDecide}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white hover:bg-primary-active transition-colors"
-              >
-                <Check className="h-4 w-4" />
-                여기로 결정
-              </button>
-              <button
-                onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface py-3 text-sm font-bold text-ink hover:bg-surface-soft transition-colors"
-              >
-                <RotateCcw className="h-4 w-4" />
-                다른곳 추천
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface py-3 text-sm font-bold text-ink hover:bg-surface-soft transition-colors"
-              >
-                <Bookmark className="h-4 w-4" />
-                리스트 저장
-              </button>
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}

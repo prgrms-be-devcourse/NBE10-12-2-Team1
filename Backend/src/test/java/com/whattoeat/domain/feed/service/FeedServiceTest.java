@@ -1,5 +1,6 @@
 package com.whattoeat.domain.feed.service;
 
+import com.whattoeat.domain.comment.repository.CommentRepository;
 import com.whattoeat.domain.feed.dto.request.FeedCreateRequest;
 import com.whattoeat.domain.feed.dto.request.FeedUpdateRequest;
 import com.whattoeat.domain.feed.dto.response.FeedDetailResponse;
@@ -12,6 +13,7 @@ import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,9 @@ public class FeedServiceTest {
 
     @MockitoBean
     FollowRepository followRepository;
+
+    @MockitoBean
+    CommentRepository commentRepository;
 
     @Autowired
     FeedService feedService;
@@ -109,6 +114,7 @@ public class FeedServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
+        given(commentRepository.countByFeedIds(any())).willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
 
@@ -129,11 +135,25 @@ public class FeedServiceTest {
     }
 
     @Test
+    @DisplayName("피드 수정 실패 - 작성자가 아닌 사람")
+    public void updateFeed_notOwner() {
+        User owner = createTestUser(1L, "owner");
+        User other =  createTestUser(2L, "other");
+        Feed feed = Feed.builder().user(owner).content("원본 내용").build();
+        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용",null);
+        given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+
+        assertThatThrownBy(() -> feedService.updateFeed(1L, 2L, request))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("본인 피드만 수정할 수 있습니다.");
+    }
+
+    @Test
     @DisplayName("피드 수정 실패 - 존재하지 않는 필드")
     public void updateFeed_notFound() {
         FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
-        assertThatThrownBy(() -> feedService.updateFeed(999L, req))
+        assertThatThrownBy(() -> feedService.updateFeed(999L, 1L, req))
                 .isInstanceOf(FeedNotFoundException.class)
                 .hasMessageContaining("Feed not found");
     }
@@ -141,21 +161,34 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 수정 성공")
     public void updateFeed_success() {
-        User user = createTestUser();
+        User user = createTestUser(1L, "testUser");
         Feed feed = Feed.builder().user(user).content("원본 내용").build();
         FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
         given(feedRepository.save(any())).willReturn(feed);
 
-        FeedDetailResponse result = feedService.updateFeed(1L, request);
+        FeedDetailResponse result = feedService.updateFeed(1L, 1L, request);
         assertThat(result.content()).isEqualTo("수정된 내용");
+    }
+
+    @Test
+    @DisplayName("피드 삭제 실패 - 작성자가 아닌 사람")
+    public void deleteFeed_notOwner() {
+        User owner = createTestUser(1L, "owner");
+        User other =  createTestUser(2L, "other");
+        Feed feed = Feed.builder().user(owner).content("맛집이네요").build();
+        given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+
+        assertThatThrownBy(()-> feedService.deleteFeed(1L, 2L))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("본인 피드만 삭제할 수 있습니다.");
     }
 
     @Test
     @DisplayName("피드 삭제 실패 - 존재하지 않는 필드")
     public void deleteFeed_notFound() {
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
-        assertThatThrownBy(() -> feedService.deleteFeed(999L))
+        assertThatThrownBy(() -> feedService.deleteFeed(999L, 1L))
                 .isInstanceOf(FeedNotFoundException.class)
                 .hasMessageContaining("Feed not found");
     }
@@ -163,10 +196,10 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 삭제 성공")
     public void deleteFeed_success() {
-        User user = createTestUser();
+        User user = createTestUser(1L, "testUser");
         Feed feed = Feed.builder().user(user).content("맛집이네요").build();
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
-        feedService.deleteFeed(1L);
+        feedService.deleteFeed(1L, 1L);
         verify(feedRepository).delete(feed);
     }
 
@@ -185,10 +218,12 @@ public class FeedServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
-                .willReturn (new PageImpl<>(List.of(follow)));
+                .willReturn(new PageImpl<>(List.of(follow)));
 
         given(feedRepository.findByUser_IdIn(List.of(2L), pageable))
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
+
+        given(commentRepository.countByFeedIds(any())).willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getFollowingFeeds(user1.getId(), pageable);
 
@@ -219,11 +254,13 @@ public class FeedServiceTest {
 
         PageRequest pageable = PageRequest.of(0, 10);
 
-        given(followRepository.findByFollower_Id(1L,Pageable.unpaged()))
+        given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
         given(feedRepository.findByUser_IdNotIn(List.of(1L, 2L)))
                 .willReturn(List.of(user3Feed));
+
+        given(commentRepository.countByFeedIds(any())).willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getRandomRecommendedFeeds(user1.getId(), pageable);
 

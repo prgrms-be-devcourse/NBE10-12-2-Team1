@@ -59,6 +59,18 @@ public class FollowService {
     }
 
     @Transactional(readOnly = true)
+    public long getFollowerCount(Long userId) {
+        getUser(userId);
+        return followRepository.countByFollowing_Id(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public long getFollowingCount(Long userId) {
+        getUser(userId);
+        return followRepository.countByFollower_Id(userId);
+    }
+
+    @Transactional(readOnly = true)
     public boolean isFollowing(Long followerId, Long followingId) {
         return followRepository.existsByFollower_IdAndFollowing_Id(followerId, followingId);
     }

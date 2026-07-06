@@ -15,18 +15,30 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.whattoeat.domain.comment.dto.CommentRequest;
 import com.whattoeat.domain.comment.dto.CommentResponse;
 import com.whattoeat.domain.comment.service.CommentService;
+import com.whattoeat.domain.user.entity.Provider;
+import com.whattoeat.domain.user.entity.Role;
+import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.data.redis.core.RedisTemplate;
+
 import java.time.LocalDateTime;
 import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
@@ -52,6 +64,28 @@ class CommentControllerTest {
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
 
+    @BeforeEach
+    void setupSecurityContext() {
+        User user = User.builder()
+                .nickname("testUser")
+                .email("test@test.com")
+                .provider(Provider.LOCAL)
+                .role(Role.USER)
+                .build();
+        ReflectionTestUtils.setField(user,"id",1L);
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()));
+        SecurityContextHolder.setContext(context);
+    }
+
+    @AfterEach
+    void cleanSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     private CommentResponse createResponse(Long id, String content, Long userId, String nickname) {
         return new CommentResponse(id, content, userId, nickname, LocalDateTime.now());
     }
@@ -66,9 +100,11 @@ class CommentControllerTest {
 
         mockMvc.perform(get("/api/v1/feeds/1/comments"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].content").value("첫 번째 댓글"))
-                .andExpect(jsonPath("$[1].content").value("두 번째 댓글"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].content").value("첫 번째 댓글"))
+                .andExpect(jsonPath("$.data[1].content").value("두 번째 댓글"));
     }
 
     @Test
@@ -77,7 +113,8 @@ class CommentControllerTest {
 
         mockMvc.perform(get("/api/v1/feeds/1/comments"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test
@@ -87,12 +124,13 @@ class CommentControllerTest {
         given(commentService.createComment(eq(1L), eq(1L), any(CommentRequest.class))).willReturn(response);
 
         mockMvc.perform(post("/api/v1/feeds/1/comments")
-                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.content").value("새 댓글"))
-                .andExpect(jsonPath("$.nickname").value("user1"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 작성 성공"))
+                .andExpect(jsonPath("$.data.content").value("새 댓글"))
+                .andExpect(jsonPath("$.data.nickname").value("user1"));
     }
 
     @Test
@@ -122,6 +160,9 @@ class CommentControllerTest {
         willDoNothing().given(commentService).deleteComment(1L, 1L);
 
         mockMvc.perform(delete("/api/v1/feeds/1/comments/1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글이 삭제되었습니다."));
+
     }
 }

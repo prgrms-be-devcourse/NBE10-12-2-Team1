@@ -6,14 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @TestPropertySource(properties = {
         "spring.security.oauth2.client.registration.kakao.client-id=test-client-id",
         "spring.security.oauth2.client.registration.kakao.client-secret=test-client-secret",
@@ -50,7 +48,7 @@ public class SecurityConfigTest {
     @Test
     @DisplayName("보호된 경로는 인증 없이 401")
     void protectedEndpointRequiresAuth(){
-        mockMvc.get().uri("/api/v1/feed")
+        mockMvc.get().uri("/api/v1/feeds")
                 .assertThat()
                 .hasStatus(HttpStatus.UNAUTHORIZED);
     }

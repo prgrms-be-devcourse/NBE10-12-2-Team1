@@ -92,6 +92,11 @@ class UserControllerTest {
                 Provider.LOCAL, LocalDateTime.now(), isOwnProfile, isFollowing);
     }
 
+    private UpdateProfileRequest updateRequest(String nickname, String profileImage){
+        return new UpdateProfileRequest(
+                nickname, profileImage, null, null, null);
+    }
+
     // ===================== getUser 테스트 =====================
 
     @Test
@@ -140,8 +145,9 @@ class UserControllerTest {
 
     @Test
     void updateProfile_성공() throws Exception {
-        UpdateProfileRequest request = new UpdateProfileRequest("newNickname", "new.jpg");
-        UserProfileResponse response = createResponse(1L, "newNickname", "new.jpg", true, false);
+        UpdateProfileRequest request = updateRequest("newNickname", "new.jpg");
+        UserProfileResponse response = createResponse(
+                1L, "newNickname", "new.jpg", true, false);
         given(userService.updateProfile(1L, 1L, request)).willReturn(response);
 
         mockMvc.perform(patch("/api/v1/users/1")
@@ -156,8 +162,9 @@ class UserControllerTest {
 
     @Test
     void updateProfile_타인_프로필_수정시_403() throws Exception {
-        UpdateProfileRequest request = new UpdateProfileRequest("nickname", null);
-        given(userService.updateProfile(2L, 1L, request)).willThrow(new AccessDeniedException(""));
+        UpdateProfileRequest request = updateRequest("nickname", null);
+        given(userService.updateProfile(2L, 1L, request))
+                .willThrow(new AccessDeniedException(""));
 
         mockMvc.perform(patch("/api/v1/users/2")
                         .with(withUserId(1L))
@@ -168,8 +175,10 @@ class UserControllerTest {
 
     @Test
     void updateProfile_존재하지_않으면_404() throws Exception {
-        UpdateProfileRequest request = new UpdateProfileRequest("nickname", null);
-        given(userService.updateProfile(999L, 999L, request)).willThrow(new UserNotFoundException(999L));
+        UpdateProfileRequest request = updateRequest("nickname", null);
+        given(userService.updateProfile(
+                999L, 999L, request))
+                .willThrow(new UserNotFoundException(999L));
 
         mockMvc.perform(patch("/api/v1/users/999")
                         .with(withUserId(999L))
@@ -180,7 +189,7 @@ class UserControllerTest {
 
     @Test
     void updateProfile_닉네임이_blank이면_400() throws Exception {
-        UpdateProfileRequest request = new UpdateProfileRequest("", "image.jpg");
+        UpdateProfileRequest request = updateRequest("", "image.jpg");
 
         mockMvc.perform(patch("/api/v1/users/1")
                         .with(withUserId(1L))
@@ -191,7 +200,7 @@ class UserControllerTest {
 
     @Test
     void updateProfile_닉네임이_20자_초과이면_400() throws Exception {
-        UpdateProfileRequest request = new UpdateProfileRequest("a".repeat(21), "image.jpg");
+        UpdateProfileRequest request = updateRequest("a".repeat(21), "image.jpg");
 
         mockMvc.perform(patch("/api/v1/users/1")
                         .with(withUserId(1L))
