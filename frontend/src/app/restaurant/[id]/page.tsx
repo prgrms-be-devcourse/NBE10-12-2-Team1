@@ -37,7 +37,7 @@ interface Feed {
 }
 
 interface FeedListPageResponse {
-  feed: Feed[];
+  feeds: Feed[];
 }
 
 export default function RestaurantDetailPage() {
@@ -74,7 +74,7 @@ export default function RestaurantDetailPage() {
       if (dbId) {
         const feedRes = await apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?restaurantId=${dbId}`);
         if (feedRes.ok && feedRes.data) {
-          setFeeds(feedRes.data.feed);
+          setFeeds(feedRes.data.feeds);
         }
       }
 

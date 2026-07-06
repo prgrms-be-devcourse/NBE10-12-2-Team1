@@ -37,7 +37,7 @@ interface ProfileList {
 }
 
 interface FeedListPageResponse {
-  feed: {
+  feeds: {
     feedId: number;
     content: string;
     nickname: string;
@@ -68,7 +68,7 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [myLists, setMyLists] = useState<ProfileList[]>([]);
-  const [myPosts, setMyPosts] = useState<FeedListPageResponse["feed"]>([]);
+  const [myPosts, setMyPosts] = useState<FeedListPageResponse["feeds"]>([]);
   const [tabLoading, setTabLoading] = useState(false);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function ProfilePage() {
       } else if (activeTab === "포스트") {
         const res = await apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?userId=${targetUserId}`);
         if (res.ok && res.data) {
-          setMyPosts(res.data.feed);
+          setMyPosts(res.data.feeds);
         }
       }
 

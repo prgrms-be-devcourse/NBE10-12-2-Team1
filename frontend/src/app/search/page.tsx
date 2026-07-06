@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, MapPin, Navigation } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -15,7 +15,6 @@ const hotPlaces = [
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
 
 interface KakaoRestaurant {
-  id?: number; // DB 식당 ID (6번 추가). 없으면 아직 저장되지 않은 카카오 장소
   kakaoPlaceId: string;
   name: string;
   category: string;
@@ -35,6 +34,7 @@ function matchesCategory(item: KakaoRestaurant, category: string): boolean {
 }
 
 export default function SearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("을지로 맛집");
   const [activeCategory, setActiveCategory] = useState("전체");
   const [results, setResults] = useState<KakaoRestaurant[]>([]);
@@ -46,24 +46,86 @@ export default function SearchPage() {
     setLoading(true);
     setError("");
 
-    const params = new URLSearchParams();
-    params.set("keyword", query.trim());
-
-    const res = await apiFetchJson<KakaoRestaurant[]>(`/api/v1/restaurants/search?${params.toString()}`);
-
-    if (res.ok && res.data) {
-      setResults(res.data);
-    } else {
-      setError(res.message || "검색 결과를 불러오지 못했습니다.");
-      setResults([]);
+    if (!window.kakao?.maps?.services) {
+      setError("카카오맵 SDK를 불러오지 못했습니다.");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    const places = new window.kakao.maps.services.Places();
+    places.keywordSearch(
+      query.trim(),
+      (data: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+            const addressParts = item.address_name ? item.address_name.split(" ") : [];
+            return {
+              kakaoPlaceId: item.id,
+              name: item.place_name,
+              category: item.category_name,
+              address: item.address_name,
+              roadAddress: item.road_address_name,
+              region1: addressParts[0] || "",
+              region2: addressParts[1] || "",
+              region3: addressParts[2] || "",
+              phone: item.phone,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+            };
+          });
+          setResults(mapped);
+        } else {
+          setError("검색 결과를 불러오지 못했습니다.");
+          setResults([]);
+        }
+        setLoading(false);
+      },
+      {
+        category_group_code: "FD6",
+        size: 15,
+      }
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchSearch();
+  };
+
+  const handleSelect = async (restaurant: KakaoRestaurant) => {
+    // 먼저 kakaoPlaceId로 DB에 저장된 식당이 있는지 확인
+    const findRes = await apiFetchJson<{ id: number }>(
+      `/api/v1/restaurants?kakaoPlaceId=${restaurant.kakaoPlaceId}`
+    );
+
+    if (findRes.ok && findRes.data) {
+      router.push(`/restaurant/${findRes.data.id}`);
+      return;
+    }
+
+    // DB에 없으면 저장 후 이동
+    const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
+      method: "POST",
+      body: JSON.stringify({
+        kakaoPlaceId: restaurant.kakaoPlaceId,
+        name: restaurant.name,
+        categoryName: restaurant.category,
+        address: restaurant.address,
+        roadAddress: restaurant.roadAddress,
+        region1: restaurant.region1,
+        region2: restaurant.region2,
+        region3: restaurant.region3,
+        phone: restaurant.phone,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+      }),
+    });
+
+    if (saveRes.ok && saveRes.data) {
+      router.push(`/restaurant/${saveRes.data.id}`);
+    } else {
+      alert(saveRes.message || "식당 저장에 실패했습니다.");
+    }
   };
 
   const filtered = results.filter((r) => matchesCategory(r, activeCategory));
@@ -158,7 +220,11 @@ export default function SearchPage() {
 
                 <div className="flex gap-4 overflow-x-auto pb-2">
                   {filtered.map((r) => (
-                    <Link key={r.kakaoPlaceId} href={`/restaurant/${r.id || r.kakaoPlaceId}`} className="shrink-0">
+                    <button
+                      key={r.kakaoPlaceId}
+                      onClick={() => handleSelect(r)}
+                      className="shrink-0 text-left"
+                    >
                       <article className="group w-64 overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
                         <div className="h-32 w-full overflow-hidden bg-surface-strong">
                           <img
@@ -175,7 +241,7 @@ export default function SearchPage() {
                           <p className="mt-2 text-xs leading-4 text-body line-clamp-2">{r.roadAddress || r.address}</p>
                         </div>
                       </article>
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </>

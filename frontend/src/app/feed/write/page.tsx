@@ -48,14 +48,46 @@ export default function WritePostPage() {
     e.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
-    const res = await apiFetchJson<KakaoRestaurant[]>(`/api/v1/restaurants/search?keyword=${encodeURIComponent(query.trim())}`);
-    if (res.ok && res.data) {
-      setSearchResults(res.data);
-    } else {
-      alert(res.message || "식당 검색에 실패했습니다.");
-      setSearchResults([]);
+
+    if (!window.kakao?.maps?.services) {
+      alert("카카오맵 SDK를 불러오지 못했습니다.");
+      setSearching(false);
+      return;
     }
-    setSearching(false);
+
+    const places = new window.kakao.maps.services.Places();
+    places.keywordSearch(
+      query.trim(),
+      (data: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+            const addressParts = item.address_name ? item.address_name.split(" ") : [];
+            return {
+              kakaoPlaceId: item.id,
+              name: item.place_name,
+              category: item.category_name,
+              address: item.address_name,
+              roadAddress: item.road_address_name,
+              region1: addressParts[0] || "",
+              region2: addressParts[1] || "",
+              region3: addressParts[2] || "",
+              phone: item.phone,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+            };
+          });
+          setSearchResults(mapped);
+        } else {
+          alert("검색 결과를 불러오지 못했습니다.");
+          setSearchResults([]);
+        }
+        setSearching(false);
+      },
+      {
+        category_group_code: "FD6",
+        size: 15,
+      }
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -27,7 +27,7 @@ interface Feed {
 }
 
 interface FeedListPageResponse {
-  feed: Feed[];
+  feeds: Feed[];
 }
 
 function FeedContent() {
@@ -48,7 +48,7 @@ function FeedContent() {
       const res = await apiFetchJson<FeedListPageResponse>(endpoint);
 
       if (res.ok && res.data) {
-        setPosts(res.data.feed);
+        setPosts(res.data.feeds);
       } else {
         setError(res.message || "피드를 불러오지 못했습니다.");
         setPosts([]);
