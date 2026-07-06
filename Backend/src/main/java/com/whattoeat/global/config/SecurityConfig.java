@@ -6,6 +6,7 @@ import com.whattoeat.global.security.CustomOAuth2LoginSuccessHandler;
 import com.whattoeat.global.security.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -20,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -62,6 +64,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup",
                                 "/api/v1/auth/reissue",
                                 "/api/v1/auth/logout",
+                                "/api/v1/restaurants",
+                                "/api/v1/restaurants/**",
                                 "/oauth2/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**")
@@ -73,6 +77,10 @@ public class SecurityConfig {
                         .authorizationEndpoint(endpoint -> endpoint
                                 .authorizationRequestResolver(customOAuth2AuthorizationRequestResolver))
                         .successHandler(customOAuth2LoginSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            log.error("[OAuth2] login failed: {}", exception.getMessage(), exception);
+                            response.sendRedirect("/login?error");
+                        })
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->

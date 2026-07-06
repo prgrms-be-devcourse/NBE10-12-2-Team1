@@ -2,6 +2,7 @@ package com.whattoeat.global.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2AuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
@@ -54,6 +56,8 @@ public class CustomOAuth2AuthorizationRequestResolver implements OAuth2Authoriza
         // Base64 URL-safe 인코딩
         String encodeState = Base64.getUrlEncoder().
                 encodeToString(rawState.getBytes(StandardCharsets.UTF_8));
+
+        log.info("[OAuth2] authorization request built. redirectUri={}, state={}", redirectUri, encodeState);
 
         return OAuth2AuthorizationRequest.from(authRequest)
                 .state(encodeState) //state 교체

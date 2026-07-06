@@ -13,10 +13,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
@@ -32,8 +35,10 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
+        log.info("[OAuth2] onAuthenticationSuccess called");
         KakaoOAuth2User kakaoUser = (KakaoOAuth2User) authentication.getPrincipal();
         User user = kakaoUser.getUser();
+        log.info("[OAuth2] authenticated user id={}", user.getId());
 
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);
@@ -42,9 +47,11 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
 
         rq.setCookie("accessToken", accessToken, 60*60); // 1시간
         rq.setCookie("refreshToken", refreshToken, 60*60*24*7); // 7일
+        log.info("[OAuth2] cookies set. userId={}", user.getId());
 
         String redirectUri = frontendUrl;
         String stateParam = request.getParameter("state");
+        log.info("[OAuth2] stateParam={}", stateParam);
 
         if (stateParam != null && !stateParam.isBlank()) {
             // Base64 URL-safe 디코딩
@@ -54,6 +61,9 @@ public class CustomOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             );
             redirectUri = decodeState.split("#", 2)[0];
         }
+
+        redirectUri = redirectUri + "/feed";
+        log.info("[OAuth2] redirecting to {}", redirectUri);
         response.sendRedirect(redirectUri);
     }
 }

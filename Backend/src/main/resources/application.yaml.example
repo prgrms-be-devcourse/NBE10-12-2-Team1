@@ -9,6 +9,12 @@ cookie:
   # 로컬 HTTP 개발 시 false, 운영 HTTPS 배포 시 true
   secure: false
   same-site: Lax
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+
 spring:
   application:
     name: WhatToEat
