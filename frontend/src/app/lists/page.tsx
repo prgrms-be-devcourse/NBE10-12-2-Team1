@@ -39,11 +39,24 @@ interface ListDetail {
   createdAt: string;
 }
 
+interface SavedListDetail {
+  listId: number;
+  userId: number;
+  nickname: string;
+  title: string;
+  description: string;
+  moodTag: string;
+  items: ListItem[];
+  savedAt: string;
+}
+
 export default function ListsPage() {
   const [myLists, setMyLists] = useState<ListSummary[]>([]);
   const [publicLists, setPublicLists] = useState<ListSummary[]>([]);
+  const [savedLists, setSavedLists] = useState<SavedListDetail[]>([]);
+  const [activeTab, setActiveTab] = useState<"my" | "saved">("my");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [selectedDetail, setSelectedDetail] = useState<ListDetail | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<ListDetail | SavedListDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -51,14 +64,16 @@ export default function ListsPage() {
   const [newDescription, setNewDescription] = useState("");
   const [newMoodTag, setNewMoodTag] = useState("DATE");
   const [copying, setCopying] = useState(false);
+  const [saving, setSaving] = useState(false);
   const initialized = useRef(false);
 
   const moodTags = ["DATE", "FRIENDS", "FAMILY", "SOLO"];
 
   const loadLists = async () => {
-    const [myRes, publicRes] = await Promise.all([
+    const [myRes, publicRes, savedRes] = await Promise.all([
       apiFetchJson<ListSummary[]>("/api/v1/lists"),
       apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
+      apiFetchJson<{ content: SavedListDetail[] }>("/api/v1/restaurant_lists/saved"),
     ]);
 
     let my: ListSummary[] = [];
@@ -71,6 +86,10 @@ export default function ListsPage() {
 
     if (publicRes.ok && publicRes.data) {
       setPublicLists(publicRes.data);
+    }
+
+    if (savedRes.ok && savedRes.data) {
+      setSavedLists(savedRes.data.content);
     }
 
     return my;
@@ -92,10 +111,18 @@ export default function ListsPage() {
   useEffect(() => {
     if (!selectedId) return;
 
-    const isMine = myLists.some((l) => l.id === selectedId);
-
     const loadDetail = async () => {
       setSelectedDetail(null);
+
+      if (activeTab === "saved") {
+        const saved = savedLists.find((l) => l.listId === selectedId);
+        if (saved) {
+          setSelectedDetail(saved);
+        }
+        return;
+      }
+
+      const isMine = myLists.some((l) => l.id === selectedId);
       const res = await apiFetchJson<ListDetail>(
         isMine ? `/api/v1/lists/${selectedId}` : `/api/v1/lists/all/${selectedId}`
       );
@@ -105,7 +132,7 @@ export default function ListsPage() {
     };
 
     loadDetail();
-  }, [selectedId, myLists]);
+  }, [selectedId, myLists, savedLists, activeTab]);
 
   const recentLists = [...publicLists].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -153,6 +180,42 @@ export default function ListsPage() {
     }
     setCopying(false);
   };
+
+  const handleSave = async () => {
+    if (!selectedDetail) return;
+    setSaving(true);
+    const res = await apiFetchJson(`/api/v1/restaurant_lists/${selectedDetail.listId}/save`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      await loadLists();
+      setActiveTab("saved");
+      setSelectedId(selectedDetail.listId);
+      alert("리스트를 저장했습니다.");
+    } else {
+      alert(res.message || "리스트 저장에 실패했습니다.");
+    }
+    setSaving(false);
+  };
+
+  const handleUnsave = async () => {
+    if (!selectedDetail) return;
+    setSaving(true);
+    const res = await apiFetchJson(`/api/v1/restaurant_lists/${selectedDetail.listId}/save`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      await loadLists();
+      setSelectedId(null);
+      setSelectedDetail(null);
+      alert("리스트 저장을 취소했습니다.");
+    } else {
+      alert(res.message || "저장 취소에 실패했습니다.");
+    }
+    setSaving(false);
+  };
+
+  const isSavedList = (listId: number) => savedLists.some((l) => l.listId === listId);
 
   const handleDeleteItem = async (item: ListItem) => {
     if (!selectedDetail) return;
@@ -226,18 +289,80 @@ export default function ListsPage() {
           <p className="text-center text-sm text-red-500">{error}</p>
         ) : (
           <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-            {/* My lists */}
+            {/* List tabs */}
             <div className="space-y-3">
-              <p className="text-sm font-bold text-muted">내 리스트</p>
-              {myLists.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted">등록된 리스트가 없습니다.</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveTab("my");
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
+                    activeTab === "my" ? "bg-primary text-white" : "bg-surface-soft text-muted hover:text-ink"
+                  }`}
+                >
+                  내 리스트
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("saved");
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
+                    activeTab === "saved" ? "bg-primary text-white" : "bg-surface-soft text-muted hover:text-ink"
+                  }`}
+                >
+                  저장한 리스트
+                </button>
+              </div>
+
+              {activeTab === "my" ? (
+                myLists.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-muted">등록된 리스트가 없습니다.</p>
+                ) : (
+                  myLists.map((list) => (
+                    <button
+                      key={list.id}
+                      onClick={() => setSelectedId(list.id)}
+                      className={`w-full rounded-2xl border p-5 text-left transition-all ${
+                        selectedId === list.id
+                          ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
+                          : "border-hairline-soft bg-surface hover:bg-surface-soft"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
+                          <img
+                            src={`https://picsum.photos/seed/${list.id}/120/120`}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-base font-bold text-ink truncate">{list.title}</p>
+                            <span className="rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink shrink-0">{list.moodTag}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
+                          <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
+                            <span>식당 {list.itemCount}개</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )
+              ) : savedLists.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted">저장한 리스트가 없습니다.</p>
               ) : (
-                myLists.map((list) => (
+                savedLists.map((list) => (
                   <button
-                    key={list.id}
-                    onClick={() => setSelectedId(list.id)}
+                    key={list.listId}
+                    onClick={() => setSelectedId(list.listId)}
                     className={`w-full rounded-2xl border p-5 text-left transition-all ${
-                      selectedId === list.id
+                      selectedId === list.listId
                         ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
                         : "border-hairline-soft bg-surface hover:bg-surface-soft"
                     }`}
@@ -245,7 +370,7 @@ export default function ListsPage() {
                     <div className="flex items-center gap-4">
                       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
                         <img
-                          src={`https://picsum.photos/seed/${list.id}/120/120`}
+                          src={`https://picsum.photos/seed/${list.listId}/120/120`}
                           alt=""
                           className="h-full w-full object-cover"
                         />
@@ -257,7 +382,9 @@ export default function ListsPage() {
                         </div>
                         <p className="mt-1 text-sm text-muted line-clamp-1">{list.description}</p>
                         <div className="mt-2.5 flex items-center gap-3 text-sm text-muted-soft">
-                          <span>식당 {list.itemCount}개</span>
+                          <span>by {list.nickname}</span>
+                          <span>·</span>
+                          <span>식당 {list.items.length}개</span>
                         </div>
                       </div>
                     </div>
@@ -278,14 +405,34 @@ export default function ListsPage() {
                       </div>
                       <p className="mt-1.5 text-base text-muted">{selectedDetail.description}</p>
                     </div>
-                    <button
-                      onClick={handleCopy}
-                      disabled={copying}
-                      className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
-                    >
-                      <Bookmark className="h-4 w-4" />
-                      {copying ? "저장 중..." : "저장"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {activeTab === "saved" ? (
+                        <button
+                          onClick={handleUnsave}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-100 transition-colors disabled:opacity-70"
+                        >
+                          <Bookmark className="h-4 w-4" />
+                          {saving ? "취소 중..." : "저장 취소"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
+                        >
+                          <Bookmark className="h-4 w-4" />
+                          {saving ? "저장 중..." : "저장"}
+                        </button>
+                      )}
+                      <button
+                        onClick={handleCopy}
+                        disabled={copying}
+                        className="flex items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted hover:text-ink transition-colors disabled:opacity-70"
+                      >
+                        {copying ? "복사 중..." : "내 리스트로 복사"}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-6 space-y-4">
