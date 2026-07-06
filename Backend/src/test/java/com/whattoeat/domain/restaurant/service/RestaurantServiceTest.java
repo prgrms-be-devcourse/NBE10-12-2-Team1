@@ -9,7 +9,10 @@ import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
+
 import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -83,5 +86,24 @@ class RestaurantServiceTest {
         Restaurant result = restaurantService.recommend(Category.JAPANESE, "서울", "강남구", null);
 
         assertThat(result).isEqualTo(r1);
+    }
+
+    @Test
+    void findByKakaoPlaceId_성공() {
+        Restaurant restaurant = createRestaurant("kakao-1", "식당", Category.KOREAN, "서울");
+        given(restaurantRepository.findByKakaoPlaceId("kakao-1")).willReturn(Optional.of(restaurant));
+
+        Restaurant result = restaurantService.findByKakaoPlaceId("kakao-1");
+
+        assertThat(result).isEqualTo(restaurant);
+    }
+
+    @Test
+    void findByKakaoPlaceId_없으면_예외() {
+        given(restaurantRepository.findByKakaoPlaceId("unknown")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> restaurantService.findByKakaoPlaceId("unknown"))
+                .isInstanceOf(RestaurantNotFoundException.class)
+                .hasMessageContaining("DB에 없는 식당입니다.");
     }
 }

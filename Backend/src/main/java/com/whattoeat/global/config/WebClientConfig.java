@@ -13,10 +13,4 @@ public class WebClientConfig {
                 .baseUrl("https://kapi.kakao.com")
                 .build();
     }
-    @Bean
-    public WebClient kakaoMapWebClient() {
-        return WebClient.builder()
-                .baseUrl("https://dapi.kakao.com")
-                .build();
-    }
 }

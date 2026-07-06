@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
-import com.whattoeat.domain.restaurant.service.RestaurantKakaoService;
 import com.whattoeat.domain.restaurant.service.RestaurantService;
 import com.whattoeat.global.exception.RestaurantNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
@@ -39,9 +38,6 @@ class RestaurantControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
-
-    @MockitoBean
-    private RestaurantKakaoService restaurantKakaoService;
 
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
@@ -116,6 +112,30 @@ class RestaurantControllerTest {
         mockMvc.perform(get("/api/v1/restaurants/recommend")
                         .param("category", "INVALID_CATEGORY"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("kakaoPlaceId로 조회 시 DB에 있으면 200 반환")
+    void getByKakaoPlaceId_성공() throws Exception {
+        Restaurant restaurant = createRestaurant("kakao-1","맛집", Category.KOREAN);
+        given(restaurantService.findByKakaoPlaceId("kakao-1")).willReturn(restaurant);
+
+        mockMvc.perform(get("/api/v1/restaurants")
+                        .param("kakaoPlaceId", "kakao-1")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.name").value("맛집"))
+                .andExpect(jsonPath("$.data.kakaoPlaceId").value("kakao-1"));
+    }
+
+    @Test
+    @DisplayName("kakaoPlaceId로 조회 시 DB에 없으면 404 반환")
+    void getByKakaoPlaceId_없음_404() throws Exception {
+        given(restaurantService.findByKakaoPlaceId("unknown"))
+                .willThrow(new RestaurantNotFoundException("DB에 없는 식당입니다."));
+
+        mockMvc.perform(get("/api/v1/restaurants")
+                        .param("kakaoPlaceId", "unknown"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
