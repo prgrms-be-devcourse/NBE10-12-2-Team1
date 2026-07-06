@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="ko">
       <head>
         <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&libraries=services`}
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services`}
           strategy="beforeInteractive"
         />
       </head>
