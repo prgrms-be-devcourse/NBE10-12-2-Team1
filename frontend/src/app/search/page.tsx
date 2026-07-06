@@ -53,9 +53,14 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+  const [mounted, setMounted] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const markersRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -69,25 +74,33 @@ export default function SearchPage() {
       setMap(kakaoMap);
     };
 
+    const loadMap = () => {
+      if (window.kakao?.maps) {
+        window.kakao.maps.load(initMap);
+      }
+    };
+
     if (window.kakao?.maps) {
-      window.kakao.maps.load(initMap);
+      loadMap();
       return;
     }
 
     const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
     if (existing) {
-      window.kakao.maps.load(initMap);
-      return;
+      existing.addEventListener("load", loadMap);
+      const check = setInterval(() => {
+        if (window.kakao?.maps) {
+          clearInterval(check);
+          loadMap();
+        }
+      }, 100);
+      return () => clearInterval(check);
     }
 
     const script = document.createElement("script");
     script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services&autoload=false`;
     script.async = true;
-    script.onload = () => {
-      if (window.kakao?.maps) {
-        window.kakao.maps.load(initMap);
-      }
-    };
+    script.onload = loadMap;
     script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
     document.head.appendChild(script);
   }, []);
@@ -268,13 +281,15 @@ export default function SearchPage() {
           <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-hairline-soft bg-surface/90 p-4 shadow-lg backdrop-blur">
             <div className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-2.5">
               <Search className="h-5 w-5 text-muted" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-muted-soft"
-                placeholder="지역, 식당명, 음식 종류를 입력하세요"
-              />
+              {mounted && (
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-muted-soft"
+                  placeholder="지역, 식당명, 음식 종류를 입력하세요"
+                />
+              )}
               <button
                 type="submit"
                 disabled={loading}
