@@ -8,7 +8,8 @@ import { apiFetchJson } from "@/lib/api";
 type Tab = "kakao" | "email";
 type Mode = "login" | "signup";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+const API_BASE = "/api";
+const OAUTH_BASE = "http://localhost:8080";
 
 interface HotPlace {
   id: number;
@@ -67,7 +68,7 @@ export default function LoginPage() {
 
   const handleKakaoLogin = () => {
     setLoading(true);
-    window.location.href = `${API_BASE}/oauth2/authorization/kakao`;
+    window.location.href = `${OAUTH_BASE}/oauth2/authorization/kakao`;
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
