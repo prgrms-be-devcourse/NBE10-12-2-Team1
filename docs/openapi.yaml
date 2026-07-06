@@ -300,14 +300,13 @@ paths:
               example:
                 success: true
                 data:
-                  userId: 1
+                  id: 1
                   nickname: "푸디보이"
                   profileImage: "https://k.kakaocdn.net/.../img.jpg"
                   email: "foodie@kakao.com"
-                  role: "USER"
-                  followerCount: 5
-                  followingCount: 3
-                  isMyProfile: true
+                  provider: "LOCAL"
+                  createdAt: "2026-07-03T10:00:00"
+                  isOwnProfile: true
                   isFollowing: false
         "401":
           description: 인증 토큰 없음 또는 만료
@@ -319,6 +318,127 @@ paths:
                 error:
                   code: "UNAUTHORIZED"
                   message: "인증이 만료되었습니다. 다시 로그인해주세요."
+        "500":
+          description: 서버 오류
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INTERNAL_SERVER_ERROR"
+                  message: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+    patch:
+      tags: [Users]
+      summary: 프로필 수정
+      description: |
+        본인 프로필의 닉네임, 프로필 이미지, 이메일, 비밀번호를 수정합니다.
+        LOCAL 사용자는 이메일/비밀번호 변경이 가능하고, KAKAO 사용자는 닉네임/프로필 이미지만 수정 가능합니다.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 수정할 사용자 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+                  maxLength: 20
+                  example: "새로운닉네임"
+                profileImage:
+                  type: string
+                  nullable: true
+                  example: "https://example.com/profile.jpg"
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                  example: "new@example.com"
+                currentPassword:
+                  type: string
+                  nullable: true
+                  example: "oldPassword123!"
+                newPassword:
+                  type: string
+                  minLength: 8
+                  maxLength: 20
+                  nullable: true
+                  example: "newPassword123!"
+      responses:
+        "200":
+          description: 프로필 수정 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  id: 1
+                  nickname: "새로운닉네임"
+                  profileImage: "https://example.com/profile.jpg"
+                  email: "new@example.com"
+                  provider: "LOCAL"
+                  createdAt: "2026-07-03T10:00:00"
+                  isOwnProfile: true
+                  isFollowing: false
+        "400":
+          description: 입력값 오류 / 카카오 사용자 비밀번호 변경 / 현재 비밀번호 불일치
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "INVALID_INPUT_VALUE"
+                  message: "입력값이 올바르지 않습니다."
+        "401":
+          description: 인증 토큰 없음 또는 만료
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "인증이 만료되었습니다. 다시 로그인해주세요."
+        "403":
+          description: 본인 프로필이 아닌 경우
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "ACCESS_DENIED"
+                  message: "본인의 프로필만 수정 가능합니다."
+        "404":
+          description: 존재하지 않는 사용자
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "USER_NOT_FOUND"
+                  message: "존재하지 않는 사용자입니다."
+        "409":
+          description: 이미 사용 중인 이메일
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: "DUPLICATE_EMAIL"
+                  message: "이미 사용 중인 이메일입니다."
         "500":
           description: 서버 오류
           content:
@@ -652,10 +772,12 @@ paths:
                       category: "한식"
                       address: "서울 중구 을지로3가 12-3"
                       roadAddress: "서울 중구 을지로 123길 4"
+                      region1: "서울"
+                      region2: "중구"
+                      region3: "을지로3가"
                       phone: "02-123-4567"
                       lat: 37.5665
                       lng: 126.9780
-                      feedCount: 12
         "400":
           description: 필수 파라미터 query 누락 또는 radius 20000 초과
           content:
@@ -967,16 +1089,14 @@ paths:
                 data:
                   feeds:
                     - feedId: 45
+                      content: "오늘 을지로 삼겹살 먹었는데 대박이야!"
                       userId: 1
                       nickname: "푸디보이"
                       profileImage: "https://k.kakaocdn.net/.../img.jpg"
-                      content: "오늘 을지로 삼겹살 먹었는데 대박이야!"
-                      restaurant:
-                        id: 1
-                        name: "을지삼겹"
-                        category: "한식"
                       likeCount: 12
-                      isLikedByMe: true
+                      commentCount: 4
+                      restaurantId: 1
+                      restaurantName: "을지삼겹"
                       createdAt: "2026-06-18T17:50:00"
                   totalPages: 3
                   totalElements: 25
@@ -1032,8 +1152,13 @@ paths:
                   feeds:
                     - feedId: 45
                       content: "오늘 을지로 삼겹살 먹었는데 대박이야!"
+                      userId: 2
                       nickname: "서교동김푸디"
+                      profileImage: "https://k.kakaocdn.net/.../profile2.jpg"
                       likeCount: 12
+                      commentCount: 4
+                      restaurantId: 1
+                      restaurantName: "을지삼겹"
                       createdAt: "2026-06-18T17:50:00"
                   totalPages: 3
                   totalElements: 25
@@ -1089,8 +1214,13 @@ paths:
                   feeds:
                     - feedId: 88
                       content: "망원동 숨집 발견! 분위기 미쳤다"
+                      userId: 3
                       nickname: "망원동고독가"
+                      profileImage: "https://k.kakaocdn.net/.../profile3.jpg"
                       likeCount: 5
+                      commentCount: 2
+                      restaurantId: 5
+                      restaurantName: "망원동숨집"
                       createdAt: "2026-06-19T12:30:00"
                   totalPages: 5
                   totalElements: 48
