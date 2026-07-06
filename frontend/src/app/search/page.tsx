@@ -58,13 +58,34 @@ export default function SearchPage() {
   const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
-    if (!mapRef.current || !window.kakao?.maps) return;
+    if (!mapRef.current) return;
 
-    const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
-      center: new window.kakao.maps.LatLng(37.5665, 126.978),
-      level: 5,
-    });
-    setMap(kakaoMap);
+    const initMap = () => {
+      if (!mapRef.current || !window.kakao?.maps) return;
+      const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
+        center: new window.kakao.maps.LatLng(37.5665, 126.978),
+        level: 5,
+      });
+      setMap(kakaoMap);
+    };
+
+    if (window.kakao?.maps) {
+      initMap();
+      return;
+    }
+
+    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
+    if (existing) {
+      existing.addEventListener("load", initMap);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services`;
+    script.async = true;
+    script.onload = initMap;
+    script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
+    document.head.appendChild(script);
   }, []);
 
   useEffect(() => {

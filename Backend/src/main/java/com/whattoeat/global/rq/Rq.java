@@ -57,4 +57,16 @@ public class Rq {
         setCookie(name, null);
     }
 
+    public void setReadableCookie(String name, String value, int maxAge) {
+        if (value == null) value = "";
+
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(false);
+        cookie.setSecure(secure);
+        cookie.setPath("/");
+        cookie.setMaxAge(value.isBlank() ? 0 : maxAge);
+        cookie.setAttribute("SameSite", cookieSameSite);
+        response.addCookie(cookie);
+    }
+
 }

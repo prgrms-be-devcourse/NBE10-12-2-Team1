@@ -69,7 +69,7 @@ public class CustomOAuth2LoginSuccessHandlerTest {
         then(authService).should().saveRefreshToken(user.getId(), "refresh-token");
         then(rq).should().setCookie("accessToken", "access-token", 60 * 60);
         then(rq).should().setCookie("refreshToken", "refresh-token", 60 * 60 * 24 * 7);
-        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000");
+        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/feed");
     }
 
     @Test
@@ -80,6 +80,6 @@ public class CustomOAuth2LoginSuccessHandlerTest {
         );
         req.setParameter("state", state);
         handler.onAuthenticationSuccess(req, res, authentication);
-        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage");
+        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage/feed");
     }
 }

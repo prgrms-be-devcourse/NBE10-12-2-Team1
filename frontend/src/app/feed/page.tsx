@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
+import { getStoredUser, setStoredUser } from "@/lib/user";
 
 interface Feed {
   feedId: number;
@@ -30,6 +31,12 @@ interface RecommendFoodie {
   profileImage: string | null;
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,6 +48,28 @@ function FeedContent() {
   const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>([]);
 
   useEffect(() => {
+    const stored = getStoredUser();
+    if (stored?.userId) return;
+
+    const userIdCookie = getCookie("userId");
+    if (!userIdCookie) return;
+
+    apiFetchJson<{ id: number; nickname: string; profileImage: string | null; email: string }>(
+      `/api/v1/users/${userIdCookie}`
+    ).then((res) => {
+      if (res.ok && res.data) {
+        setStoredUser({
+          userId: res.data.id,
+          nickname: res.data.nickname,
+          profileImage: res.data.profileImage,
+          email: res.data.email,
+        });
+        window.dispatchEvent(new Event("login-state-change"));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError("");
@@ -49,7 +78,7 @@ function FeedContent() {
       const res = await apiFetchJson<FeedListPageResponse>(endpoint);
 
       if (res.ok && res.data) {
-        setPosts(res.data.feeds);
+        setPosts(res.data.feeds ?? []);
       } else {
         setError(res.message || "피드를 불러오지 못했습니다.");
         setPosts([]);

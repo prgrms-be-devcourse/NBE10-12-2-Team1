@@ -3,6 +3,7 @@ package com.whattoeat.domain.user.controller;
 import com.whattoeat.domain.user.dto.UpdateProfileRequest;
 import com.whattoeat.domain.user.dto.UserProfileResponse;
 import com.whattoeat.domain.user.service.UserService;
+import com.whattoeat.global.rsData.RsData;
 import com.whattoeat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,16 @@ public class UserController {
 
     private final UserService userService;
 
+    //내 프로필 조회
+    @GetMapping("/me")
+    public ResponseEntity<RsData<UserProfileResponse>> getMe(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(RsData.success(userService.getUser(userDetails.getUserId(), userDetails.getUserId()), "내 프로필 조회 성공"));
+    }
+
     //프로필 조회
     @GetMapping("/{id}")
-    public ResponseEntity<UserProfileResponse> getUser(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(userService.getUser(id, userDetails.getUserId()));
+    public ResponseEntity<RsData<UserProfileResponse>> getUser(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(RsData.success(userService.getUser(id, userDetails.getUserId()), "프로필 조회 성공"));
     }
 
     //내 프로필 수정

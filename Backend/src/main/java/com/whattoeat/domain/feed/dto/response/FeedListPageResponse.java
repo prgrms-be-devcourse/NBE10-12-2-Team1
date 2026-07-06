@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public record FeedListPageResponse(
-        List<FeedListResponse> feed,
+        List<FeedListResponse> feeds,
         int totalPages,
         long totalElements,
         int page,
