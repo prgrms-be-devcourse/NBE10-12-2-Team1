@@ -4,8 +4,15 @@ import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
-import { CurrentUser, getStoredUser } from "@/lib/user";
+import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 import { apiFetchJson } from "@/lib/api";
+
+interface UserProfileResponse {
+  id: number;
+  nickname: string;
+  profileImage: string | null;
+  email: string;
+}
 
 interface AppShellProps {
   children: ReactNode;
@@ -138,6 +145,24 @@ export default function AppShell({
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const loadMe = async () => {
+      const res = await apiFetchJson<UserProfileResponse>("/api/v1/users/me");
+      if (res.ok && res.data) {
+        const currentUser: CurrentUser = {
+          userId: res.data.id,
+          nickname: res.data.nickname,
+          profileImage: res.data.profileImage,
+          email: res.data.email,
+        };
+        setStoredUser(currentUser);
+        setUser(currentUser);
+        window.dispatchEvent(new Event("login-state-change"));
+      }
+    };
+    loadMe();
   }, []);
 
   useEffect(() => {
