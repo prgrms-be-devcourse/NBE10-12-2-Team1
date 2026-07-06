@@ -1095,6 +1095,7 @@ paths:
                       profileImage: "https://k.kakaocdn.net/.../img.jpg"
                       likeCount: 12
                       commentCount: 4
+                      isLikedByMe: true
                       restaurantId: 1
                       restaurantName: "을지삼겹"
                       createdAt: "2026-06-18T17:50:00"
@@ -1157,6 +1158,7 @@ paths:
                       profileImage: "https://k.kakaocdn.net/.../profile2.jpg"
                       likeCount: 12
                       commentCount: 4
+                      isLikedByMe: false
                       restaurantId: 1
                       restaurantName: "을지삼겹"
                       createdAt: "2026-06-18T17:50:00"
