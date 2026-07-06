@@ -42,9 +42,14 @@ interface FeedListPageResponse {
 
 export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
+  const [mounted, setMounted] = useState(false);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [postCount, setPostCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
@@ -75,6 +80,34 @@ export function SidebarProfile() {
 
     loadCounts();
   }, [user.userId]);
+
+  if (!mounted) {
+    return (
+      <div className="block rounded-2xl bg-surface p-5 border border-hairline-soft">
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-full bg-surface-strong ring-2 ring-primary/20 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded bg-surface-strong animate-pulse" />
+            <div className="h-3 w-32 rounded bg-surface-strong animate-pulse" />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-between text-center text-base">
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">팔로잉</p>
+          </div>
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">팔로워</p>
+          </div>
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">포스트</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link href="/profile" className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors">
@@ -243,11 +276,15 @@ export default function AppShell({
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20 focus:outline-hidden"
               >
-                <img
-                  src={user.profileImage ?? "/default-profile.png"}
-                  alt="프로필"
-                  className="h-full w-full object-cover"
-                />
+                {mounted ? (
+                  <img
+                    src={user.profileImage ?? "/default-profile.png"}
+                    alt="프로필"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-5 w-5 text-muted" />
+                )}
               </button>
 
               {menuOpen && (
