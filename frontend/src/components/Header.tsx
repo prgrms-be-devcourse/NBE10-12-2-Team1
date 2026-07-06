@@ -56,7 +56,7 @@ export default function Header() {
   // 로그아웃
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/api/v1/auth/logout`, {
+      await fetch("/api/v1/auth/logout", {
         method: "POST",
         credentials: "include",
       });

@@ -6,6 +6,54 @@ import { Search, Navigation } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        load: (callback: () => void) => void;
+        Map: new (container: HTMLElement, options: object) => unknown;
+        LatLng: new (lat: number, lng: number) => unknown;
+        LatLngBounds: new () => unknown;
+        Marker: new (options: { position: unknown; map?: unknown }) => unknown;
+        services?: {
+          Places: new () => {
+            keywordSearch: (
+              query: string,
+              callback: (data: KakaoPlaceItem[], status: string) => void,
+              options?: object
+            ) => void;
+          };
+          Status: { OK: string };
+        };
+      };
+    };
+  }
+}
+
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  y: string;
+  x: string;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  setBounds: (bounds: unknown) => void;
+}
+
+interface KakaoLatLngBounds {
+  extend: (position: unknown) => void;
+}
+
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
 
 const categoryLabelMap: Record<string, string> = {
@@ -53,12 +101,20 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+  const [mounted, setMounted] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const [map, setMap] = useState<KakaoMap | null>(null);
+  const markersRef = useRef<KakaoMarker[]>([]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || typeof window === "undefined") return;
+
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
 
     const initMap = () => {
       if (!mapRef.current || !window.kakao?.maps) return;
@@ -69,21 +125,43 @@ export default function SearchPage() {
       setMap(kakaoMap);
     };
 
+    const loadMap = () => {
+      if (window.kakao?.maps) {
+        window.kakao.maps.load(initMap);
+      }
+    };
+
     if (window.kakao?.maps) {
-      initMap();
+      loadMap();
       return;
     }
 
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
+    const existing = document.getElementById("kakao-map-sdk") as HTMLScriptElement | null;
     if (existing) {
-      existing.addEventListener("load", initMap);
-      return;
+      existing.addEventListener("load", loadMap);
+      const check = setInterval(() => {
+        if (window.kakao?.maps) {
+          clearInterval(check);
+          loadMap();
+        }
+      }, 100);
+      return () => clearInterval(check);
+    }
+
+    if (!kakaoKey) {
+      const raf = requestAnimationFrame(() =>
+        setError("카카오맵 JS 키가 설정되지 않았습니다. .env.local을 확인하세요.")
+      );
+      return () => cancelAnimationFrame(raf);
     }
 
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services`;
+    script.id = "kakao-map-sdk";
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services`;
     script.async = true;
-    script.onload = initMap;
+    script.crossOrigin = "anonymous";
+    script.referrerPolicy = "origin";
+    script.onload = loadMap;
     script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
     document.head.appendChild(script);
   }, []);
@@ -108,10 +186,10 @@ export default function SearchPage() {
     const filtered = results.filter((r) => matchesCategory(r, activeCategory));
     if (filtered.length === 0) return;
 
-    const bounds = new window.kakao.maps.LatLngBounds();
+    const bounds = new window.kakao.maps.LatLngBounds() as KakaoLatLngBounds;
     filtered.forEach((r) => {
       const position = new window.kakao.maps.LatLng(r.lat, r.lng);
-      const marker = new window.kakao.maps.Marker({ position, map });
+      const marker = new window.kakao.maps.Marker({ position, map }) as KakaoMarker;
       markersRef.current.push(marker);
       bounds.extend(position);
     });
@@ -145,9 +223,9 @@ export default function SearchPage() {
     const places = new window.kakao.maps.services.Places();
     places.keywordSearch(
       query.trim(),
-      (data: any, status: any) => {
+      (data: KakaoPlaceItem[], status: string) => {
         if (status === window.kakao.maps.services.Status.OK) {
-          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+          const mapped: KakaoRestaurant[] = data.map((item) => {
             const addressParts = item.address_name ? item.address_name.split(" ") : [];
             return {
               kakaoPlaceId: item.id,
@@ -264,13 +342,15 @@ export default function SearchPage() {
           <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-hairline-soft bg-surface/90 p-4 shadow-lg backdrop-blur">
             <div className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-2.5">
               <Search className="h-5 w-5 text-muted" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-muted-soft"
-                placeholder="지역, 식당명, 음식 종류를 입력하세요"
-              />
+              {mounted && (
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-muted-soft"
+                  placeholder="지역, 식당명, 음식 종류를 입력하세요"
+                />
+              )}
               <button
                 type="submit"
                 disabled={loading}

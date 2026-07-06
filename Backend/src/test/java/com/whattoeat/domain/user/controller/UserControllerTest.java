@@ -106,9 +106,9 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/1").with(withUserId(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isOwnProfile").value(true))
-                .andExpect(jsonPath("$.isFollowing").value(false))
-                .andExpect(jsonPath("$.nickname").value("testNickname"));
+                .andExpect(jsonPath("$.data.isOwnProfile").value(true))
+                .andExpect(jsonPath("$.data.isFollowing").value(false))
+                .andExpect(jsonPath("$.data.nickname").value("testNickname"));
     }
 
     @Test
@@ -118,8 +118,8 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/2").with(withUserId(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isOwnProfile").value(false))
-                .andExpect(jsonPath("$.isFollowing").value(true));
+                .andExpect(jsonPath("$.data.isOwnProfile").value(false))
+                .andExpect(jsonPath("$.data.isFollowing").value(true));
     }
 
     @Test
@@ -129,8 +129,8 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/2").with(withUserId(1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isOwnProfile").value(false))
-                .andExpect(jsonPath("$.isFollowing").value(false));
+                .andExpect(jsonPath("$.data.isOwnProfile").value(false))
+                .andExpect(jsonPath("$.data.isFollowing").value(false));
     }
 
     @Test

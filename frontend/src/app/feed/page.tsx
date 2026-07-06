@@ -84,7 +84,7 @@ function FeedContent() {
   useEffect(() => {
     const loadFoodies = async () => {
       const res = await apiFetchJson<FeedListPageResponse>("/api/v1/feeds/recommend");
-      if (!res.ok || !res.data) return;
+      if (!res.ok || !res.data?.feeds) return;
 
       const seen = new Set<number>();
       const unique: RecommendFoodie[] = [];

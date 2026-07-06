@@ -26,6 +26,27 @@ interface HotPlace {
   region2: string;
 }
 
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  panTo: (center: unknown) => void;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        Map: new (container: HTMLElement, options: object) => KakaoMap;
+        LatLng: new (lat: number, lng: number) => unknown;
+        Marker: new (options: { position: unknown; map?: unknown }) => KakaoMarker;
+      };
+    };
+  }
+}
+
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
@@ -56,20 +77,27 @@ const sorts = [
 ];
 
 const locationData: Record<string, string[]> = {
-  서울: ["전체", "강남구", "강동구", "마포구", "종로구", "용산구", "중구"],
-  부산: ["전체", "해울대구", "수영구", "남구", "북구"],
+  서울: ["전체", "강남구", "마포구", "종로구", "성동구", "중구"],
+  부산: ["전체", "해운대구", "수영구", "남구", "북구"],
   대구: ["전체", "중구", "동구", "서구", "남구"],
   경기: ["수원시", "고양시", "용인시", "성남시", "부천시"],
   강원: ["춘천시", "원주시", "강릉시"],
 };
 
 const towns: Record<string, string[]> = {
-  "서울 강남구": ["전체", "신사동", "녹사동", "삼성동"],
-  "서울 갱동구": ["전체", "청라동", "신촌동"],
-  "서울 마포구": ["전체", "홍대동", "연남동", "상수동"],
-  "서울 종로구": ["전체", "종로3가", "종로5가"],
-  "서울 용산구": ["전체", "이태원동", "한남동"],
-  "서울 중구": ["전체", "시탐워", "을지로동"],
+  "서울 강남구": ["전체", "역삼1동", "역삼2동"],
+  "서울 마포구": ["전체", "서교동", "연남동"],
+  "서울 종로구": ["전체", "종로1.2.3.4가동", "혜화동"],
+  "서울 성동구": ["전체", "성수1가1동", "송정동"],
+  "서울 중구": ["전체", "을지로동", "명동"],
+  "부산 해운대구": ["전체", "우동", "중동"],
+  "부산 수영구": ["전체", "광안동"],
+  "대구 중구": ["전체", "동인동"],
+  "대구 동구": ["전체", "신암동"],
+  "경기 수원시": ["전체", "팔달구", "장안구"],
+  "경기 고양시": ["전체", "일산서구", "일산동구"],
+  "강원 춘천시": ["전체", "소양동"],
+  "강원 원주시": ["전체", "명륜동"],
 };
 
 interface RecommendRestaurant {
@@ -112,8 +140,8 @@ export default function RecommendPage() {
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
 
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markerRef = useRef<any>(null);
+  const [map, setMap] = useState<KakaoMap | null>(null);
+  const markerRef = useRef<KakaoMarker | null>(null);
 
   const locationLabel =
     selectedCity +

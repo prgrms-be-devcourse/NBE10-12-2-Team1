@@ -4,8 +4,15 @@ import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
-import { CurrentUser, getStoredUser } from "@/lib/user";
+import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 import { apiFetchJson } from "@/lib/api";
+
+interface UserProfileResponse {
+  id: number;
+  nickname: string;
+  profileImage: string | null;
+  email: string;
+}
 
 interface AppShellProps {
   children: ReactNode;
@@ -35,9 +42,15 @@ interface FeedListPageResponse {
 
 export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
+  const [mounted, setMounted] = useState(false);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [postCount, setPostCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
@@ -68,6 +81,34 @@ export function SidebarProfile() {
 
     loadCounts();
   }, [user.userId]);
+
+  if (!mounted) {
+    return (
+      <div className="block rounded-2xl bg-surface p-5 border border-hairline-soft">
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-full bg-surface-strong ring-2 ring-primary/20 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded bg-surface-strong animate-pulse" />
+            <div className="h-3 w-32 rounded bg-surface-strong animate-pulse" />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-between text-center text-base">
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">팔로잉</p>
+          </div>
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">팔로워</p>
+          </div>
+          <div>
+            <p className="font-bold text-ink">-</p>
+            <p className="text-xs text-muted">포스트</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link href="/profile" className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors">
@@ -127,12 +168,36 @@ export default function AppShell({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
     window.addEventListener("login-state-change", handleChange);
     return () => window.removeEventListener("login-state-change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const loadMe = async () => {
+      const res = await apiFetchJson<UserProfileResponse>("/api/v1/users/me");
+      if (res.ok && res.data) {
+        const currentUser: CurrentUser = {
+          userId: res.data.id,
+          nickname: res.data.nickname,
+          profileImage: res.data.profileImage,
+          email: res.data.email,
+        };
+        setStoredUser(currentUser);
+        setUser(currentUser);
+        window.dispatchEvent(new Event("login-state-change"));
+      }
+    };
+    loadMe();
   }, []);
 
   useEffect(() => {
@@ -147,7 +212,7 @@ export default function AppShell({
 
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/api/v1/auth/logout`, {
+      await fetch("/api/v1/auth/logout", {
         method: "POST",
         credentials: "include",
       });
@@ -173,15 +238,17 @@ export default function AppShell({
             <Link href="/feed" className="text-2xl font-bold tracking-tight text-primary">
               오늘뭐먹지
             </Link>
-            <div className="hidden md:flex items-center rounded-full bg-surface-soft px-4 py-2">
-              <Search className="h-5 w-5 text-muted" />
-              <input
-                type="text"
-                placeholder="맛집, 지역 검색..."
-                className="ml-3 bg-transparent text-base text-ink placeholder:text-muted-soft focus:outline-hidden w-56"
-                suppressHydrationWarning
-              />
-            </div>
+            {mounted && (
+              <div className="hidden md:flex items-center rounded-full bg-surface-soft px-4 py-2">
+                <Search className="h-5 w-5 text-muted" />
+                <input
+                  type="text"
+                  placeholder="맛집, 지역 검색..."
+                  className="ml-3 bg-transparent text-base text-ink placeholder:text-muted-soft focus:outline-hidden w-56"
+                  suppressHydrationWarning
+                />
+              </div>
+            )}
           </div>
 
           <nav className="hidden lg:flex items-center justify-end gap-2 ml-auto">
@@ -211,11 +278,15 @@ export default function AppShell({
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20 focus:outline-hidden"
               >
-                <img
-                  src={user.profileImage ?? "/default-profile.png"}
-                  alt="프로필"
-                  className="h-full w-full object-cover"
-                />
+                {mounted ? (
+                  <img
+                    src={user.profileImage ?? "/default-profile.png"}
+                    alt="프로필"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-5 w-5 text-muted" />
+                )}
               </button>
 
               {menuOpen && (

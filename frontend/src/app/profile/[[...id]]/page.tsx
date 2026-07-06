@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Settings, Users, UserPlus, Bookmark, X, UserMinus } from "lucide-react";
+import { Settings, Users, UserPlus, X, UserMinus } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 import { getStoredUser } from "@/lib/user";

@@ -23,6 +23,36 @@ interface KakaoRestaurant {
   lng: number;
 }
 
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  y: string;
+  x: string;
+}
+
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        services?: {
+          Places: new () => {
+            keywordSearch: (
+              query: string,
+              callback: (data: KakaoPlaceItem[], status: string) => void,
+              options?: object
+            ) => void;
+          };
+          Status: { OK: string };
+        };
+      };
+    };
+  }
+}
+
 const guideItems = [
   "방문한 식당을 태그하면 지도에서도 확인할 수 있어요.",
   "분위기 태그를 선택하면 비슷한 취향의 푸디들에게 노출돼요.",
@@ -53,8 +83,8 @@ export default function WritePostPage() {
     loadRecent();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    e?.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
 
@@ -67,9 +97,9 @@ export default function WritePostPage() {
     const places = new window.kakao.maps.services.Places();
     places.keywordSearch(
       query.trim(),
-      (data: any, status: any) => {
+      (data: KakaoPlaceItem[], status: string) => {
         if (status === window.kakao.maps.services.Status.OK) {
-          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+          const mapped: KakaoRestaurant[] = data.map((item) => {
             const addressParts = item.address_name ? item.address_name.split(" ") : [];
             return {
               kakaoPlaceId: item.id,
@@ -102,41 +132,43 @@ export default function WritePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    if (!selectedRestaurant) {
-      alert("식당을 선택해주세요.");
-      return;
-    }
 
     setSubmitting(true);
 
-    const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
-      method: "POST",
-      body: JSON.stringify({
-        kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
-        name: selectedRestaurant.name,
-        categoryName: selectedRestaurant.category,
-        address: selectedRestaurant.address,
-        roadAddress: selectedRestaurant.roadAddress,
-        region1: selectedRestaurant.region1,
-        region2: selectedRestaurant.region2,
-        region3: selectedRestaurant.region3,
-        phone: selectedRestaurant.phone,
-        lat: selectedRestaurant.lat,
-        lng: selectedRestaurant.lng,
-      }),
-    });
+    let restaurantId: number | null = null;
 
-    if (!saveRes.ok || !saveRes.data) {
-      alert(saveRes.message || "식당 저장에 실패했습니다.");
-      setSubmitting(false);
-      return;
+    if (selectedRestaurant) {
+      const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
+        method: "POST",
+        body: JSON.stringify({
+          kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
+          name: selectedRestaurant.name,
+          categoryName: selectedRestaurant.category,
+          address: selectedRestaurant.address,
+          roadAddress: selectedRestaurant.roadAddress,
+          region1: selectedRestaurant.region1,
+          region2: selectedRestaurant.region2,
+          region3: selectedRestaurant.region3,
+          phone: selectedRestaurant.phone,
+          lat: selectedRestaurant.lat,
+          lng: selectedRestaurant.lng,
+        }),
+      });
+
+      if (!saveRes.ok || !saveRes.data) {
+        alert(saveRes.message || "식당 저장에 실패했습니다.");
+        setSubmitting(false);
+        return;
+      }
+
+      restaurantId = saveRes.data.id;
     }
 
     const feedRes = await apiFetchJson("/api/v1/feeds", {
       method: "POST",
       body: JSON.stringify({
         content: content.trim(),
-        restaurantId: saveRes.data.id,
+        restaurantId,
       }),
     });
 
@@ -184,7 +216,7 @@ export default function WritePostPage() {
         <form onSubmit={handleSubmit} className="rounded-2xl bg-surface p-6 border border-hairline-soft shadow-sm space-y-5">
           {/* Tagged restaurant */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-muted mb-2 block">태그된 식당</label>
+            <label className="text-xs font-bold text-muted mb-2 block">태그된 식당 (선택)</label>
             {selectedRestaurant ? (
               <div className="flex items-center justify-between rounded-xl bg-primary-soft p-3">
                 <div>
@@ -201,23 +233,30 @@ export default function WritePostPage() {
               </div>
             ) : (
               <>
-                <form onSubmit={handleSearch} className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="식당명을 입력하세요"
                     className="flex-1 rounded-xl border border-hairline bg-surface-soft px-4 py-2.5 text-sm focus:border-primary focus:outline-hidden"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearch(e);
+                      }
+                    }}
                   />
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSearch}
                     disabled={searching}
                     className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
                   >
                     <Search className="h-4 w-4" />
                     {searching ? "검색 중..." : "검색"}
                   </button>
-                </form>
+                </div>
                 <div className="space-y-2">
                   {searchResults.map((r) => (
                     <button
@@ -231,6 +270,7 @@ export default function WritePostPage() {
                     </button>
                   ))}
                 </div>
+                <p className="text-xs text-muted">식당을 선택하지 않아도 포스트를 작성할 수 있어요.</p>
               </>
             )}
           </div>
