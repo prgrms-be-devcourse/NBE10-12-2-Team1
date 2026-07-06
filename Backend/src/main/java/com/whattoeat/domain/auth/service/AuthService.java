@@ -45,6 +45,15 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    @Transactional
+    public AuthResult signupAndLogin(SignUpRequest request) {
+        User user = signup(request);
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+        saveRefreshToken(user.getId(), refreshToken);
+        return new AuthResult(accessToken, refreshToken, AuthUserResponse.from(user));
+    }
+
     public void saveRefreshToken(Long userId, String refreshToken) {
         redisTemplate.opsForValue().set(
                 "refresh:" + userId,

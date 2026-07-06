@@ -11,7 +11,6 @@ import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.Role;
-import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.DuplicateLoginIdException;
 import com.whattoeat.global.exception.DuplicateNicknameException;
 import com.whattoeat.global.exception.InvalidCredentialsException;
@@ -80,18 +79,14 @@ class AuthControllerTest {
     // ========== POST /api/v1/auth/signup ==========
 
     @Test
-    @DisplayName("정상 입력으로 회원가입 성공 시 200 반환")
+    @DisplayName("정상 입력으로 회원가입 성공 시 200 반환 및 쿠키 설정")
     void signupSuccess() throws Exception {
         SignUpRequest request = new SignUpRequest("test@tset.com", "pass1234", "testnick");
-        User user = User.builder()
-                .loginId("test@tset.com")
-                .password("encodedPassword")
-                .nickname("testnick")
-                .email("test@test.com")
-                .provider(Provider.LOCAL)
-                .role(Role.USER)
-                .build();
-        given(authService.signup(any())).willReturn(user);
+        AuthUserResponse userProfile = new AuthUserResponse(
+                1L, "testnick", null, "test@test.com", Provider.LOCAL, Role.USER, LocalDateTime.now()
+        );
+        AuthResult result = new AuthResult("mocked-access-token", "mocked-refresh-token", userProfile);
+        given(authService.signupAndLogin(any())).willReturn(result);
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,13 +97,16 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.email").value("test@test.com"))
                 .andExpect(jsonPath("$.data.provider").value("LOCAL"))
                 .andExpect(jsonPath("$.message").value("회원가입이 완료되었습니다."));
+
+        then(rq).should().setCookie("accessToken", "mocked-access-token", 60 * 60);
+        then(rq).should().setCookie("refreshToken", "mocked-refresh-token", 60 * 60 * 24 * 7);
     }
 
     @Test
     @DisplayName("아이디 중복 시 409 반환")
     void signupFailDuplicateLoginId() throws Exception {
         SignUpRequest request = new SignUpRequest("test@tset.com", "pass1234", "testnick");
-        willThrow(new DuplicateLoginIdException("이미 사용 중인 아이디입니다.")).given(authService).signup(any());
+        willThrow(new DuplicateLoginIdException("이미 사용 중인 아이디입니다.")).given(authService).signupAndLogin(any());
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +119,7 @@ class AuthControllerTest {
     @DisplayName("닉네임 중복 시 409 반환")
     void signupFailDuplicateNickname() throws Exception {
         SignUpRequest request = new SignUpRequest("test@tset.com", "pass1234", "testnick");
-        willThrow(new DuplicateNicknameException("이미 사용 중인 닉네임입니다.")).given(authService).signup(any());
+        willThrow(new DuplicateNicknameException("이미 사용 중인 닉네임입니다.")).given(authService).signupAndLogin(any());
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)

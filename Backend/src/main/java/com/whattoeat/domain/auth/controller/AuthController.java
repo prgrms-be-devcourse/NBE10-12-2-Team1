@@ -2,7 +2,6 @@ package com.whattoeat.domain.auth.controller;
 
 import com.whattoeat.domain.auth.dto.*;
 import com.whattoeat.domain.auth.service.AuthService;
-import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.InvalidCredentialsException;
 import com.whattoeat.global.rq.Rq;
 import com.whattoeat.global.rsData.RsData;
@@ -25,8 +24,10 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<RsData<AuthUserResponse>> signup(@Valid @RequestBody SignUpRequest request) {
-        User user = authService.signup(request);
-        return ResponseEntity.ok(RsData.success(AuthUserResponse.from(user), "회원가입이 완료되었습니다."));
+        AuthResult result = authService.signupAndLogin(request);
+        rq.setCookie("accessToken", result.accessToken(), 60 * 60);
+        rq.setCookie("refreshToken", result.refreshToken(), 60 * 60 * 24 * 7);
+        return ResponseEntity.ok(RsData.success(result.userProfile(), "회원가입이 완료되었습니다."));
     }
 
     @PostMapping("/login")
