@@ -23,4 +23,6 @@ public interface RestaurantListRepository extends JpaRepository<RestaurantList, 
          where rl.id = :id
     """)
     Optional<RestaurantList> findByIdWithItems(@Param("id") Long id);
+
+
 }
