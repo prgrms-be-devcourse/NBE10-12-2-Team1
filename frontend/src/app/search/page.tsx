@@ -108,6 +108,7 @@ export default function SearchPage() {
     script.id = "kakao-map-sdk";
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`;
     script.async = true;
+    script.crossOrigin = "anonymous";
     script.onload = loadMap;
     script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
     document.head.appendChild(script);
