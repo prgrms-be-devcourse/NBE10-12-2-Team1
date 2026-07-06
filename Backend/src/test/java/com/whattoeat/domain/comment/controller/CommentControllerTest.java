@@ -100,9 +100,11 @@ class CommentControllerTest {
 
         mockMvc.perform(get("/api/v1/feeds/1/comments"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].content").value("첫 번째 댓글"))
-                .andExpect(jsonPath("$[1].content").value("두 번째 댓글"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].content").value("첫 번째 댓글"))
+                .andExpect(jsonPath("$.data[1].content").value("두 번째 댓글"));
     }
 
     @Test
@@ -111,7 +113,8 @@ class CommentControllerTest {
 
         mockMvc.perform(get("/api/v1/feeds/1/comments"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test
@@ -124,8 +127,10 @@ class CommentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.content").value("새 댓글"))
-                .andExpect(jsonPath("$.nickname").value("user1"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 작성 성공"))
+                .andExpect(jsonPath("$.data.content").value("새 댓글"))
+                .andExpect(jsonPath("$.data.nickname").value("user1"));
     }
 
     @Test
@@ -155,6 +160,9 @@ class CommentControllerTest {
         willDoNothing().given(commentService).deleteComment(1L, 1L);
 
         mockMvc.perform(delete("/api/v1/feeds/1/comments/1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글이 삭제되었습니다."));
+
     }
 }

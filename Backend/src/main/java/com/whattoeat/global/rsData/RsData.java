@@ -16,6 +16,7 @@ public record RsData<T>(
                 message
         );
     }
+
     // 성공 응답 - message 없음
     public static <T> RsData<T> success(T data) {
         return new RsData<>(
@@ -23,5 +24,13 @@ public record RsData<T>(
                 data,
                 null
         );
+    }
+
+    public static <T> RsData<T> failure(String message) {
+        return new RsData<>(false, null, message);
+    }
+
+    public static <T> RsData<T> failure(T data, String message) {
+        return new RsData<>(false, data, message);
     }
 }
