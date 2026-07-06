@@ -12,13 +12,14 @@ public record FeedListResponse(
         String nickname,
         String profileImage,
         int likeCount,
+        boolean isLikedByMe,
         long commentCount,
         // id 만 있으면 추가 api 호출하여 피드 목록 로딩이 느려지고, 반대로 name만 있으면 링크 불가
         Long restaurantId,
         String restaurantName,
         LocalDateTime createdAt
 ) {
-    public static FeedListResponse from(Feed feed, long commentCount) {
+    public static FeedListResponse from(Feed feed, long commentCount, boolean isLikedByMe) {
         return new FeedListResponse(
                 feed.getId(),
                 feed.getContent(),
@@ -26,6 +27,7 @@ public record FeedListResponse(
                 feed.getUser().getNickname(),
                 feed.getUser().getProfileImage(),
                 feed.getLikeCount(),
+                isLikedByMe,
                 commentCount,
                 feed.getRestaurant() != null ? feed.getRestaurant().getId() : null,
                 feed.getRestaurant() != null ? feed.getRestaurant().getName() : null,

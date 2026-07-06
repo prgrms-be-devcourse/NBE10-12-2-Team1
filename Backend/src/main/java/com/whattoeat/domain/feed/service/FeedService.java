@@ -8,6 +8,7 @@ import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.event.FeedCreatedEvent;
 import com.whattoeat.domain.feed.repository.FeedRepository;
+import com.whattoeat.domain.feedlike.repository.FeedLikeRepository;
 import com.whattoeat.domain.follow.repository.FollowRepository;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
@@ -22,10 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +34,7 @@ public class FeedService {
     private final FollowRepository followRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final CommentRepository commentRepository;
+    private final FeedLikeRepository feedLikeRepository;
 
 
     @Transactional
@@ -49,7 +48,7 @@ public class FeedService {
     }
 
     @Transactional(readOnly = true)
-    public Page<FeedListResponse> getFeeds(Long userId, Long restaurantId, Pageable pageable) {
+    public Page<FeedListResponse> getFeeds(Long currentUserId,  Long userId, Long restaurantId, Pageable pageable) {
         Page<Feed> feeds;
         if (userId != null) {
             feeds = feedRepository.findByUserId(userId, pageable);
@@ -59,11 +58,16 @@ public class FeedService {
             feeds = feedRepository.findAllByOrderByIdDesc(pageable);
         }
 
-        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.getContent());
+        List<Feed> feedContents = feeds.getContent();
 
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);
+        Set<Long> likedFeedIds = findLikedFeedIds(currentUserId, feedContents);
         return feeds.map(feed -> FeedListResponse
-                .from(feed, commentCounts.getOrDefault(feed.getId(),0L)));
+                .from(feed, commentCounts.getOrDefault(feed.getId(),0L),
+                        likedFeedIds.contains(feed.getId())
+                        ));
     }
+
 
     private Map<Long, Long> countCommentByFeedIds(List<Feed> feeds) {
         List<Long> feedIds = feeds.stream().map(Feed::getId).toList();
@@ -74,6 +78,20 @@ public class FeedService {
                                 row -> row[1] == null ? 0L : ((Number) row[1]).longValue()
                         )
                 );
+    }
+
+    private Set<Long> findLikedFeedIds(Long currentUserId, List<Feed> feeds) {
+        if (currentUserId == null || feeds.isEmpty()) {
+            return Set.of();
+        }
+
+        List<Long> feedIds = feeds.stream()
+                .map(Feed::getId)
+                .toList();
+
+        return new HashSet<>(
+                feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(currentUserId, feedIds)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -88,10 +106,15 @@ public class FeedService {
         }
 
         Page<Feed> feeds = feedRepository.findByUser_IdIn(followingUserIds, pageable);
-        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.getContent());
+        List<Feed> feedContents = feeds.getContent();
+
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);
+        Set<Long> likedFeedIds = findLikedFeedIds(userId, feedContents);
 
         return feeds.map(feed -> FeedListResponse
-                .from(feed, commentCounts.getOrDefault(feed.getId(),0L)));
+                .from(feed, commentCounts.getOrDefault(feed.getId(),0L),
+                        likedFeedIds.contains(feed.getId())
+                ));
     }
 
     @Transactional(readOnly = true)
@@ -119,13 +142,16 @@ public class FeedService {
         if (start >= feeds.size()) {
             return Page.empty(pageable);
         }
+        List<Feed> pagedFeeds = feeds.subList(start, end);
 
-        Map<Long, Long> commentCounts = countCommentByFeedIds(feeds.subList(start, end));
+        Map<Long, Long> commentCounts = countCommentByFeedIds(pagedFeeds);
+        Set<Long> likedFeedIds = findLikedFeedIds(userId, pagedFeeds);
 
-        List<FeedListResponse> responses = feeds.subList(start, end)
+        List<FeedListResponse> responses = pagedFeeds
                 .stream()
                 .map(feed -> FeedListResponse
-                        .from(feed, commentCounts.getOrDefault(feed.getId(),0L)))
+                        .from(feed, commentCounts.getOrDefault(feed.getId(),0L),
+                                likedFeedIds.contains(feed.getId())))
                 .toList();
 
         return new PageImpl<>(responses, pageable, feeds.size());
