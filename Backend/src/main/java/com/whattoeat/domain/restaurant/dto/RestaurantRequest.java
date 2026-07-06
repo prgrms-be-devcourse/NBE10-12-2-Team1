@@ -1,6 +1,5 @@
 package com.whattoeat.domain.restaurant.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -23,7 +22,6 @@ public class RestaurantRequest {
             String kakaoPlaceId,
             @NotBlank(message = "식당명은 필수입니다.")
             String name,
-            @JsonProperty("category")
             String categoryName,
             @NotBlank(message = "주소는 필수입니다.")
             String address,
