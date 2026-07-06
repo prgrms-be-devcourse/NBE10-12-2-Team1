@@ -127,12 +127,17 @@ export default function AppShell({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
     window.addEventListener("login-state-change", handleChange);
     return () => window.removeEventListener("login-state-change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -173,15 +178,17 @@ export default function AppShell({
             <Link href="/feed" className="text-2xl font-bold tracking-tight text-primary">
               오늘뭐먹지
             </Link>
-            <div className="hidden md:flex items-center rounded-full bg-surface-soft px-4 py-2">
-              <Search className="h-5 w-5 text-muted" />
-              <input
-                type="text"
-                placeholder="맛집, 지역 검색..."
-                className="ml-3 bg-transparent text-base text-ink placeholder:text-muted-soft focus:outline-hidden w-56"
-                suppressHydrationWarning
-              />
-            </div>
+            {mounted && (
+              <div className="hidden md:flex items-center rounded-full bg-surface-soft px-4 py-2">
+                <Search className="h-5 w-5 text-muted" />
+                <input
+                  type="text"
+                  placeholder="맛집, 지역 검색..."
+                  className="ml-3 bg-transparent text-base text-ink placeholder:text-muted-soft focus:outline-hidden w-56"
+                  suppressHydrationWarning
+                />
+              </div>
+            )}
           </div>
 
           <nav className="hidden lg:flex items-center justify-end gap-2 ml-auto">
