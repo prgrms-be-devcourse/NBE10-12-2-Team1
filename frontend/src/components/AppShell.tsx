@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
 import { CurrentUser, getStoredUser } from "@/lib/user";
+import { apiFetchJson } from "@/lib/api";
 
 interface AppShellProps {
   children: ReactNode;
@@ -23,13 +24,20 @@ const mainNav = [
 
 const fallbackUser: CurrentUser = {
   userId: 0,
-  nickname: "오늘의푸디",
-  profileImage: "https://picsum.photos/seed/myprofile/80/80",
+  nickname: "게스트",
+  profileImage: "/default-profile.png",
   email: "",
 };
 
+interface FeedListPageResponse {
+  feeds: unknown[];
+}
+
 export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
+  const [postCount, setPostCount] = useState<number | null>(null);
 
   useEffect(() => {
     const handleChange = () => setUser(getStoredUser() ?? fallbackUser);
@@ -37,30 +45,54 @@ export function SidebarProfile() {
     return () => window.removeEventListener("login-state-change", handleChange);
   }, []);
 
+  useEffect(() => {
+    if (!user.userId) return;
+
+    const loadCounts = async () => {
+      const [countRes, feedRes] = await Promise.all([
+        apiFetchJson<{ userId: number; followerCount: number; followingCount: number }>(
+          `/api/v1/follows/users/${user.userId}/count`
+        ),
+        apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?userId=${user.userId}`),
+      ]);
+
+      if (countRes.ok && countRes.data) {
+        setFollowerCount(countRes.data.followerCount);
+        setFollowingCount(countRes.data.followingCount);
+      }
+
+      if (feedRes.ok && feedRes.data) {
+        setPostCount(feedRes.data.feeds.length);
+      }
+    };
+
+    loadCounts();
+  }, [user.userId]);
+
   return (
     <Link href="/profile" className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors">
       <div className="flex items-center gap-4">
         <img
-          src={user.profileImage ?? "https://picsum.photos/seed/myprofile/80/80"}
+          src={user.profileImage ?? "/default-profile.png"}
           alt=""
           className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/20"
         />
         <div>
           <p className="text-base font-bold text-ink">{user.nickname}</p>
-          <p className="text-sm text-muted">{user.email || "@todayfoodie"}</p>
+          <p className="text-sm text-muted">{user.email || "로그인이 필요합니다"}</p>
         </div>
       </div>
       <div className="mt-4 flex justify-between text-center text-base">
         <div>
-          <p className="font-bold text-ink">128</p>
+          <p className="font-bold text-ink">{followingCount ?? "-"}</p>
           <p className="text-xs text-muted">팔로잉</p>
         </div>
         <div>
-          <p className="font-bold text-ink">342</p>
+          <p className="font-bold text-ink">{followerCount ?? "-"}</p>
           <p className="text-xs text-muted">팔로워</p>
         </div>
         <div>
-          <p className="font-bold text-ink">45</p>
+          <p className="font-bold text-ink">{postCount ?? "-"}</p>
           <p className="text-xs text-muted">포스트</p>
         </div>
       </div>
@@ -179,7 +211,7 @@ export default function AppShell({
                 className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20 focus:outline-hidden"
               >
                 <img
-                  src={user.profileImage ?? "https://picsum.photos/seed/myprofile/80/80"}
+                  src={user.profileImage ?? "/default-profile.png"}
                   alt="프로필"
                   className="h-full w-full object-cover"
                 />

@@ -335,7 +335,7 @@ export default function ListsPage() {
                       <div className="flex items-center gap-4">
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
                           <img
-                            src={`https://picsum.photos/seed/${list.id}/120/120`}
+                            src="/list-placeholder.png"
                             alt=""
                             className="h-full w-full object-cover"
                           />
@@ -370,7 +370,7 @@ export default function ListsPage() {
                     <div className="flex items-center gap-4">
                       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
                         <img
-                          src={`https://picsum.photos/seed/${list.listId}/120/120`}
+                          src="/list-placeholder.png"
                           alt=""
                           className="h-full w-full object-cover"
                         />

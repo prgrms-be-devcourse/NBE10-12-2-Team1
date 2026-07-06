@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin,
@@ -17,13 +17,15 @@ import {
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
-const hotPlaces = [
-  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
-  { name: "성수동 카페거리", category: "카페", likes: 189 },
-  { name: "이태원 양식당", category: "양식", likes: 156 },
-];
+const categories = ["한식", "일식", "양식", "중식", "분식", "카페", "아시안", "기타"];
 
-const categories = ["한식", "일식", "양식", "중식", "분식", "카페", "아시안", "피자", "치킨"];
+interface HotPlace {
+  id: number;
+  name: string;
+  category: string;
+  region2: string;
+}
+
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
@@ -107,11 +109,47 @@ export default function RecommendPage() {
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendError, setRecommendError] = useState("");
   const [current, setCurrent] = useState<RecommendRestaurant | null>(null);
+  const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<any>(null);
+  const markerRef = useRef<any>(null);
 
   const locationLabel =
     selectedCity +
     (selectedDistrict === "전체" ? "" : ` ${selectedDistrict}`) +
     (selectedTown === "전체" ? "" : ` ${selectedTown}`);
+
+  useEffect(() => {
+    const loadHotPlaces = async () => {
+      const res = await apiFetchJson<HotPlace[]>("/api/v1/restaurants");
+      if (res.ok && res.data) {
+        setHotPlaces(res.data.slice(0, 3));
+      }
+    };
+
+    loadHotPlaces();
+  }, []);
+
+  useEffect(() => {
+    if (!resultModalOpen || !current || !mapRef.current || !window.kakao?.maps) return;
+
+    const center = new window.kakao.maps.LatLng(current.lat, current.lng);
+    const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
+      center,
+      level: 3,
+    });
+    setMap(kakaoMap);
+
+    markerRef.current?.setMap(null);
+    const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap });
+    markerRef.current = marker;
+
+    return () => {
+      markerRef.current?.setMap(null);
+      setMap(null);
+    };
+  }, [resultModalOpen, current]);
 
   const fetchRecommend = async () => {
     setRecommendLoading(true);
@@ -164,17 +202,21 @@ export default function RecommendPage() {
           <SidebarProfile />
           <SidebarCard title="오늘의 핫플">
             <div className="space-y-4">
-              {hotPlaces.map((p, i) => (
-                <div key={p.name} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-base font-bold text-ink">{p.name}</p>
-                    <p className="text-sm text-muted">{p.category} · 좋아요 {p.likes}</p>
+              {hotPlaces.length === 0 ? (
+                <p className="text-sm text-muted">등록된 식당이 없습니다.</p>
+              ) : (
+                hotPlaces.map((p, i) => (
+                  <div key={p.id} className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="text-base font-bold text-ink">{p.name}</p>
+                      <p className="text-sm text-muted">{categoryLabel(p.category)} · {p.region2 || "-"}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </SidebarCard>
         </div>
@@ -363,6 +405,30 @@ export default function RecommendPage() {
               </div>
             ) : (
               <>
+                {/* Map */}
+                <div className="relative mb-5 h-48 w-full overflow-hidden rounded-2xl border border-hairline-soft">
+                  <div ref={mapRef} className="absolute inset-0 bg-surface-strong" />
+                  <button
+                    onClick={() => {
+                      if (!map || !navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const center = new window.kakao.maps.LatLng(
+                            pos.coords.latitude,
+                            pos.coords.longitude
+                          );
+                          map.setCenter(center);
+                        },
+                        () => alert("현재 위치를 가져올 수 없습니다.")
+                      );
+                    }}
+                    className="absolute bottom-2 right-2 flex items-center justify-center rounded-lg border border-hairline bg-surface/90 p-1.5 text-muted shadow-sm hover:bg-white"
+                    aria-label="현재 위치"
+                  >
+                    <Navigation className="h-4 w-4" />
+                  </button>
+                </div>
+
                 {/* Draft card */}
                 <div className="rounded-2xl bg-surface border border-hairline-soft overflow-hidden shadow-sm">
                   <div className="aspect-[16/10] w-full bg-primary-soft flex items-center justify-center text-7xl">

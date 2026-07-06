@@ -43,7 +43,7 @@ export default function EditProfilePage() {
         setUser(res.data);
         setNickname(res.data.nickname);
         setEmail(res.data.email);
-        setPreviewImage(res.data.profileImage || `https://picsum.photos/seed/${res.data.nickname}/120/120`);
+        setPreviewImage(res.data.profileImage || "/default-profile.png");
       } else {
         alert(res.message || "프로필 정보를 불러오지 못했습니다.");
       }

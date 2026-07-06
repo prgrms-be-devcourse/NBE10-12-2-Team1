@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
@@ -23,11 +23,6 @@ interface KakaoRestaurant {
   lng: number;
 }
 
-const recentPosts = [
-  { id: "user1", author: "김푸디", content: "을지로 오면 무조건 여기! 곱창이 너무 부드럽고...", seed: "user1" },
-  { id: "user2", author: "맛탐정_소연", content: "블루보틀 삼성점 분위기 최고였어요.", seed: "user2" },
-];
-
 const guideItems = [
   "방문한 식당을 태그하면 지도에서도 확인할 수 있어요.",
   "분위기 태그를 선택하면 비슷한 취향의 푸디들에게 노출돼요.",
@@ -43,6 +38,20 @@ export default function WritePostPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<KakaoRestaurant | null>(null);
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recentPosts, setRecentPosts] = useState<{ feedId: number; nickname: string; content: string }[]>([]);
+
+  useEffect(() => {
+    const loadRecent = async () => {
+      const res = await apiFetchJson<{ feeds: { feedId: number; nickname: string; content: string }[] }>(
+        "/api/v1/feeds/recommend"
+      );
+      if (res.ok && res.data) {
+        setRecentPosts(res.data.feeds.slice(0, 3));
+      }
+    };
+
+    loadRecent();
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +153,7 @@ export default function WritePostPage() {
     <AppShell
       leftSidebar={
         <div className="sticky top-20 space-y-5">
-          <LeftRecentPosts />
+          <LeftRecentPosts posts={recentPosts} />
         </div>
       }
       rightSidebar={
@@ -291,21 +300,27 @@ export default function WritePostPage() {
   );
 }
 
-export function LeftRecentPosts() {
+function LeftRecentPosts({ posts }: { posts: { feedId: number; nickname: string; content: string }[] }) {
   return (
     <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
       <p className="text-sm font-bold text-ink mb-3">최근 피드</p>
-      <div className="space-y-3">
-        {recentPosts.map((p) => (
-          <Link key={p.id} href={`/profile/${p.id}`} className="flex gap-2.5 group">
-            <img src={`https://picsum.photos/seed/${p.seed}/40/40`} alt="" className="h-7 w-7 rounded-full object-cover shrink-0 group-hover:ring-2 group-hover:ring-primary/30 transition-all" />
-            <div>
-              <p className="text-xs font-bold text-ink group-hover:text-primary transition-colors">{p.author}</p>
-              <p className="text-xs text-muted line-clamp-2">{p.content}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {posts.length === 0 ? (
+        <p className="text-xs text-muted">최근 피드가 없습니다.</p>
+      ) : (
+        <div className="space-y-3">
+          {posts.map((p) => (
+            <Link key={p.feedId} href={`/feed`} className="flex gap-2.5 group">
+              <div className="h-7 w-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                {p.nickname[0]}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-ink group-hover:text-primary transition-colors">{p.nickname}</p>
+                <p className="text-xs text-muted line-clamp-2">{p.content}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
