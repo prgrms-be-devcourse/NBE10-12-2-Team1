@@ -1,7 +1,6 @@
 "use client";
 
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
       >
