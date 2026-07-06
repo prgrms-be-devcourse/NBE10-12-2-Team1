@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public class RestaurantResponse {
 
     public record KakaoRestaurant(
+            Long id,
             String kakaoPlaceId,
             String name,
             String category,

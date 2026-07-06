@@ -1,6 +1,8 @@
 package com.whattoeat.domain.restaurant.service;
 
 import com.whattoeat.domain.restaurant.dto.RestaurantResponse;
+import com.whattoeat.domain.restaurant.entity.Restaurant;
+import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.external.kakao.client.KakaoMapApiClient;
 import com.whattoeat.external.kakao.dto.KakaoPlaceDocument;
 import com.whattoeat.external.kakao.dto.KakaoPlaceResponse;
@@ -14,6 +16,7 @@ import java.util.List;
 public class RestaurantKakaoService {
 
     private final KakaoMapApiClient kakaoMapApiClient;
+    private final RestaurantRepository restaurantRepository;
 
     public List<RestaurantResponse.KakaoRestaurant> searchByKeyword(
             String keyword,
@@ -43,7 +46,11 @@ public class RestaurantKakaoService {
 
         AddressParts addressParts = parseAddress(address);
 
+        Long restaurantId = restaurantRepository.findByKakaoPlaceId(document.getId())
+                .map(Restaurant::getId).orElse(null);
+
         return new RestaurantResponse.KakaoRestaurant(
+                restaurantId,
                 document.getId(),
                 document.getPlaceName(),
                 document.getCategoryName(),
