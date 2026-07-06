@@ -15,3 +15,16 @@ export function getStoredUser(): CurrentUser | null {
     return null;
   }
 }
+
+export function setStoredUser(user: CurrentUser | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+  } catch {
+    // ignore
+  }
+}
