@@ -78,5 +78,11 @@ public class RestaurantController {
 
         return RsData.success(result, "저장된 식당 목록입니다.");
     }
+    @GetMapping("/{id}")
+    public RsData<RestaurantResponse.Recommend> getRestaurantById(@PathVariable Long id) {
+        Restaurant restaurant = restaurantService.findById(id);
+        return RsData.success(new RestaurantResponse.Recommend(restaurant),
+                "식당 조회가 완료 되었습니다." );
+    }
 
 }

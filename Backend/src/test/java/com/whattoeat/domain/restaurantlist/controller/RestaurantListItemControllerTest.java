@@ -3,7 +3,9 @@ package com.whattoeat.domain.restaurantlist.controller;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -20,20 +22,33 @@ import com.whattoeat.domain.restaurantlist.entity.RestaurantList;
 import com.whattoeat.domain.restaurantlist.entity.RestaurantListItem;
 import com.whattoeat.domain.restaurantlist.service.RestaurantListService;
 import com.whattoeat.domain.user.entity.User;
+import com.whattoeat.global.exception.GlobalExceptionHandler;
 import com.whattoeat.global.jwt.JwtUtil;
+import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+
+import org.springframework.core.MethodParameter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 @WebMvcTest(
         controllers = RestaurantListController.class,
@@ -41,6 +56,8 @@ import org.springframework.test.web.servlet.MockMvc;
 )
 @AutoConfigureMockMvc(addFilters = false)
 class RestaurantListItemControllerTest {
+
+    private static final Long TEST_USER_ID = 1L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,8 +77,57 @@ class RestaurantListItemControllerTest {
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
 
+    private CustomUserDetails userDetails;
+
+    @BeforeEach
+    void setUp() {
+        restaurantListService = mock(RestaurantListService.class);
+        userDetails = mock(CustomUserDetails.class);
+
+        given(userDetails.getUserId())
+                .willReturn(TEST_USER_ID);
+
+        RestaurantListController controller =
+                new RestaurantListController(restaurantListService);
+
+        HandlerMethodArgumentResolver authenticationPrincipalResolver =
+                new HandlerMethodArgumentResolver() {
+
+                    @Override
+                    public boolean supportsParameter(MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(
+                                AuthenticationPrincipal.class
+                        );
+                    }
+
+                    @Override
+                    public Object resolveArgument(
+                            MethodParameter parameter,
+                            ModelAndViewContainer mavContainer,
+                            NativeWebRequest webRequest,
+                            WebDataBinderFactory binderFactory
+                    ) {
+                        return userDetails;
+                    }
+                };
+
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .setCustomArgumentResolvers(authenticationPrincipalResolver)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
+    private UsernamePasswordAuthenticationToken authenticationToken() {
+        return new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                List.of()
+        );
+    }
+
     private Restaurant mockRestaurant(Long id, String name, Category category) {
-        Restaurant restaurant = Mockito.mock(Restaurant.class);
+        Restaurant restaurant = mock(Restaurant.class);
         given(restaurant.getId()).willReturn(id);
         given(restaurant.getName()).willReturn(name);
         given(restaurant.getCategory()).willReturn(category);
@@ -69,7 +135,7 @@ class RestaurantListItemControllerTest {
     }
 
     private RestaurantList createRestaurantList(Long id) {
-        User user = Mockito.mock(User.class);
+        User user = mock(User.class);
 
         RestaurantList restaurantList = new RestaurantList(
                 user,
@@ -155,6 +221,7 @@ class RestaurantListItemControllerTest {
 
     @Test
     void 맛집리스트_아이템_수정_성공() throws Exception {
+        // given
         RestaurantListRequest.RestaurantListItem request =
                 new RestaurantListRequest.RestaurantListItem(
                         10L,
@@ -179,16 +246,20 @@ class RestaurantListItemControllerTest {
         );
 
         given(restaurantListService.updateItem(
-                eq(1L),
+                eq(TEST_USER_ID),
                 eq(100L),
                 eq(1L),
                 eq(2),
                 eq("수정된 한줄평")
         )).willReturn(item);
 
-        mockMvc.perform(put("/api/v1/lists/1/items/100")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        // when & then
+        mockMvc.perform(
+                        put("/api/v1/lists/1/items/100")
+                                .with(authentication(authenticationToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(100))
@@ -199,18 +270,33 @@ class RestaurantListItemControllerTest {
                 .andExpect(jsonPath("$.data.orderIndex").value(2))
                 .andExpect(jsonPath("$.data.memo").value("수정된 한줄평"))
                 .andExpect(jsonPath("$.data.createdAt").exists())
-                .andExpect(jsonPath("$.message").value("리스트 아이템 정보가 변경되었습니다."));
+                .andExpect(jsonPath("$.message")
+                        .value("리스트 아이템 정보가 변경되었습니다."));
+
+        verify(restaurantListService).updateItem(
+                TEST_USER_ID,
+                100L,
+                1L,
+                2,
+                "수정된 한줄평"
+        );
     }
 
     @Test
     void 맛집리스트_아이템_삭제_성공() throws Exception {
-        mockMvc.perform(delete("/api/v1/lists/1/items/100"))
+        mockMvc.perform(delete("/api/v1/lists/1/items/100")
+                        .with(authentication(authenticationToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").doesNotExist())
-                .andExpect(jsonPath("$.message").value("리스트 아이템이 삭제되었습니다."));
+                .andExpect(jsonPath("$.message")
+                        .value("리스트 아이템이 삭제되었습니다."));
 
-        verify(restaurantListService).deleteItem(1L, 100L, 1L);
+        verify(restaurantListService).deleteItem(
+                TEST_USER_ID,
+                100L,
+                1L
+        );
     }
 
     @Test

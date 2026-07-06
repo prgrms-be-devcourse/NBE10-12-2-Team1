@@ -67,4 +67,10 @@ public class RestaurantService {
     public List<Restaurant> findAll() {
         return restaurantRepository.findAll();
     }
+
+    @Transactional(readOnly = true)
+    public Restaurant findById(Long id) {
+        return restaurantRepository.findById(id)
+                .orElseThrow(() ->new RestaurantNotFoundException(id));
+    }
 }

@@ -198,4 +198,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
     }
+
+    // 이미 저장한 식당리스트인 경우 409 반환
+    @ExceptionHandler(AlreadySavedRestaurantListException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyLikedFeed(AlreadySavedRestaurantListException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
+    }
 }
