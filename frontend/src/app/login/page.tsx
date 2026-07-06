@@ -1,19 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Map, List, Sparkles } from "lucide-react";
+import { apiFetchJson } from "@/lib/api";
 
 type Tab = "kakao" | "email";
 type Mode = "login" | "signup";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-const hotPlaces = [
-  { name: "을지로 순대곱창", category: "한식", distance: "120m", seed: "euljiro" },
-  { name: "블루보틀 삼청점", category: "카페", distance: "480m", seed: "bluebottle" },
-  { name: "광화문 정육식당", category: "한식", distance: "890m", seed: "meat" },
-];
+interface HotPlace {
+  id: number;
+  name: string;
+  category: string;
+  region2: string;
+}
+
+const categoryLabelMap: Record<string, string> = {
+  KOREAN: "한식",
+  JAPANESE: "일식",
+  WESTERN: "양식",
+  CHINESE: "중식",
+  SNACK: "분식",
+  CAFE: "카페",
+  ASIAN: "아시안",
+  ETC: "기타",
+};
 
 const features = [
   { icon: Map, title: "위치 기반 맛집 탐색", desc: "주변의 진짜 맛집을 빠르게 찾아보세요" },
@@ -32,6 +45,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
+  const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+
+  useEffect(() => {
+    const loadHotPlaces = async () => {
+      const res = await apiFetchJson<HotPlace[]>("/api/v1/restaurants");
+      if (res.ok && res.data) {
+        setHotPlaces(res.data.slice(0, 3));
+      }
+    };
+
+    loadHotPlaces();
+  }, []);
 
   const handleLoginSuccess = (user: Record<string, unknown>) => {
     localStorage.setItem("isLoggedIn", "true");
@@ -124,15 +149,19 @@ export default function LoginPage() {
           <div>
             <p className="text-sm font-bold mb-3">지금 핫한 맛집</p>
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {hotPlaces.map((p) => (
-                <div key={p.name} className="min-w-[160px] rounded-xl bg-white/15 p-3 backdrop-blur-sm">
-                  <div className="h-20 rounded-lg bg-white/20 overflow-hidden mb-2">
-                    <img src={`https://picsum.photos/seed/${p.seed}/200/120`} alt="" className="h-full w-full object-cover" />
+              {hotPlaces.length === 0 ? (
+                <p className="text-xs text-white/80">등록된 식당이 없습니다.</p>
+              ) : (
+                hotPlaces.map((p) => (
+                  <div key={p.id} className="min-w-[160px] rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+                    <div className="h-20 rounded-lg bg-white/20 overflow-hidden mb-2">
+                      <img src="/restaurant-placeholder.png" alt="" className="h-full w-full object-cover" />
+                    </div>
+                    <p className="text-sm font-bold truncate">{p.name}</p>
+                    <p className="text-xs text-white/80">{categoryLabelMap[p.category] || p.category} · {p.region2 || "-"}</p>
                   </div>
-                  <p className="text-sm font-bold truncate">{p.name}</p>
-                  <p className="text-xs text-white/80">{p.category} · {p.distance}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>

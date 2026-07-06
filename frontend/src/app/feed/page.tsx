@@ -7,12 +7,6 @@ import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
-const recommendFoodies = [
-  { id: "user5", name: "푸디맘", handle: "@foodimom", img: "user5" },
-  { id: "user6", name: "카페인 중독", handle: "@cafeholic", img: "user6" },
-  { id: "user7", name: "맛집 탐험가", handle: "@foodtrip", img: "user7" },
-];
-
 interface Feed {
   feedId: number;
   content: string;
@@ -30,6 +24,12 @@ interface FeedListPageResponse {
   feeds: Feed[];
 }
 
+interface RecommendFoodie {
+  userId: number;
+  nickname: string;
+  profileImage: string | null;
+}
+
 function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,6 +38,7 @@ function FeedContent() {
   const [posts, setPosts] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -60,6 +61,37 @@ function FeedContent() {
     load();
   }, [activeTab]);
 
+  useEffect(() => {
+    const loadFoodies = async () => {
+      const res = await apiFetchJson<FeedListPageResponse>("/api/v1/feeds/recommend");
+      if (!res.ok || !res.data) return;
+
+      const seen = new Set<number>();
+      const unique: RecommendFoodie[] = [];
+      for (const feed of res.data.feeds) {
+        if (!seen.has(feed.userId)) {
+          seen.add(feed.userId);
+          unique.push({
+            userId: feed.userId,
+            nickname: feed.nickname,
+            profileImage: feed.profileImage,
+          });
+        }
+        if (unique.length >= 3) break;
+      }
+      setRecommendFoodies(unique);
+    };
+
+    loadFoodies();
+  }, []);
+
+  const handleFollow = async (userId: number) => {
+    const res = await apiFetchJson(`/api/v1/follows/${userId}`, { method: "POST" });
+    if (!res.ok) {
+      alert(res.message || "팔로우에 실패했습니다.");
+    }
+  };
+
   const handleTabChange = (tab: "following" | "recommended") => {
     router.replace(`/feed?tab=${tab}`, { scroll: false });
   };
@@ -71,20 +103,30 @@ function FeedContent() {
           <SidebarProfile />
           <SidebarCard title="추천 푸디">
             <div className="space-y-4">
-              {recommendFoodies.map((f) => (
-                <Link key={f.id} href={`/profile/${f.id}`} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <img src={`https://picsum.photos/seed/${f.img}/60/60`} alt="" className="h-10 w-10 rounded-full object-cover" />
-                    <div>
-                      <p className="text-base font-bold text-ink group-hover:text-primary transition-colors">{f.name}</p>
-                      <p className="text-sm text-muted-soft">{f.handle}</p>
-                    </div>
+              {recommendFoodies.length === 0 ? (
+                <p className="text-sm text-muted">추천 푸디가 없습니다.</p>
+              ) : (
+                recommendFoodies.map((f) => (
+                  <div key={f.userId} className="flex items-center justify-between group">
+                    <Link href={`/profile/${f.userId}`} className="flex items-center gap-3">
+                      <img
+                        src={f.profileImage || "/default-profile.png"}
+                        alt=""
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="text-base font-bold text-ink group-hover:text-primary transition-colors">{f.nickname}</p>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={() => handleFollow(f.userId)}
+                      className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+                    >
+                      팔로우
+                    </button>
                   </div>
-                  <button className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-bold text-white hover:bg-primary-active transition-colors">
-                    팔로우
-                  </button>
-                </Link>
-              ))}
+                ))
+              )}
             </div>
           </SidebarCard>
         </div>
@@ -143,7 +185,7 @@ function FeedContent() {
                 <div className="flex items-center justify-between">
                   <Link href={`/profile/${post.userId}`} className="flex items-center gap-3 group">
                     <img
-                      src={post.profileImage || `https://picsum.photos/seed/${post.nickname}/80/80`}
+                      src={post.profileImage || "/default-profile.png"}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover ring-1 ring-hairline-soft"
                     />

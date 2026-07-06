@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Navigation } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
-const hotPlaces = [
-  { name: "연남동 스시 오마카세", category: "일식", likes: 234 },
-  { name: "성수동 카페거리", category: "카페", likes: 189 },
-  { name: "이태원 양식당", category: "양식", likes: 156 },
-];
-
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
+
+const categoryLabelMap: Record<string, string> = {
+  KOREAN: "한식",
+  JAPANESE: "일식",
+  WESTERN: "양식",
+  CHINESE: "중식",
+  SNACK: "분식",
+  CAFE: "카페",
+  ASIAN: "아시안",
+  ETC: "기타",
+};
+
+interface HotPlace {
+  id: number;
+  name: string;
+  category: string;
+  region2: string;
+}
 
 interface KakaoRestaurant {
   kakaoPlaceId: string;
@@ -40,6 +52,18 @@ export default function SearchPage() {
   const [results, setResults] = useState<KakaoRestaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+
+  useEffect(() => {
+    const loadHotPlaces = async () => {
+      const res = await apiFetchJson<HotPlace[]>("/api/v1/restaurants");
+      if (res.ok && res.data) {
+        setHotPlaces(res.data.slice(0, 3));
+      }
+    };
+
+    loadHotPlaces();
+  }, []);
 
   const fetchSearch = async () => {
     if (!query.trim()) return;
@@ -137,17 +161,21 @@ export default function SearchPage() {
           <SidebarProfile />
           <SidebarCard title="오늘의 핫플">
             <div className="space-y-4">
-              {hotPlaces.map((p, i) => (
-                <div key={p.name} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-base font-bold text-ink">{p.name}</p>
-                    <p className="text-sm text-muted">{p.category} · 좋아요 {p.likes}</p>
+              {hotPlaces.length === 0 ? (
+                <p className="text-sm text-muted">등록된 식당이 없습니다.</p>
+              ) : (
+                hotPlaces.map((p, i) => (
+                  <div key={p.id} className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="text-base font-bold text-ink">{p.name}</p>
+                      <p className="text-sm text-muted">{categoryLabelMap[p.category] || p.category} · {p.region2 || "-"}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </SidebarCard>
         </div>

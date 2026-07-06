@@ -46,10 +46,15 @@ interface FeedListPageResponse {
   }[];
 }
 
-const savedLists = [
-  { id: 3, title: "홍대 회식 추천", author: "푸디맘", itemCount: 6, savedCount: 45, coverSeed: "hongdae", moodTag: "회식" },
-  { id: 4, title: "망원동 카페 투어", author: "카페인 중독", itemCount: 5, savedCount: 128, coverSeed: "cafe", moodTag: "데이트" },
-];
+interface SavedList {
+  listId: number;
+  nickname: string;
+  title: string;
+  description: string;
+  moodTag: string;
+  items: unknown[];
+  savedAt: string;
+}
 
 export default function ProfilePage() {
   const params = useParams();
@@ -69,6 +74,7 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [myLists, setMyLists] = useState<ProfileList[]>([]);
   const [myPosts, setMyPosts] = useState<FeedListPageResponse["feeds"]>([]);
+  const [savedLists, setSavedLists] = useState<SavedList[]>([]);
   const [tabLoading, setTabLoading] = useState(false);
 
   useEffect(() => {
@@ -123,6 +129,11 @@ export default function ProfilePage() {
         if (res.ok && res.data) {
           setMyPosts(res.data.feeds);
         }
+      } else if (activeTab === "저장함" && user.ownProfile) {
+        const res = await apiFetchJson<{ content: SavedList[] }>("/api/v1/restaurant_lists/saved");
+        if (res.ok && res.data) {
+          setSavedLists(res.data.content);
+        }
       }
 
       setTabLoading(false);
@@ -175,7 +186,7 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-5">
               <img
-                src={user.profileImage || `https://picsum.photos/seed/user${user.id}/120/120`}
+                src={user.profileImage || "/default-profile.png"}
                 alt="프로필"
                 className="h-20 w-20 rounded-full object-cover ring-4 ring-primary/15"
               />
@@ -259,7 +270,7 @@ export default function ProfilePage() {
                       {myLists.map((list) => (
                         <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
                           <div className="h-36 bg-surface-strong">
-                            <img src={`https://picsum.photos/seed/list${list.id}/400/220`} alt={list.title} className="h-full w-full object-cover" />
+                            <img src="/list-placeholder.png" alt={list.title} className="h-full w-full object-cover" />
                           </div>
                           <div className="p-4">
                             <div className="flex items-center justify-between">
@@ -292,27 +303,27 @@ export default function ProfilePage() {
 
               {activeTab === "저장함" && (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {savedLists.map((list) => (
-                    <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
-                      <div className="h-36 bg-surface-strong">
-                        <img src={`https://picsum.photos/seed/${list.coverSeed}/400/220`} alt={list.title} className="h-full w-full object-cover" />
-                      </div>
-                      <div className="p-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                          <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                  {savedLists.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted">저장한 리스트가 없습니다.</p>
+                  ) : (
+                    savedLists.map((list) => (
+                      <div key={list.listId} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                        <div className="h-36 bg-surface-strong">
+                          <img src={`/list-placeholder.png`} alt={list.title} className="h-full w-full object-cover" />
                         </div>
-                        <p className="text-xs text-muted mt-1">by {list.author}</p>
-                        <div className="mt-2 flex items-center justify-between text-xs text-muted-soft">
-                          <span>식당 {list.itemCount}개</span>
-                          <span className="flex items-center gap-1">
-                            <Bookmark className="h-3 w-3" />
-                            {list.savedCount}
-                          </span>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-base font-bold text-ink">{list.title}</h3>
+                            <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                          </div>
+                          <p className="text-xs text-muted mt-1">by {list.nickname}</p>
+                          <div className="mt-2 text-xs text-muted-soft">
+                            <span>식당 {list.items.length}개</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
             </>
