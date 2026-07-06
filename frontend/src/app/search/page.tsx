@@ -70,20 +70,24 @@ export default function SearchPage() {
     };
 
     if (window.kakao?.maps) {
-      initMap();
+      window.kakao.maps.load(initMap);
       return;
     }
 
     const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps/sdk.js"]');
     if (existing) {
-      existing.addEventListener("load", initMap);
+      window.kakao.maps.load(initMap);
       return;
     }
 
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY}&libraries=services&autoload=false`;
     script.async = true;
-    script.onload = initMap;
+    script.onload = () => {
+      if (window.kakao?.maps) {
+        window.kakao.maps.load(initMap);
+      }
+    };
     script.onerror = () => setError("카카오맵 SDK를 불러오지 못했습니다. JS 키와 도메인 등록을 확인하세요.");
     document.head.appendChild(script);
   }, []);
