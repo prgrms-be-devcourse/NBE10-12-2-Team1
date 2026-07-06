@@ -4,13 +4,17 @@ import com.whattoeat.domain.restaurant.entity.Category;
 import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Component
+@Order(1)
 @RequiredArgsConstructor
 public class RestaurantDummyInitializer implements CommandLineRunner {
 
@@ -19,7 +23,10 @@ public class RestaurantDummyInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (restaurantRepository.count() > 0) {
+        long count = restaurantRepository.count();
+        log.info("[Dummy] RestaurantDummyInitializer started. current count={}", count);
+        if (count > 0) {
+            log.info("[Dummy] Restaurants already exist. Skipping dummy insertion.");
             return;
         }
 
