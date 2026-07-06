@@ -6,6 +6,54 @@ import { Search, Navigation } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
+declare global {
+  interface Window {
+    kakao?: {
+      maps?: {
+        load: (callback: () => void) => void;
+        Map: new (container: HTMLElement, options: object) => unknown;
+        LatLng: new (lat: number, lng: number) => unknown;
+        LatLngBounds: new () => unknown;
+        Marker: new (options: { position: unknown; map?: unknown }) => unknown;
+        services?: {
+          Places: new () => {
+            keywordSearch: (
+              query: string,
+              callback: (data: KakaoPlaceItem[], status: string) => void,
+              options?: object
+            ) => void;
+          };
+          Status: { OK: string };
+        };
+      };
+    };
+  }
+}
+
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  y: string;
+  x: string;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  setBounds: (bounds: unknown) => void;
+}
+
+interface KakaoLatLngBounds {
+  extend: (position: unknown) => void;
+}
+
 const categories = ["전체", "한식", "일식", "양식", "중식", "분식", "카페"];
 
 const categoryLabelMap: Record<string, string> = {
@@ -55,11 +103,12 @@ export default function SearchPage() {
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
   const [mounted, setMounted] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const [map, setMap] = useState<KakaoMap | null>(null);
+  const markersRef = useRef<KakaoMarker[]>([]);
 
   useEffect(() => {
-    setMounted(true);
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   useEffect(() => {
@@ -100,8 +149,10 @@ export default function SearchPage() {
     }
 
     if (!kakaoKey) {
-      setError("카카오맵 JS 키가 설정되지 않았습니다. .env.local을 확인하세요.");
-      return;
+      const raf = requestAnimationFrame(() =>
+        setError("카카오맵 JS 키가 설정되지 않았습니다. .env.local을 확인하세요.")
+      );
+      return () => cancelAnimationFrame(raf);
     }
 
     const script = document.createElement("script");
@@ -135,10 +186,10 @@ export default function SearchPage() {
     const filtered = results.filter((r) => matchesCategory(r, activeCategory));
     if (filtered.length === 0) return;
 
-    const bounds = new window.kakao.maps.LatLngBounds();
+    const bounds = new window.kakao.maps.LatLngBounds() as KakaoLatLngBounds;
     filtered.forEach((r) => {
       const position = new window.kakao.maps.LatLng(r.lat, r.lng);
-      const marker = new window.kakao.maps.Marker({ position, map });
+      const marker = new window.kakao.maps.Marker({ position, map }) as KakaoMarker;
       markersRef.current.push(marker);
       bounds.extend(position);
     });
@@ -172,9 +223,9 @@ export default function SearchPage() {
     const places = new window.kakao.maps.services.Places();
     places.keywordSearch(
       query.trim(),
-      (data: any, status: any) => {
+      (data: KakaoPlaceItem[], status: string) => {
         if (status === window.kakao.maps.services.Status.OK) {
-          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+          const mapped: KakaoRestaurant[] = data.map((item) => {
             const addressParts = item.address_name ? item.address_name.split(" ") : [];
             return {
               kakaoPlaceId: item.id,
