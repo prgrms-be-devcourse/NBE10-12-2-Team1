@@ -15,6 +15,7 @@ interface Feed {
   nickname: string;
   profileImage: string | null;
   likeCount: number;
+  isLikedByMe: boolean;
   commentCount: number;
   restaurantId: number | null;
   restaurantName: string | null;
@@ -109,6 +110,28 @@ function FeedContent() {
     const res = await apiFetchJson(`/api/v1/follows/${userId}`, { method: "POST" });
     if (!res.ok) {
       alert(res.message || "팔로우에 실패했습니다.");
+    }
+  };
+
+  const handleLikeToggle = async (feedId: number, currentlyLiked: boolean) => {
+    const res = await apiFetchJson(
+      `/api/v1/feeds/${feedId}/like`,
+      { method: currentlyLiked ? "DELETE" : "POST" }
+    );
+    if (res.ok) {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.feedId === feedId
+            ? {
+                ...post,
+                isLikedByMe: !currentlyLiked,
+                likeCount: currentlyLiked ? post.likeCount - 1 : post.likeCount + 1,
+              }
+            : post
+        )
+      );
+    } else {
+      alert(res.message || "좋아요 처리에 실패했습니다.");
     }
   };
 
@@ -241,8 +264,13 @@ function FeedContent() {
 
                 {/* Actions */}
                 <div className="mt-4 flex items-center gap-5 border-t border-hairline-soft pt-3">
-                  <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors">
-                    <Heart className="h-4 w-4" />
+                  <button
+                    onClick={() => handleLikeToggle(post.feedId, post.isLikedByMe)}
+                    className={`flex items-center gap-1.5 text-sm transition-colors ${
+                      post.isLikedByMe ? "text-red-500" : "text-muted hover:text-primary"
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 ${post.isLikedByMe ? "fill-current" : ""}`} />
                     <span>좋아요 {post.likeCount}</span>
                   </button>
                   <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors">
