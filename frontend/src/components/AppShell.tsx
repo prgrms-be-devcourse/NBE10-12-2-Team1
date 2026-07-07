@@ -13,7 +13,6 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
-
 import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 
 import { apiFetchJson } from "@/lib/api";
@@ -234,7 +233,6 @@ export function SidebarProfile() {
     <Link
       href="/profile"
       className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors"
-
     >
       <div className="flex items-center gap-4">
         <img
@@ -276,6 +274,7 @@ export function SidebarProfile() {
     </Link>
   );
 }
+
 /* =========================================================
  * 사이드바 카드
  * ========================================================= */
@@ -324,7 +323,6 @@ export default function AppShell({
   const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
-
   const [user, setUser] = useState<CurrentUser>(
     () => getStoredUser() ?? fallbackUser,
   );
