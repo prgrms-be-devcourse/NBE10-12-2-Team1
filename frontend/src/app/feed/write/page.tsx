@@ -34,25 +34,6 @@ interface KakaoPlaceItem {
   x: string;
 }
 
-declare global {
-  interface Window {
-    kakao?: {
-      maps?: {
-        services?: {
-          Places: new () => {
-            keywordSearch: (
-              query: string,
-              callback: (data: KakaoPlaceItem[], status: string) => void,
-              options?: object
-            ) => void;
-          };
-          Status: { OK: string };
-        };
-      };
-    };
-  }
-}
-
 const guideItems = [
   "방문한 식당을 태그하면 지도에서도 확인할 수 있어요.",
   "분위기 태그를 선택하면 비슷한 취향의 푸디들에게 노출돼요.",
@@ -98,7 +79,7 @@ export default function WritePostPage() {
     places.keywordSearch(
       query.trim(),
       (data: KakaoPlaceItem[], status: string) => {
-        if (status === window.kakao.maps.services.Status.OK) {
+        if (status === window.kakao!.maps!.services!.Status.OK) {
           const mapped: KakaoRestaurant[] = data.map((item) => {
             const addressParts = item.address_name ? item.address_name.split(" ") : [];
             return {

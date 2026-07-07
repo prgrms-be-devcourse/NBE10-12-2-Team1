@@ -29,27 +29,6 @@ interface HotPlace {
   region2: string;
 }
 
-interface KakaoMap {
-  setCenter: (center: unknown) => void;
-  panTo: (center: unknown) => void;
-}
-
-interface KakaoMarker {
-  setMap: (map: unknown | null) => void;
-}
-
-declare global {
-  interface Window {
-    kakao?: {
-      maps?: {
-        Map: new (container: HTMLElement, options: object) => KakaoMap;
-        LatLng: new (lat: number, lng: number) => unknown;
-        Marker: new (options: { position: unknown; map?: unknown }) => KakaoMarker;
-      };
-    };
-  }
-}
-
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
@@ -469,7 +448,7 @@ export default function RecommendPage() {
                       if (!map || !navigator.geolocation) return;
                       navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                          const center = new window.kakao.maps.LatLng(
+                          const center = new window.kakao!.maps!.LatLng(
                             pos.coords.latitude,
                             pos.coords.longitude
                           );
