@@ -6,6 +6,31 @@ import { Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  y: string;
+  x: string;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  setBounds: (bounds: unknown) => void;
+  setLevel: (level: number) => void;
+}
+
+interface KakaoLatLngBounds {
+  extend: (position: unknown) => void;
+}
+
 interface HotPlace {
   id: number;
   name: string;
@@ -472,7 +497,7 @@ export default function SearchPage() {
          * 그래야 카페·디저트도
          * 키워드 검색 가능
          */
-        size: 15,
+        size: 30,
       },
     );
   };
@@ -553,7 +578,7 @@ export default function SearchPage() {
       {
         location,
         radius: 3000,
-        size: 15,
+        size: 30,
         sort: "distance",
       },
     );
@@ -579,7 +604,7 @@ export default function SearchPage() {
       {
         location,
         radius: 3000,
-        size: 15,
+        size: 30,
         sort: "distance",
       },
     );

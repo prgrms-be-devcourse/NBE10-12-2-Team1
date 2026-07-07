@@ -14,6 +14,12 @@ declare global {
     extend: (position: unknown) => void;
   }
 
+  interface KakaoCustomOverlay {
+    setMap: (map: KakaoMap | null) => void;
+    setPosition: (position: unknown) => void;
+    setContent: (content: string | HTMLElement) => void;
+  }
+
   interface KakaoPlaceItem {
     id: string;
     place_name: string;
@@ -51,15 +57,29 @@ declare global {
         load: (callback: () => void) => void;
 
         Map: new (container: HTMLElement, options: object) => KakaoMap;
+
         LatLng: new (lat: number, lng: number) => unknown;
+
         LatLngBounds: new () => KakaoLatLngBounds;
+
         Marker: new (options: {
           position: unknown;
-          map?: unknown;
+          map?: KakaoMap;
         }) => KakaoMarker;
 
+        CustomOverlay: new (options: {
+          map?: KakaoMap;
+          position: unknown;
+          content: string | HTMLElement;
+          xAnchor?: number;
+          yAnchor?: number;
+          zIndex?: number;
+          clickable?: boolean;
+        }) => KakaoCustomOverlay;
+
         services?: {
-          Places: new (map?: unknown) => KakaoPlaces;
+          Places: new (map?: KakaoMap) => KakaoPlaces;
+
           Status: KakaoStatus;
         };
       };

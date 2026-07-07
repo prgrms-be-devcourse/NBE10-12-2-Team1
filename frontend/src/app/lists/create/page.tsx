@@ -71,9 +71,6 @@ interface CreateListResponse {
 
 /* =========================================================
  * 무드태그
- *
- * ⚠️ 반드시 백엔드 MoodTag enum 값과 맞아야 함
- * 아래 값은 현재 예시
  * ========================================================= */
 
 const moodTags = [
@@ -163,21 +160,19 @@ export default function CreateListPage() {
         return;
       }
 
-      // 1. 카카오 SDK 자체가 아직 없을 때만 재시도
       const maps = window.kakao?.maps;
+
       if (!maps) {
         retryTimer = window.setTimeout(initializeKakao, 100);
 
         return;
       }
 
-      // 2. 카카오맵 SDK 로딩 완료 후 Places 객체 생성
       const createPlaces = () => {
         if (cancelled) {
           return;
         }
 
-        // services 라이브러리가 실제로 포함되어 있는지 확인
         if (!maps.services) {
           setError("카카오맵 services 라이브러리를 불러오지 못했습니다.");
 
@@ -189,7 +184,6 @@ export default function CreateListPage() {
         setError("");
       };
 
-      // autoload=false인 경우 여기서 실제 SDK 로딩
       if (typeof maps.load === "function") {
         maps.load(createPlaces);
       } else {
@@ -210,19 +204,18 @@ export default function CreateListPage() {
 
   /* =========================================================
    * 1단계 → 2단계
-   *
-   * 중요:
-   * 여기서는 백엔드 API 호출 안 함
    * ========================================================= */
 
   const handleNextFromBasicInfo = () => {
     if (!title.trim()) {
       alert("제목을 입력해주세요.");
+
       return;
     }
 
     if (!moodTag) {
       alert("무드 태그를 선택해주세요.");
+
       return;
     }
 
@@ -230,10 +223,15 @@ export default function CreateListPage() {
   };
 
   /* =========================================================
-   * 카카오 식당 검색
+   * 카카오 식당 / 카페 검색
+   *
+   * FD6 = 음식점
+   * CE7 = 카페
+   *
+   * 각각 검색한 뒤 결과를 합침
    * ========================================================= */
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!query.trim()) {
@@ -244,54 +242,116 @@ export default function CreateListPage() {
 
     if (!placesRef.current || !services) {
       setError("카카오맵 검색 서비스를 불러오는 중입니다.");
+
       return;
     }
 
     setSearching(true);
     setError("");
 
-    placesRef.current.keywordSearch(
-      query.trim(),
+    const searchKeyword = query.trim();
 
-      (data: KakaoPlaceItem[], status: string) => {
-        if (status === services.Status.OK) {
-          const mapped: KakaoRestaurant[] = data.map((item: KakaoPlaceItem) => {
-            const addressParts = item.address_name
-              ? item.address_name.split(" ")
-              : [];
+    try {
+      /* -------------------------------------------------------
+       * 카테고리별 검색
+       * ------------------------------------------------------- */
 
-            return {
-              kakaoPlaceId: item.id,
-              name: item.place_name,
-              category: item.category_name,
-              address: item.address_name,
-              roadAddress: item.road_address_name,
-              region1: addressParts[0] || "",
-              region2: addressParts[1] || "",
-              region3: addressParts[2] || "",
-              phone: item.phone || "",
-              lat: Number(item.y),
-              lng: Number(item.x),
-            };
-          });
+      const searchByCategory = (
+        categoryGroupCode: "FD6" | "CE7",
+      ): Promise<KakaoPlaceItem[]> => {
+        return new Promise((resolve) => {
+          placesRef.current!.keywordSearch(
+            searchKeyword,
 
-          setSearchResults(mapped);
-        } else if (status === services.Status.ZERO_RESULT) {
-          setSearchResults([]);
-          setError("검색 결과가 없습니다.");
-        } else {
-          setSearchResults([]);
-          setError("검색 결과를 불러오지 못했습니다.");
-        }
+            (data: KakaoPlaceItem[], status: string) => {
+              if (status === services.Status.OK) {
+                resolve(data);
 
-        setSearching(false);
-      },
+                return;
+              }
 
-      {
-        category_group_code: "FD6",
-        size: 15,
-      },
-    );
+              if (status === services.Status.ZERO_RESULT) {
+                resolve([]);
+
+                return;
+              }
+
+              resolve([]);
+            },
+
+            {
+              category_group_code: categoryGroupCode,
+              size: 15,
+            },
+          );
+        });
+      };
+
+      /* -------------------------------------------------------
+       * 음식점 + 카페 동시에 검색
+       * ------------------------------------------------------- */
+
+      const [restaurants, cafes] = await Promise.all([
+        searchByCategory("FD6"),
+        searchByCategory("CE7"),
+      ]);
+
+      /* -------------------------------------------------------
+       * 음식점 + 카페 결과 합치기
+       * ------------------------------------------------------- */
+
+      const combined = [...restaurants, ...cafes];
+
+      /* -------------------------------------------------------
+       * 같은 장소 중복 제거
+       *
+       * 카카오 장소 ID 기준
+       * ------------------------------------------------------- */
+
+      const uniquePlaces = Array.from(
+        new Map(combined.map((item) => [item.id, item])).values(),
+      );
+
+      /* -------------------------------------------------------
+       * 화면에서 사용할 데이터로 변환
+       * ------------------------------------------------------- */
+
+      const mapped: KakaoRestaurant[] = uniquePlaces.map(
+        (item: KakaoPlaceItem) => {
+          const addressParts = item.address_name
+            ? item.address_name.split(" ")
+            : [];
+
+          return {
+            kakaoPlaceId: item.id,
+            name: item.place_name,
+            category: item.category_name,
+            address: item.address_name,
+            roadAddress: item.road_address_name,
+            region1: addressParts[0] || "",
+            region2: addressParts[1] || "",
+            region3: addressParts[2] || "",
+            phone: item.phone || "",
+            lat: Number(item.y),
+            lng: Number(item.x),
+          };
+        },
+      );
+
+      setSearchResults(mapped);
+
+      if (mapped.length === 0) {
+        setError("검색 결과가 없습니다.");
+      }
+    } catch (error) {
+      console.error("카카오 장소 검색 오류:", error);
+
+      setSearchResults([]);
+
+      setError("검색 결과를 불러오지 못했습니다.");
+    } finally {
+      setSearching(false);
+    }
   };
 
   /* =========================================================
@@ -330,11 +390,6 @@ export default function CreateListPage() {
 
           name: restaurant.name,
 
-          /*
-           * 백엔드 DTO:
-           *
-           * String categoryName
-           */
           categoryName: restaurant.category,
 
           address: restaurant.address,
@@ -360,16 +415,9 @@ export default function CreateListPage() {
 
   /* =========================================================
    * 식당 선택
-   *
-   * 일반 SearchPage와 다른 점:
-   *
-   * router.push() X
-   * selectedRestaurants에 추가 O
    * ========================================================= */
 
   const handleSelectRestaurant = async (restaurant: KakaoRestaurant) => {
-    /* 이미 선택된 식당인지 확인 */
-
     const alreadySelected = selectedRestaurants.some(
       (item) => item.kakaoPlaceId === restaurant.kakaoPlaceId,
     );
@@ -385,15 +433,11 @@ export default function CreateListPage() {
     setSelectingPlaceId(restaurant.kakaoPlaceId);
 
     try {
-      /* Restaurant 테이블 데이터 확보 */
-
       const savedRestaurant = await ensureRestaurant(restaurant);
 
       if (!savedRestaurant) {
         return;
       }
-
-      /* 선택 목록에 추가 */
 
       setSelectedRestaurants((prev) => [
         ...prev,
@@ -440,13 +484,12 @@ export default function CreateListPage() {
 
   /* =========================================================
    * 2단계 → 3단계
-   *
-   * 여기서도 리스트 저장 안 함
    * ========================================================= */
 
   const handleNextFromRestaurants = () => {
     if (selectedRestaurants.length === 0) {
       alert("식당을 한 개 이상 선택해주세요.");
+
       return;
     }
 
@@ -472,14 +515,6 @@ export default function CreateListPage() {
     try {
       /* -----------------------------------------------------
        * 1. RestaurantList 생성
-       *
-       * 백엔드 DTO:
-       *
-       * public record RestaurantList(
-       *     String title,
-       *     String description,
-       *     MoodTag moodTag
-       * ) {}
        * ----------------------------------------------------- */
 
       const listResponse = await apiFetchJson<CreateListResponse>(
@@ -496,6 +531,7 @@ export default function CreateListPage() {
 
       if (!listResponse.ok || !listResponse.data) {
         alert(listResponse.message || "리스트 생성에 실패했습니다.");
+
         return;
       }
 
@@ -509,19 +545,12 @@ export default function CreateListPage() {
         console.error("리스트 생성 응답:", listResponse);
 
         alert("생성된 리스트 ID를 확인할 수 없습니다.");
+
         return;
       }
 
       /* -----------------------------------------------------
        * 3. 선택한 식당을 리스트 아이템으로 추가
-       *
-       * 현재 예상 DTO:
-       *
-       * {
-       *   restaurantId,
-       *   comment,
-       *   priority
-       * }
        * ----------------------------------------------------- */
 
       for (let index = 0; index < selectedRestaurants.length; index++) {
@@ -706,11 +735,11 @@ export default function CreateListPage() {
             <div className="p-6">
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* =============================================
-                 * 왼쪽 - 식당 검색
+                 * 왼쪽 - 식당 / 카페 검색
                  * ============================================= */}
 
                 <div>
-                  <h2 className="mb-3 font-bold text-ink">식당 검색</h2>
+                  <h2 className="mb-3 font-bold text-ink">식당 · 카페 검색</h2>
 
                   <form onSubmit={handleSearch} className="flex gap-2">
                     <div className="flex flex-1 items-center gap-2 rounded-xl border border-hairline px-3">
@@ -720,7 +749,7 @@ export default function CreateListPage() {
                         type="text"
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
-                        placeholder="식당명, 지역, 음식 종류 검색"
+                        placeholder="식당명, 카페명, 지역, 음식 종류 검색"
                         className="w-full bg-transparent py-3 outline-none"
                       />
                     </div>
@@ -745,7 +774,7 @@ export default function CreateListPage() {
                   <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto">
                     {searchResults.length === 0 && !error ? (
                       <div className="rounded-xl border border-dashed border-hairline p-10 text-center text-sm text-muted">
-                        식당을 검색해주세요.
+                        식당이나 카페를 검색해주세요.
                       </div>
                     ) : (
                       searchResults.map((restaurant) => {
@@ -844,6 +873,7 @@ export default function CreateListPage() {
                           </div>
 
                           {/* 한줄평 */}
+
                           <textarea
                             value={restaurant.memo}
                             onChange={(event) =>

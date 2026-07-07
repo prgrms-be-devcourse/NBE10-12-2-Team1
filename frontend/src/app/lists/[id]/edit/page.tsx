@@ -133,7 +133,7 @@ interface RestaurantResponse {
  * 분위기
  * ========================================================= */
 
-const moodTags = ["SOLO", "DATE", "GROUP", "FAMILY", "HEALING"];
+const moodTags = ["SOLO", "DATE", "FAMILY", "HEALING"];
 
 /* =========================================================
  * 음식점 / 카페만 남김
