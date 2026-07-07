@@ -70,3 +70,10 @@ Backend/build/
 /Backend/.DS_Store
 /frontend/.DS_Store
 /API명세서.md
+
+### Claude / AI ###
+/.agents/
+/.claude/
+/.understand-anything/
+/skills-lock.json
+/Backend/application.yaml
