@@ -100,8 +100,6 @@ public class FeedService {
 
         List<Long> excludedUserIds = new ArrayList<>();
 
-        excludedUserIds.add(userId);
-
         List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
                 .stream()
                 .map(follow -> follow.getFollowing().getId())
@@ -109,7 +107,7 @@ public class FeedService {
 
         excludedUserIds.addAll(followingUserIds);
 
-        List<Feed> feeds = feedRepository.findByUser_IdNotIn(excludedUserIds);
+        List<Feed> feeds = new ArrayList<>(feedRepository.findByUser_IdNotIn(excludedUserIds));
 
         Collections.shuffle(feeds);
 

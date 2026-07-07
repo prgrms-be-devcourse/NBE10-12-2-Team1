@@ -15,6 +15,7 @@ import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import java.util.ArrayList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -268,7 +269,7 @@ public class FeedServiceTest {
     }
 
     @Test
-    @DisplayName("내 피드와 팔로잉한 사용자의 피드를 제외하고 랜덤 추천 피드를 조회한다")
+    @DisplayName("팔로잉한 사용자의 피드만 제외하고 랜덤 추천 피드를 조회한다")
     void getRandomRecommendedFeeds() {
         User user1 = createTestUser(1L, "user1");
         User user2 = createTestUser(2L, "user2");
@@ -285,23 +286,23 @@ public class FeedServiceTest {
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
-        given(feedRepository.findByUser_IdNotIn(List.of(1L, 2L)))
-                .willReturn(List.of(user3Feed));
+        given(feedRepository.findByUser_IdNotIn(List.of(2L)))
+                .willReturn(new ArrayList<>(List.of(user1Feed, user3Feed)));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getRandomRecommendedFeeds(user1.getId(), pageable);
 
-        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent()).hasSize(2);
         assertThat(result.getContent())
                 .extracting(FeedListResponse::feedId)
-                .contains(user3Feed.getId())
-                .doesNotContain(user1Feed.getId(), user2Feed.getId());
+                .contains(user1Feed.getId(), user3Feed.getId())
+                .doesNotContain(user2Feed.getId());
 
         assertThat(result.getContent())
                 .extracting(FeedListResponse::content)
-                .contains("user3 feed")
-                .doesNotContain("user1 feed", "user2 feed");
+                .contains("user1 feed", "user3 feed")
+                .doesNotContain("user2 feed");
     }
 
 }
