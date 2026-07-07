@@ -31,11 +31,13 @@ public class FeedController {
 
     @GetMapping
     public RsData<FeedListPageResponse> getFeeds(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long restaurantId,
             Pageable pageable
     ) {
-        Page<FeedListResponse> page = feedService.getFeeds(userId, restaurantId, pageable);
+        Long currentUserId = userDetails != null ? userDetails.getUserId() : null;
+        Page<FeedListResponse> page = feedService.getFeeds(currentUserId,userId, restaurantId, pageable);
         return RsData.success(FeedListPageResponse.from(page), "피드 목록 조회가 완료되었습니다.");
     }
 

@@ -8,6 +8,7 @@ import com.whattoeat.domain.feed.dto.response.FeedListResponse;
 import com.whattoeat.domain.feed.entity.Feed;
 import com.whattoeat.domain.feed.event.FeedCreatedEvent;
 import com.whattoeat.domain.feed.repository.FeedRepository;
+import com.whattoeat.domain.feedlike.repository.FeedLikeRepository;
 import com.whattoeat.domain.follow.entity.Follow;
 import com.whattoeat.domain.follow.repository.FollowRepository;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
@@ -56,6 +57,9 @@ public class FeedServiceTest {
 
     @MockitoBean
     CommentRepository commentRepository;
+
+    @MockitoBean
+    FeedLikeRepository feedLikeRepository;
 
     @Autowired
     FeedService feedService;
@@ -138,15 +142,20 @@ public class FeedServiceTest {
     @DisplayName("피드 목록 조회 성공")
     public void getFeed_success() {
         User user = createTestUser();
-        Feed feed1 = Feed.builder().user(user).content("맛집1").build();
-        Feed feed2 = Feed.builder().user(user).content("맛집2").build();
+        Feed feed1 = createTestFeed(1L, user, "맛집1");
+        Feed feed2 = createTestFeed(2L, user, "맛집2");
         PageRequest pageable = PageRequest.of(0, 10);
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(feed1, feed2), pageable, 2));
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
 
-        Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
+        given(feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(any(), any()))
+                .willReturn(List.of(feed1.getId()));
 
+        Page<FeedListResponse> result = feedService.getFeeds(1L,null, null, pageable);
+
+        assertThat(result.getContent().get(0).isLikedByMe()).isTrue();
+        assertThat(result.getContent().get(1).isLikedByMe()).isFalse();
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getContent().get(0).content()).isEqualTo("맛집1");
     }
@@ -158,7 +167,7 @@ public class FeedServiceTest {
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        Page<FeedListResponse> result = feedService.getFeeds(null, null, pageable);
+        Page<FeedListResponse> result = feedService.getFeeds(null,null, null, pageable);
         assertThat(result.getContent().isEmpty());
         assertThat(result.getTotalElements()).isZero();
     }
@@ -253,6 +262,8 @@ public class FeedServiceTest {
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
+        given(feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(any(), any()))
+                .willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getFollowingFeeds(user1.getId(), pageable);
 
@@ -290,6 +301,8 @@ public class FeedServiceTest {
                 .willReturn(new ArrayList<>(List.of(user1Feed, user3Feed)));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
+        given(feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(any(), any()))
+                .willReturn(List.of());
 
         Page<FeedListResponse> result = feedService.getRandomRecommendedFeeds(user1.getId(), pageable);
 
