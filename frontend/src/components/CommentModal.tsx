@@ -27,22 +27,22 @@ export default function CommentModal({ feedId, onClose, onCountChange }: Comment
   const [submitting, setSubmitting] = useState(false);
   const currentUser = getStoredUser();
 
-  const fetchComments = async () => {
-    setLoading(true);
-    setError("");
-    const res = await apiFetchJson<Comment[]>(`/api/v1/feeds/${feedId}/comments`);
-    if (res.ok && res.data) {
-      setComments(res.data);
-      onCountChange?.(res.data.length);
-    } else {
-      setError(res.message || "댓글을 불러오지 못했습니다.");
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchComments();
-  }, [feedId]);
+    const loadComments = async () => {
+      setLoading(true);
+      setError("");
+      const res = await apiFetchJson<Comment[]>(`/api/v1/feeds/${feedId}/comments`);
+      if (res.ok && res.data) {
+        setComments(res.data);
+        onCountChange?.(res.data.length);
+      } else {
+        setError(res.message || "댓글을 불러오지 못했습니다.");
+      }
+      setLoading(false);
+    };
+
+    loadComments();
+  }, [feedId, onCountChange]);
 
   const handleSubmit = async () => {
     if (!content.trim() || submitting) return;
