@@ -148,7 +148,7 @@ export default function CreateListPage() {
    * 카카오 Places 객체
    * --------------------------------------------------------- */
 
-  const placesRef = useRef<any>(null);
+  const placesRef = useRef<KakaoPlaces | null>(null);
 
   /* =========================================================
    * 카카오맵 SDK 준비
@@ -253,9 +253,9 @@ export default function CreateListPage() {
     placesRef.current.keywordSearch(
       query.trim(),
 
-      (data: any[], status: any) => {
+      (data: KakaoPlaceItem[], status: string) => {
         if (status === services.Status.OK) {
-          const mapped: KakaoRestaurant[] = data.map((item: any) => {
+          const mapped: KakaoRestaurant[] = data.map((item: KakaoPlaceItem) => {
             const addressParts = item.address_name
               ? item.address_name.split(" ")
               : [];
