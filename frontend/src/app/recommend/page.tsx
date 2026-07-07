@@ -29,15 +29,6 @@ interface HotPlace {
   region2: string;
 }
 
-interface KakaoMap {
-  setCenter: (center: unknown) => void;
-  panTo: (center: unknown) => void;
-}
-
-interface KakaoMarker {
-  setMap: (map: unknown | null) => void;
-}
-
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
