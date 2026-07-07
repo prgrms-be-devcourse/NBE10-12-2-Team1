@@ -1,5 +1,25 @@
 const API_BASE = "";
 
+const protectedPathPrefixes = [
+  "/feed",
+  "/profile",
+  "/search",
+  "/recommend",
+  "/lists",
+  "/restaurant",
+] as const;
+
+function clearClientSession() {
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("user");
+  window.dispatchEvent(new Event("login-state-change"));
+}
+
+function shouldRedirectToLogin(status: number) {
+  if (typeof window === "undefined" || status !== 401) return false;
+  return protectedPathPrefixes.some((prefix) => window.location.pathname.startsWith(prefix));
+}
+
 export async function apiFetch(path: string, options?: RequestInit) {
   return fetch(`${API_BASE}${path}`, {
     credentials: "include",
@@ -16,6 +36,11 @@ export async function apiFetchJson<T = unknown>(path: string, options?: RequestI
   const json = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    if (shouldRedirectToLogin(res.status)) {
+      clearClientSession();
+      window.location.assign("/login");
+    }
+
     return { ok: false, message: json.message || "요청에 실패했습니다." };
   }
 

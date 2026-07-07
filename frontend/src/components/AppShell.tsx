@@ -3,9 +3,10 @@
 import { ReactNode, useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Map, List, Sparkles, User, Bell, Search, LogOut, Settings } from "lucide-react";
+import { Home, Map, List, Sparkles, User, Search, LogOut, Settings } from "lucide-react";
 import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 import { apiFetchJson } from "@/lib/api";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface UserProfileResponse {
   id: number;
@@ -269,9 +270,7 @@ export default function AppShell({
           </nav>
 
           <div className="flex items-center gap-3 ml-8">
-            <button className="rounded-full p-2.5 text-muted hover:bg-surface-soft hover:text-ink transition-colors">
-              <Bell className="h-6 w-6" />
-            </button>
+            <NotificationBell />
 
             <div className="relative" ref={menuRef}>
               <button
