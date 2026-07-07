@@ -30,6 +30,7 @@ interface FollowUser {
 
 interface ProfileList {
   id: number;
+  userId: number;
   title: string;
   description: string;
   moodTag: string;
@@ -119,10 +120,17 @@ export default function ProfilePage() {
     const loadTab = async () => {
       setTabLoading(true);
 
-      if (activeTab === "내 리스트" && user.ownProfile) {
-        const res = await apiFetchJson<ProfileList[]>("/api/v1/lists");
-        if (res.ok && res.data) {
-          setMyLists(res.data);
+      if (activeTab === "내 리스트") {
+        if (user.ownProfile) {
+          const res = await apiFetchJson<ProfileList[]>("/api/v1/lists");
+          if (res.ok && res.data) {
+            setMyLists(res.data);
+          }
+        } else {
+          const res = await apiFetchJson<ProfileList[]>("/api/v1/lists/all");
+          if (res.ok && res.data) {
+            setMyLists(res.data.filter((list) => list.userId === targetUserId));
+          }
         }
       } else if (activeTab === "포스트") {
         const res = await apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?userId=${targetUserId}`);
@@ -262,30 +270,24 @@ export default function ProfilePage() {
           ) : (
             <>
               {activeTab === "내 리스트" && (
-                <>
-                  {user && !user.ownProfile ? (
-                    <p className="py-10 text-center text-sm text-muted">다른 사용자의 리스트는 조회할 수 없습니다.</p>
-                  ) : (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {myLists.map((list) => (
-                        <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
-                          <div className="h-36 bg-surface-strong">
-                            <img src="/list-placeholder.png" alt={list.title} className="h-full w-full object-cover" />
-                          </div>
-                          <div className="p-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                              <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
-                            </div>
-                            <div className="mt-2 text-xs text-muted-soft">
-                              <span>식당 {list.itemCount}개</span>
-                            </div>
-                          </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {myLists.map((list) => (
+                    <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                      <div className="h-36 bg-surface-strong">
+                        <img src="/list-placeholder.png" alt={list.title} className="h-full w-full object-cover" />
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-base font-bold text-ink">{list.title}</h3>
+                          <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
                         </div>
-                      ))}
+                        <div className="mt-2 text-xs text-muted-soft">
+                          <span>식당 {list.itemCount}개</span>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </>
+                  ))}
+                </div>
               )}
 
               {activeTab === "포스트" && (
