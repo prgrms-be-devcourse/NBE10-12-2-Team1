@@ -7,20 +7,6 @@ import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 import type { KakaoPlaceItem } from "@/types/kakao";
 
-interface KakaoMarker {
-  setMap: (map: unknown | null) => void;
-}
-
-interface KakaoMap {
-  setCenter: (center: unknown) => void;
-  setBounds: (bounds: unknown) => void;
-  setLevel: (level: number) => void;
-}
-
-interface KakaoLatLngBounds {
-  extend: (position: unknown) => void;
-}
-
 interface HotPlace {
   id: number;
   name: string;
