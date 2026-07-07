@@ -15,7 +15,7 @@ declare global {
   }
 
   interface KakaoCustomOverlay {
-    setMap: (map: KakaoMap | null) => void;
+    setMap: (map: unknown | null) => void;
     setPosition: (position: unknown) => void;
     setContent: (content: string | HTMLElement) => void;
   }
@@ -64,11 +64,11 @@ declare global {
 
         Marker: new (options: {
           position: unknown;
-          map?: KakaoMap;
+          map?: unknown;
         }) => KakaoMarker;
 
         CustomOverlay: new (options: {
-          map?: KakaoMap;
+          map?: unknown;
           position: unknown;
           content: string | HTMLElement;
           xAnchor?: number;
@@ -78,8 +78,7 @@ declare global {
         }) => KakaoCustomOverlay;
 
         services?: {
-          Places: new (map?: KakaoMap) => KakaoPlaces;
-
+          Places: new (map?: unknown) => KakaoPlaces;
           Status: KakaoStatus;
         };
       };
