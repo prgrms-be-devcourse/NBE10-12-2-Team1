@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
-import type { KakaoPlaceItem } from "@/types/kakao";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
