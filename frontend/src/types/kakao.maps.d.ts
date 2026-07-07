@@ -52,8 +52,11 @@ declare global {
 
         Map: new (container: HTMLElement, options: object) => KakaoMap;
         LatLng: new (lat: number, lng: number) => unknown;
-        LatLngBounds: new () => unknown;
-        Marker: new (options: { position: unknown; map?: unknown }) => KakaoMarker;
+        LatLngBounds: new () => KakaoLatLngBounds;
+        Marker: new (options: {
+          position: unknown;
+          map?: unknown;
+        }) => KakaoMarker;
 
         services?: {
           Places: new (map?: unknown) => KakaoPlaces;

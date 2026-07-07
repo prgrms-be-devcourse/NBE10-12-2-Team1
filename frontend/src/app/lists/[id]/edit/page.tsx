@@ -20,36 +20,6 @@ import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
 /* =========================================================
- * Kakao Maps 타입
- * ========================================================= */
-
-declare global {
-  interface Window {
-    kakao?: {
-      maps?: {
-        load: (callback: () => void) => void;
-
-        services?: {
-          Places: new () => {
-            keywordSearch: (
-              query: string,
-              callback: (data: KakaoPlaceItem[], status: string) => void,
-              options?: object,
-            ) => void;
-          };
-
-          Status: {
-            OK: string;
-            ZERO_RESULT: string;
-            ERROR: string;
-          };
-        };
-      };
-    };
-  }
-}
-
-/* =========================================================
  * Kakao 검색 결과 원본
  * ========================================================= */
 
