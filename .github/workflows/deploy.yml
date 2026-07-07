@@ -82,7 +82,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
           source: "Backend/build/libs/*.jar,Backend/application.yaml"
-          target: "/home/ubuntu/whattoeat/"
+          target: "/home/ubuntu/whattoeat/new/"
           strip_components: 2
 
       - name: EC2에서 재시작
@@ -92,8 +92,11 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            mv /home/ubuntu/whattoeat/*.jar /home/ubuntu/whattoeat/app.jar
-            pkill -f "app.jar" || true
+            kill $(cat /home/ubuntu/whattoeat/app.pid) 2>/dev/null || true
             sleep 3
+            mv /home/ubuntu/whattoeat/new/*.jar /home/ubuntu/whattoeat/app.jar
+            mv /home/ubuntu/whattoeat/new/application.yaml /home/ubuntu/whattoeat/application.yaml
+            rm -rf /home/ubuntu/whattoeat/new
             cd /home/ubuntu/whattoeat
             nohup java -jar -Dspring.config.location=./application.yaml -Dserver.port=8081 app.jar > app.log 2>&1 &
+            echo $! > /home/ubuntu/whattoeat/app.pid
