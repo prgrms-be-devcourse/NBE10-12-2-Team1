@@ -177,7 +177,7 @@ export default function CreateListPage() {
         }
 
         // services 라이브러리가 실제로 포함되어 있는지 확인
-        if (!window.kakao.maps.services) {
+        if (!window.kakao?.maps?.services) {
           setError("카카오맵 services 라이브러리를 불러오지 못했습니다.");
 
           return;
@@ -189,8 +189,8 @@ export default function CreateListPage() {
       };
 
       // autoload=false인 경우 여기서 실제 SDK 로딩
-      if (typeof window.kakao.maps.load === "function") {
-        window.kakao.maps.load(createPlaces);
+      if (typeof window.kakao!.maps.load === "function") {
+        window.kakao!.maps.load(createPlaces);
       } else {
         createPlaces();
       }
@@ -251,7 +251,7 @@ export default function CreateListPage() {
       query.trim(),
 
       (data: any[], status: any) => {
-        if (status === window.kakao.maps.services.Status.OK) {
+        if (status === window.kakao!.maps!.services!.Status.OK) {
           const mapped: KakaoRestaurant[] = data.map((item: any) => {
             const addressParts = item.address_name
               ? item.address_name.split(" ")
@@ -273,7 +273,7 @@ export default function CreateListPage() {
           });
 
           setSearchResults(mapped);
-        } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
+        } else if (status === window.kakao!.maps!.services!.Status.ZERO_RESULT) {
           setSearchResults([]);
           setError("검색 결과가 없습니다.");
         } else {
