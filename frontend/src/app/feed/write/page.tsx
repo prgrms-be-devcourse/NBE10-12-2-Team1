@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
+import type { KakaoPlaceItem } from "@/types/kakao";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -21,17 +22,6 @@ interface KakaoRestaurant {
   phone: string;
   lat: number;
   lng: number;
-}
-
-interface KakaoPlaceItem {
-  id: string;
-  place_name: string;
-  category_name: string;
-  address_name: string;
-  road_address_name: string;
-  phone: string;
-  y: string;
-  x: string;
 }
 
 const guideItems = [
@@ -69,17 +59,18 @@ export default function WritePostPage() {
     if (!query.trim()) return;
     setSearching(true);
 
-    if (!window.kakao?.maps?.services) {
+    const services = window.kakao?.maps?.services;
+    if (!services) {
       alert("카카오맵 SDK를 불러오지 못했습니다.");
       setSearching(false);
       return;
     }
 
-    const places = new window.kakao.maps.services.Places();
+    const places = new services.Places();
     places.keywordSearch(
       query.trim(),
       (data: KakaoPlaceItem[], status: string) => {
-        if (status === window.kakao!.maps!.services!.Status.OK) {
+        if (status === services.Status.OK) {
           const mapped: KakaoRestaurant[] = data.map((item) => {
             const addressParts = item.address_name ? item.address_name.split(" ") : [];
             return {

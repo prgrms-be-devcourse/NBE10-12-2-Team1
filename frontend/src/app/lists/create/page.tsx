@@ -164,7 +164,8 @@ export default function CreateListPage() {
       }
 
       // 1. 카카오 SDK 자체가 아직 없을 때만 재시도
-      if (!window.kakao?.maps) {
+      const maps = window.kakao?.maps;
+      if (!maps) {
         retryTimer = window.setTimeout(initializeKakao, 100);
 
         return;
@@ -177,20 +178,20 @@ export default function CreateListPage() {
         }
 
         // services 라이브러리가 실제로 포함되어 있는지 확인
-        if (!window.kakao?.maps?.services) {
+        if (!maps.services) {
           setError("카카오맵 services 라이브러리를 불러오지 못했습니다.");
 
           return;
         }
 
-        placesRef.current = new window.kakao.maps.services.Places();
+        placesRef.current = new maps.services.Places();
 
         setError("");
       };
 
       // autoload=false인 경우 여기서 실제 SDK 로딩
-      if (typeof window.kakao!.maps.load === "function") {
-        window.kakao!.maps.load(createPlaces);
+      if (typeof maps.load === "function") {
+        maps.load(createPlaces);
       } else {
         createPlaces();
       }
@@ -239,7 +240,9 @@ export default function CreateListPage() {
       return;
     }
 
-    if (!placesRef.current) {
+    const services = window.kakao?.maps?.services;
+
+    if (!placesRef.current || !services) {
       setError("카카오맵 검색 서비스를 불러오는 중입니다.");
       return;
     }
@@ -251,7 +254,7 @@ export default function CreateListPage() {
       query.trim(),
 
       (data: any[], status: any) => {
-        if (status === window.kakao!.maps!.services!.Status.OK) {
+        if (status === services.Status.OK) {
           const mapped: KakaoRestaurant[] = data.map((item: any) => {
             const addressParts = item.address_name
               ? item.address_name.split(" ")
@@ -273,7 +276,7 @@ export default function CreateListPage() {
           });
 
           setSearchResults(mapped);
-        } else if (status === window.kakao!.maps!.services!.Status.ZERO_RESULT) {
+        } else if (status === services.Status.ZERO_RESULT) {
           setSearchResults([]);
           setError("검색 결과가 없습니다.");
         } else {

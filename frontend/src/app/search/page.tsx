@@ -5,17 +5,7 @@ import { useRouter } from "next/navigation";
 import { Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
-
-interface KakaoPlaceItem {
-  id: string;
-  place_name: string;
-  category_name: string;
-  address_name: string;
-  road_address_name: string;
-  phone: string;
-  y: string;
-  x: string;
-}
+import type { KakaoPlaceItem } from "@/types/kakao";
 
 interface HotPlace {
   id: number;
