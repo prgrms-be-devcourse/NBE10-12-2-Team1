@@ -13,6 +13,9 @@ import {
   Bookmark,
   Check,
   RotateCcw,
+  SearchX,
+  Home,
+  ArrowLeft,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -426,7 +429,32 @@ export default function RecommendPage() {
             </div>
 
             {recommendError ? (
-              <p className="text-center text-sm text-red-500 py-10">{recommendError}</p>
+              <div className="flex flex-col items-center py-12 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-soft">
+                  <SearchX className="h-8 w-8 text-muted" />
+                </div>
+                <p className="text-base font-bold text-ink">조건에 맞는 식당이 없습니다</p>
+                <p className="mt-1 text-sm text-muted">{recommendError}</p>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setResultModalOpen(false)}
+                    className="flex items-center gap-1.5 rounded-xl border border-hairline bg-surface px-5 py-2.5 text-sm font-bold text-ink hover:bg-surface-soft transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    다시 추천받기
+                  </button>
+                  <button
+                    onClick={() => {
+                      setResultModalOpen(false);
+                      router.push("/recommend");
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+                  >
+                    <Home className="h-4 w-4" />
+                    홈으로 가기
+                  </button>
+                </div>
+              </div>
             ) : !current ? (
               <div className="flex items-center justify-center py-10">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
