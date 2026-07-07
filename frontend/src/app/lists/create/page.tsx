@@ -54,7 +54,7 @@ interface SelectedRestaurant {
   name: string;
   category: string;
   address: string;
-  comment: string;
+  memo: string;
 }
 
 /* =========================================================
@@ -403,7 +403,7 @@ export default function CreateListPage() {
           name: restaurant.name,
           category: restaurant.category,
           address: restaurant.roadAddress || restaurant.address,
-          comment: "",
+          memo: "",
         },
       ]);
     } finally {
@@ -425,13 +425,13 @@ export default function CreateListPage() {
    * 한줄평 수정
    * ========================================================= */
 
-  const handleCommentChange = (restaurantId: number, comment: string) => {
+  const handleMemoChange = (restaurantId: number, memo: string) => {
     setSelectedRestaurants((prev) =>
       prev.map((restaurant) =>
         restaurant.restaurantId === restaurantId
           ? {
               ...restaurant,
-              comment,
+              memo,
             }
           : restaurant,
       ),
@@ -533,10 +533,8 @@ export default function CreateListPage() {
             method: "POST",
             body: JSON.stringify({
               restaurantId: restaurant.restaurantId,
-
-              comment: restaurant.comment.trim(),
-
-              priority: index + 1,
+              memo: restaurant.memo.trim(),
+              orderIndex: index + 1,
             }),
           },
         );
@@ -846,11 +844,10 @@ export default function CreateListPage() {
                           </div>
 
                           {/* 한줄평 */}
-
                           <textarea
-                            value={restaurant.comment}
+                            value={restaurant.memo}
                             onChange={(event) =>
-                              handleCommentChange(
+                              handleMemoChange(
                                 restaurant.restaurantId,
                                 event.target.value,
                               )
@@ -861,7 +858,7 @@ export default function CreateListPage() {
                           />
 
                           <p className="mt-1 text-right text-xs text-muted">
-                            {restaurant.comment.length}
+                            {restaurant.memo.length}
                             /100
                           </p>
                         </div>
@@ -936,7 +933,7 @@ export default function CreateListPage() {
                         </p>
 
                         <p className="mt-3 text-sm text-body">
-                          {restaurant.comment || "한줄평 없음"}
+                          {restaurant.memo || "한줄평 없음"}
                         </p>
                       </div>
                     </div>

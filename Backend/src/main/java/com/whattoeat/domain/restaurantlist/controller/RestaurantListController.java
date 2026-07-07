@@ -113,6 +113,30 @@ public class RestaurantListController {
         );
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "식당 리스트 기본 정보 수정")
+    public RsData<RestaurantListResponse.RestaurantListDetail> updateRestaurantList(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @Valid @RequestBody RestaurantListRequest.RestaurantList req
+    ) {
+        Long userId = userDetails.getUserId();
+
+        RestaurantList restaurantList = restaurantListService.update(
+                id,
+                userId,
+                req.title(),
+                req.description(),
+                req.moodTag()
+        );
+
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListDetail(restaurantList),
+                "리스트 정보가 변경되었습니다."
+        );
+    }
+
+
     @PutMapping("/{id}/items/{itemId}")
     @Operation(summary = "식당 리스트 아이템 수정(순서/메모)")
     public RsData<RestaurantListResponse.RestaurantListItemDetail> updateRestaurantListItem(

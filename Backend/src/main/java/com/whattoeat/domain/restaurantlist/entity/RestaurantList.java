@@ -44,6 +44,7 @@ public class RestaurantList extends BaseEntity {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "restaurantList", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
     private List<RestaurantListItem> items = new ArrayList<>();
 
     public RestaurantList(User user, String title, String description, MoodTag moodTag) {
