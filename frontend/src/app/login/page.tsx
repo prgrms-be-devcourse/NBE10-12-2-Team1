@@ -9,7 +9,7 @@ type Tab = "kakao" | "email";
 type Mode = "login" | "signup";
 
 const API_BASE = "";
-const OAUTH_BASE = "http://localhost:8080";
+const OAUTH_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 interface HotPlace {
   id: number;
