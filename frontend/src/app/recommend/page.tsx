@@ -38,18 +38,6 @@ interface KakaoMarker {
   setMap: (map: unknown | null) => void;
 }
 
-declare global {
-  interface Window {
-    kakao?: {
-      maps?: {
-        Map: new (container: HTMLElement, options: object) => KakaoMap;
-        LatLng: new (lat: number, lng: number) => unknown;
-        Marker: new (options: { position: unknown; map?: unknown }) => KakaoMarker;
-      };
-    };
-  }
-}
-
 const categoryEmoji: Record<string, string> = {
   "한식": "🍚",
   "일식": "🍣",
@@ -169,11 +157,11 @@ export default function RecommendPage() {
     const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
       center,
       level: 3,
-    });
+    }) as KakaoMap;
     setMap(kakaoMap);
 
     markerRef.current?.setMap(null);
-    const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap });
+    const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap }) as KakaoMarker;
     markerRef.current = marker;
 
     return () => {
@@ -466,10 +454,11 @@ export default function RecommendPage() {
                   <div ref={mapRef} className="absolute inset-0 bg-surface-strong" />
                   <button
                     onClick={() => {
-                      if (!map || !navigator.geolocation) return;
+                      const maps = window.kakao?.maps;
+                      if (!map || !navigator.geolocation || !maps) return;
                       navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                          const center = new window.kakao.maps.LatLng(
+                          const center = new maps.LatLng(
                             pos.coords.latitude,
                             pos.coords.longitude
                           );
