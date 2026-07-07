@@ -17,12 +17,12 @@ interface UserProfile {
   email: string;
   provider: "LOCAL" | "KAKAO";
   createdAt: string;
-  ownProfile: boolean;
-  following: boolean;
+  isOwnProfile: boolean;
+  isFollowing: boolean;
 }
 
 interface FollowUser {
-  id: number;
+  userId: number;
   nickname: string;
   profileImage: string | null;
   isFollowedByMe: boolean;
@@ -91,14 +91,16 @@ export default function ProfilePage() {
 
       const [profileRes, countRes] = await Promise.all([
         apiFetchJson<UserProfile>(`/api/v1/users/${targetUserId}`),
-        apiFetchJson<{ userId: number; followerCount: number; followingCount: number }>(
-          `/api/v1/follows/users/${targetUserId}/count`
-        ),
+        apiFetchJson<{
+          userId: number;
+          followerCount: number;
+          followingCount: number;
+        }>(`/api/v1/follows/users/${targetUserId}/count`),
       ]);
 
       if (profileRes.ok && profileRes.data) {
         setUser(profileRes.data);
-        setIsFollowing(profileRes.data.following);
+        setIsFollowing(profileRes.data.isFollowing);
       } else {
         setError(profileRes.message || "프로필을 불러오지 못했습니다.");
       }
@@ -121,7 +123,7 @@ export default function ProfilePage() {
       setTabLoading(true);
 
       if (activeTab === "내 리스트") {
-        if (user.ownProfile) {
+        if (user.isOwnProfile) {
           const res = await apiFetchJson<ProfileList[]>("/api/v1/lists");
           if (res.ok && res.data) {
             setMyLists(res.data);
@@ -133,12 +135,16 @@ export default function ProfilePage() {
           }
         }
       } else if (activeTab === "포스트") {
-        const res = await apiFetchJson<FeedListPageResponse>(`/api/v1/feeds?userId=${targetUserId}`);
+        const res = await apiFetchJson<FeedListPageResponse>(
+          `/api/v1/feeds?userId=${targetUserId}`,
+        );
         if (res.ok && res.data) {
           setMyPosts(res.data.feeds);
         }
-      } else if (activeTab === "저장함" && user.ownProfile) {
-        const res = await apiFetchJson<{ content: SavedList[] }>("/api/v1/restaurant_lists/saved");
+      } else if (activeTab === "저장함" && user.isOwnProfile) {
+        const res = await apiFetchJson<{ content: SavedList[] }>(
+          "/api/v1/restaurant_lists/saved",
+        );
         if (res.ok && res.data) {
           setSavedLists(res.data.content);
         }
@@ -151,16 +157,33 @@ export default function ProfilePage() {
   }, [activeTab, targetUserId, user]);
 
   const handleFollowToggle = async () => {
-    if (!user || user.ownProfile) return;
+    if (!user || user.isOwnProfile) return;
+
+    const nextFollowing = !isFollowing;
+
+    if (!nextFollowing) {
+      const confirmed = window.confirm("언팔로우 하시겠습니까?");
+      if (!confirmed) return;
+    }
 
     setFollowLoading(true);
 
-    const res = isFollowing
-      ? await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "DELETE" })
-      : await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "POST" });
+    const res = nextFollowing
+      ? await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "POST" })
+      : await apiFetchJson(`/api/v1/follows/${user.id}`, { method: "DELETE" });
 
     if (res.ok) {
-      setIsFollowing(!isFollowing);
+      setIsFollowing(nextFollowing);
+      setUser((prev) =>
+        prev ? { ...prev, isFollowing: nextFollowing } : prev,
+      );
+
+      setFollowerCount((prev) => {
+        if (prev === null) return prev;
+        return nextFollowing ? prev + 1 : Math.max(0, prev - 1);
+      });
+
+      window.dispatchEvent(new Event("follow-state-change"));
     } else {
       alert(res.message || "팔로우 처리에 실패했습니다.");
     }
@@ -181,7 +204,9 @@ export default function ProfilePage() {
   if (error || !user) {
     return (
       <AppShell>
-        <p className="py-20 text-center text-sm text-red-500">{error || "프로필을 불러오지 못했습니다."}</p>
+        <p className="py-20 text-center text-sm text-red-500">
+          {error || "프로필을 불러오지 못했습니다."}
+        </p>
       </AppShell>
     );
   }
@@ -199,32 +224,51 @@ export default function ProfilePage() {
                 className="h-20 w-20 rounded-full object-cover ring-4 ring-primary/15"
               />
               <div>
-                <h1 className="text-[22px] font-bold tracking-tight text-ink">{user.nickname}</h1>
+                <h1 className="text-[22px] font-bold tracking-tight text-ink">
+                  {user.nickname}
+                </h1>
                 <p className="text-sm text-muted">{user.email}</p>
                 <p className="text-xs text-muted-soft mt-1">
-                  {user.provider === "KAKAO" ? "카카오 로그인" : "이메일 로그인"}
+                  {user.provider === "KAKAO"
+                    ? "카카오 로그인"
+                    : "이메일 로그인"}
                 </p>
                 <div className="mt-3 flex gap-4 text-sm">
-                  <button onClick={() => setShowFollowers(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
+                  <button
+                    onClick={() => setShowFollowers(true)}
+                    className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium"
+                  >
                     <Users className="h-4 w-4 text-muted" />
-                    팔로워 <span className="font-bold text-ink">{followerCount ?? "-"}</span>
+                    팔로워{" "}
+                    <span className="font-bold text-ink">
+                      {followerCount ?? "-"}
+                    </span>
                   </button>
-                  <button onClick={() => setShowFollowings(true)} className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium">
+                  <button
+                    onClick={() => setShowFollowings(true)}
+                    className="flex items-center gap-1.5 text-body hover:text-primary transition-colors font-medium"
+                  >
                     <UserPlus className="h-4 w-4 text-muted" />
-                    팔로잉 <span className="font-bold text-ink">{followingCount ?? "-"}</span>
+                    팔로잉{" "}
+                    <span className="font-bold text-ink">
+                      {followingCount ?? "-"}
+                    </span>
                   </button>
                 </div>
               </div>
             </div>
-            {user.ownProfile && (
-              <Link href="/profile/edit" className="rounded-full border border-hairline bg-surface-soft p-2 text-muted hover:text-ink">
+            {user.isOwnProfile && (
+              <Link
+                href="/profile/edit"
+                className="rounded-full border border-hairline bg-surface-soft p-2 text-muted hover:text-ink"
+              >
                 <Settings className="h-5 w-5" />
               </Link>
             )}
           </div>
 
           <div className="mt-6 flex gap-3">
-            {user.ownProfile ? (
+            {user.isOwnProfile ? (
               <Link
                 href="/profile/edit"
                 className="rounded-full border border-hairline bg-surface-soft px-4 py-2 text-sm font-bold text-ink hover:bg-white transition-colors"
@@ -236,7 +280,9 @@ export default function ProfilePage() {
                 onClick={handleFollowToggle}
                 disabled={followLoading}
                 className={`rounded-full px-5 py-2 text-sm font-bold transition-colors ${
-                  isFollowing ? "bg-surface-strong text-ink hover:bg-hairline" : "bg-primary text-white hover:bg-primary-active"
+                  isFollowing
+                    ? "bg-surface-strong text-ink hover:bg-hairline"
+                    : "bg-primary text-white hover:bg-primary-active"
                 }`}
               >
                 {isFollowing ? "팔로잉" : "팔로우"}
@@ -256,7 +302,9 @@ export default function ProfilePage() {
               }`}
             >
               {tab}
-              {activeTab === tab && <span className="absolute bottom-0 left-0 h-0.5 w-full bg-primary" />}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-0 h-0.5 w-full bg-primary" />
+              )}
             </button>
           ))}
         </div>
@@ -272,14 +320,25 @@ export default function ProfilePage() {
               {activeTab === "내 리스트" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {myLists.map((list) => (
-                    <div key={list.id} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                    <div
+                      key={list.id}
+                      className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm"
+                    >
                       <div className="h-36 bg-surface-strong">
-                        <img src="/list-placeholder.png" alt={list.title} className="h-full w-full object-cover" />
+                        <img
+                          src="/list-placeholder.png"
+                          alt={list.title}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                       <div className="p-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                          <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                          <h3 className="text-base font-bold text-ink">
+                            {list.title}
+                          </h3>
+                          <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">
+                            {list.moodTag}
+                          </span>
                         </div>
                         <div className="mt-2 text-xs text-muted-soft">
                           <span>식당 {list.itemCount}개</span>
@@ -293,10 +352,16 @@ export default function ProfilePage() {
               {activeTab === "포스트" && (
                 <div className="space-y-4">
                   {myPosts.map((post) => (
-                    <article key={post.feedId} className="rounded-2xl border border-hairline-soft bg-surface p-5">
-                      <p className="text-sm leading-6 text-body">{post.content}</p>
+                    <article
+                      key={post.feedId}
+                      className="rounded-2xl border border-hairline-soft bg-surface p-5"
+                    >
+                      <p className="text-sm leading-6 text-body">
+                        {post.content}
+                      </p>
                       <p className="mt-2 text-xs text-muted-soft">
-                        좋아요 {post.likeCount} · {new Date(post.createdAt).toLocaleDateString()}
+                        좋아요 {post.likeCount} ·{" "}
+                        {new Date(post.createdAt).toLocaleDateString()}
                       </p>
                     </article>
                   ))}
@@ -306,19 +371,34 @@ export default function ProfilePage() {
               {activeTab === "저장함" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {savedLists.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted">저장한 리스트가 없습니다.</p>
+                    <p className="py-10 text-center text-sm text-muted">
+                      저장한 리스트가 없습니다.
+                    </p>
                   ) : (
                     savedLists.map((list) => (
-                      <div key={list.listId} className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm">
+                      <div
+                        key={list.listId}
+                        className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm"
+                      >
                         <div className="h-36 bg-surface-strong">
-                          <img src={`/list-placeholder.png`} alt={list.title} className="h-full w-full object-cover" />
+                          <img
+                            src={`/list-placeholder.png`}
+                            alt={list.title}
+                            className="h-full w-full object-cover"
+                          />
                         </div>
                         <div className="p-4">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-base font-bold text-ink">{list.title}</h3>
-                            <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">{list.moodTag}</span>
+                            <h3 className="text-base font-bold text-ink">
+                              {list.title}
+                            </h3>
+                            <span className="rounded-full bg-tag-mood px-2 py-0.5 text-[10px] font-bold text-ink">
+                              {list.moodTag}
+                            </span>
                           </div>
-                          <p className="text-xs text-muted mt-1">by {list.nickname}</p>
+                          <p className="text-xs text-muted mt-1">
+                            by {list.nickname}
+                          </p>
                           <div className="mt-2 text-xs text-muted-soft">
                             <span>식당 {list.items.length}개</span>
                           </div>
@@ -334,10 +414,36 @@ export default function ProfilePage() {
 
         {/* Followers modal */}
         {showFollowers && targetUserId && (
-          <FollowListModal title="팔로워 목록" type="followers" userId={targetUserId} onClose={() => setShowFollowers(false)} />
+          <FollowListModal
+            title="팔로워 목록"
+            type="followers"
+            userId={targetUserId}
+            onClose={() => setShowFollowers(false)}
+            onFollowChange={(nextFollowing) => {
+              if (!user.isOwnProfile) return;
+
+              setFollowingCount((prev) => {
+                if (prev === null) return prev;
+                return nextFollowing ? prev + 1 : Math.max(0, prev - 1);
+              });
+            }}
+          />
         )}
         {showFollowings && targetUserId && (
-          <FollowListModal title="팔로잉 목록" type="followings" userId={targetUserId} onClose={() => setShowFollowings(false)} />
+          <FollowListModal
+            title="팔로잉 목록"
+            type="followings"
+            userId={targetUserId}
+            onClose={() => setShowFollowings(false)}
+            onFollowChange={(nextFollowing) => {
+              if (!user.isOwnProfile) return;
+
+              setFollowingCount((prev) => {
+                if (prev === null) return prev;
+                return nextFollowing ? prev + 1 : Math.max(0, prev - 1);
+              });
+            }}
+          />
         )}
       </div>
     </AppShell>
@@ -349,14 +455,24 @@ interface FollowListModalProps {
   type: "followers" | "followings";
   userId: number;
   onClose: () => void;
+  onFollowChange?: (nextFollowing: boolean) => void;
 }
 
-function FollowListModal({ title, type, userId, onClose }: FollowListModalProps) {
+function FollowListModal({
+  title,
+  type,
+  userId,
+  onClose,
+  onFollowChange,
+}: FollowListModalProps) {
   const [users, setUsers] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const endpoint = type === "followers" ? `/api/v1/follows/users/${userId}/followers` : `/api/v1/follows/users/${userId}/followings`;
+  const endpoint =
+    type === "followers"
+      ? `/api/v1/follows/users/${userId}/followers`
+      : `/api/v1/follows/users/${userId}/followings`;
 
   useEffect(() => {
     let cancelled = false;
@@ -374,14 +490,32 @@ function FollowListModal({ title, type, userId, onClose }: FollowListModalProps)
     };
   }, [endpoint]);
 
-  const handleToggle = async (targetUserId: number, currentlyFollowing: boolean) => {
+  const handleToggle = async (
+    targetUserId: number,
+    currentlyFollowing: boolean,
+  ) => {
+    if (currentlyFollowing) {
+      const confirmed = window.confirm("언팔로우 하시겠습니까?");
+      if (!confirmed) return;
+    }
+
     const res = await apiFetchJson(`/api/v1/follows/${targetUserId}`, {
       method: currentlyFollowing ? "DELETE" : "POST",
     });
+
     if (res.ok) {
+      const nextFollowing = !currentlyFollowing;
+
       setUsers((prev) =>
-        prev.map((u) => (u.id === targetUserId ? { ...u, isFollowedByMe: !currentlyFollowing } : u))
+        prev.map((u) =>
+          u.userId === targetUserId
+            ? { ...u, isFollowedByMe: nextFollowing }
+            : u,
+        ),
       );
+
+      onFollowChange?.(nextFollowing);
+      window.dispatchEvent(new Event("follow-state-change"));
     } else {
       alert(res.message || "팔로우 처리에 실패했습니다.");
     }
@@ -392,30 +526,43 @@ function FollowListModal({ title, type, userId, onClose }: FollowListModalProps)
       <div className="w-full max-w-sm rounded-2xl border border-hairline-soft bg-surface p-5 shadow-lg">
         <div className="flex items-center justify-between border-b border-hairline-soft pb-3">
           <h2 className="text-base font-bold text-ink">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-muted hover:bg-surface-soft">
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 text-muted hover:bg-surface-soft"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
         <ul className="mt-4 max-h-60 overflow-y-auto space-y-3">
           {loading ? (
-            <li className="py-6 text-center text-sm text-muted">불러오는 중...</li>
+            <li className="py-6 text-center text-sm text-muted">
+              불러오는 중...
+            </li>
           ) : error ? (
             <li className="py-6 text-center text-sm text-red-500">{error}</li>
           ) : users.length === 0 ? (
-            <li className="py-6 text-center text-sm text-muted">목록이 비어있습니다.</li>
+            <li className="py-6 text-center text-sm text-muted">
+              목록이 비어있습니다.
+            </li>
           ) : (
             users.map((f) => (
-              <li key={f.id} className="flex items-center justify-between">
-                <Link href={`/profile/${f.id}`} onClick={onClose} className="flex items-center gap-3">
+              <li key={f.userId} className="flex items-center justify-between">
+                <Link
+                  href={`/profile/${f.userId}`}
+                  onClick={onClose}
+                  className="flex items-center gap-3"
+                >
                   <img
                     src={f.profileImage || "/default-profile.png"}
                     alt={f.nickname}
                     className="h-9 w-9 rounded-full object-cover"
                   />
-                  <span className="text-sm font-bold text-ink hover:text-primary">{f.nickname}</span>
+                  <span className="text-sm font-bold text-ink hover:text-primary">
+                    {f.nickname}
+                  </span>
                 </Link>
                 <button
-                  onClick={() => handleToggle(f.id, f.isFollowedByMe)}
+                  onClick={() => handleToggle(f.userId, f.isFollowedByMe)}
                   className="flex items-center gap-1 rounded-full bg-surface-soft px-3 py-1 text-xs font-bold text-muted hover:text-primary"
                 >
                   <UserMinus className="h-3 w-3" />
