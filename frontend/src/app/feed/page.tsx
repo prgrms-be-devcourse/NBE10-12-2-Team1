@@ -7,6 +7,7 @@ import { Heart, MessageCircle, MoreHorizontal, Plus } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/user";
+import CommentModal from "@/components/CommentModal";
 
 interface Feed {
   feedId: number;
@@ -41,6 +42,24 @@ function FeedContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>([]);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [activeCommentFeedId, setActiveCommentFeedId] = useState<number | null>(null);
+
+  const handleOpenComments = (feedId: number) => {
+    setActiveCommentFeedId(feedId);
+    setCommentModalOpen(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentModalOpen(false);
+    setActiveCommentFeedId(null);
+  };
+
+  const handleCommentCountChange = (feedId: number, count: number) => {
+    setPosts((prev) =>
+      prev.map((post) => (post.feedId === feedId ? { ...post, commentCount: count } : post))
+    );
+  };
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -273,7 +292,10 @@ function FeedContent() {
                     <Heart className={`h-4 w-4 ${post.isLikedByMe ? "fill-current" : ""}`} />
                     <span>좋아요 {post.likeCount}</span>
                   </button>
-                  <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors">
+                  <button
+                    onClick={() => handleOpenComments(post.feedId)}
+                    className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors"
+                  >
                     <MessageCircle className="h-4 w-4" />
                     <span>댓글 {post.commentCount}</span>
                   </button>
@@ -283,6 +305,13 @@ function FeedContent() {
           </div>
         )}
       </div>
+      {commentModalOpen && activeCommentFeedId !== null && (
+        <CommentModal
+          feedId={activeCommentFeedId}
+          onClose={handleCloseComments}
+          onCountChange={(count) => handleCommentCountChange(activeCommentFeedId, count)}
+        />
+      )}
     </AppShell>
   );
 }
