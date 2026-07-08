@@ -176,12 +176,14 @@ export function SidebarProfile() {
     };
 
     window.addEventListener("follow-state-change", handleFollowStateChange);
+    window.addEventListener("feed-state-change", handleFollowStateChange);
 
     return () => {
       window.removeEventListener(
         "follow-state-change",
         handleFollowStateChange,
       );
+      window.removeEventListener("feed-state-change", handleFollowStateChange);
     };
   }, [user.userId]);
 
