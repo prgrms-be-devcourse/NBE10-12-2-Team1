@@ -59,8 +59,6 @@ interface KakaoRestaurant {
 
 /* =========================================================
  * 리스트 상세 응답 아이템
- *
- * 실제 백엔드 RestaurantListItemDetail 기준
  * ========================================================= */
 
 interface ListItem {
@@ -93,9 +91,6 @@ interface EditableListItem {
 
   memo: string;
 
-  /**
-   * 새로 추가한 아이템인지 여부
-   */
   isNew: boolean;
 }
 
@@ -137,8 +132,6 @@ const moodTags = ["SOLO", "DATE", "FAMILY", "HEALING"];
 
 /* =========================================================
  * 음식점 / 카페만 남김
- *
- * Search 페이지와 동일
  * ========================================================= */
 
 function isFoodOrCafe(item: KakaoPlaceItem): boolean {
@@ -150,8 +143,6 @@ function isFoodOrCafe(item: KakaoPlaceItem): boolean {
 
 /* =========================================================
  * Kakao 결과 변환
- *
- * Search 페이지와 동일
  * ========================================================= */
 
 function mapKakaoPlaces(data: KakaoPlaceItem[]): KakaoRestaurant[] {
@@ -258,12 +249,6 @@ export default function ListEditPage() {
 
   /* =======================================================
    * Kakao 장소 ID → DB Restaurant ID
-   *
-   * 예:
-   * "123456789" → 10
-   *
-   * 기존 리스트에 이미 들어 있는지
-   * 검색 결과에서 바로 표시하기 위해 사용
    * ======================================================= */
 
   const [restaurantIdByPlaceId, setRestaurantIdByPlaceId] = useState<
@@ -291,6 +276,42 @@ export default function ListEditPage() {
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+
+  /* =======================================================
+   * 알림창
+   * ======================================================= */
+
+  const [alertOpen, setAlertOpen] = useState(false);
+
+  const [alertMessage, setAlertMessage] = useState("");
+
+  const [moveAfterAlert, setMoveAfterAlert] = useState(false);
+
+  /* =========================================================
+   * 알림창 열기
+   * ========================================================= */
+
+  const showAlert = (message: string) => {
+    setAlertMessage(message);
+
+    setAlertOpen(true);
+  };
+
+  /* =========================================================
+   * 알림창 닫기
+   *
+   * 수정 성공 후에는 리스트 페이지로 이동
+   * ========================================================= */
+
+  const handleAlertClose = () => {
+    setAlertOpen(false);
+
+    if (moveAfterAlert) {
+      setMoveAfterAlert(false);
+
+      router.push(`/lists?listId=${listId}`);
+    }
+  };
 
   /* =========================================================
    * 리스트 상세 조회
@@ -364,8 +385,6 @@ export default function ListEditPage() {
 
   /* =========================================================
    * Kakao SDK 로딩
-   *
-   * Search 페이지와 동일한 흐름
    * ========================================================= */
 
   useEffect(() => {
@@ -387,18 +406,12 @@ export default function ListEditPage() {
       });
     };
 
-    /**
-     * 이미 SDK가 로드됨
-     */
     if (window.kakao?.maps) {
       loadKakaoServices();
 
       return;
     }
 
-    /**
-     * 기존 script 있음
-     */
     const existing = document.getElementById(
       "kakao-map-sdk",
     ) as HTMLScriptElement | null;
@@ -421,18 +434,12 @@ export default function ListEditPage() {
       };
     }
 
-    /**
-     * 키 없음
-     */
     if (!kakaoKey) {
       setRestaurantSearchError("카카오맵 JS 키가 설정되지 않았습니다.");
 
       return;
     }
 
-    /**
-     * SDK script 생성
-     */
     const script = document.createElement("script");
 
     script.id = "kakao-map-sdk";
@@ -460,9 +467,6 @@ export default function ListEditPage() {
 
   /* =========================================================
    * 검색 결과의 장소들을 DB Restaurant과 연결
-   *
-   * 이 과정 때문에 기존 리스트 식당도
-   * 검색 결과에서 바로 "추가됨"으로 표시 가능
    * ========================================================= */
 
   const resolveRestaurantIds = async (restaurants: KakaoRestaurant[]) => {
@@ -511,8 +515,6 @@ export default function ListEditPage() {
 
   /* =========================================================
    * Kakao 키워드 검색
-   *
-   * Search 페이지와 동일
    * ========================================================= */
 
   const handleRestaurantSearch = () => {
@@ -567,12 +569,6 @@ export default function ListEditPage() {
 
           setRestaurantSearchError("");
 
-          /**
-           * 검색 결과가 우리 DB에 있는지 확인
-           *
-           * 완료되면 기존 리스트에 있는 식당은
-           * 즉시 "추가됨" 표시 가능
-           */
           void resolveRestaurantIds(mapped);
         } else if (status === services.Status.ZERO_RESULT) {
           setRestaurantResults([]);
@@ -631,13 +627,6 @@ export default function ListEditPage() {
 
   /* =========================================================
    * 장소 추가
-   *
-   * 1. DB Restaurant 확인
-   * 2. 없으면 Restaurant 생성
-   * 3. 화면 items에 새 아이템 추가
-   *
-   * 아직 RestaurantListItem POST는 안 함
-   * 수정 완료에서 처리
    * ========================================================= */
 
   const handleAddRestaurant = async (restaurant: KakaoRestaurant) => {
@@ -654,9 +643,6 @@ export default function ListEditPage() {
     try {
       let restaurantId = restaurantIdByPlaceId[restaurant.kakaoPlaceId];
 
-      /**
-       * DB에 없으면 Restaurant 저장
-       */
       if (!restaurantId) {
         const saveRes = await apiFetchJson<RestaurantResponse>(
           "/api/v1/restaurants",
@@ -690,7 +676,7 @@ export default function ListEditPage() {
         );
 
         if (!saveRes.ok || !saveRes.data) {
-          alert(saveRes.message || "장소 저장에 실패했습니다.");
+          showAlert(saveRes.message || "장소 저장에 실패했습니다.");
 
           return;
         }
@@ -704,9 +690,6 @@ export default function ListEditPage() {
         }));
       }
 
-      /**
-       * restaurantId 기준 최종 중복 확인
-       */
       const alreadyExists = items.some(
         (item) => item.restaurantId === restaurantId,
       );
@@ -715,9 +698,6 @@ export default function ListEditPage() {
         return;
       }
 
-      /**
-       * 수정 중인 목록에 추가
-       */
       setItems((prev) => [
         ...prev,
 
@@ -738,7 +718,7 @@ export default function ListEditPage() {
     } catch (addError) {
       console.error("장소 추가 실패:", addError);
 
-      alert("장소를 추가하는 중 오류가 발생했습니다.");
+      showAlert("장소를 추가하는 중 오류가 발생했습니다.");
     } finally {
       setAddingPlaceIds((prev) =>
         prev.filter((placeId) => placeId !== restaurant.kakaoPlaceId),
@@ -775,19 +755,12 @@ export default function ListEditPage() {
       return;
     }
 
-    /**
-     * 기존 DB 아이템이면
-     * 수정 완료 시 DELETE
-     */
     if (!target.isNew && target.id) {
       setRemovedItemIds((prev) =>
         prev.includes(target.id!) ? prev : [...prev, target.id!],
       );
     }
 
-    /**
-     * 화면에서 제거
-     */
     setItems((prev) =>
       prev
         .filter((_, itemIndex) => itemIndex !== index)
@@ -845,16 +818,11 @@ export default function ListEditPage() {
 
   /* =========================================================
    * 수정 완료
-   *
-   * 1. 리스트 기본 정보 수정
-   * 2. 삭제 아이템 처리
-   * 3. 새 아이템 추가
-   * 4. 기존 아이템 수정
    * ========================================================= */
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("리스트 제목을 입력해주세요.");
+      showAlert("리스트 제목을 입력해주세요.");
 
       return;
     }
@@ -864,11 +832,6 @@ export default function ListEditPage() {
     try {
       /* -------------------------------------------------
        * 1. 리스트 기본 정보 수정
-       *
-       * 새로 추가한 백엔드 API
-       *
-       * PUT /api/v1/lists/{id}
-       * RestaurantListRequest.RestaurantList
        * ------------------------------------------------- */
 
       const listRes = await apiFetchJson(`/api/v1/lists/${listId}`, {
@@ -884,7 +847,7 @@ export default function ListEditPage() {
       });
 
       if (!listRes.ok) {
-        alert(listRes.message || "리스트 정보 수정에 실패했습니다.");
+        showAlert(listRes.message || "리스트 정보 수정에 실패했습니다.");
 
         return;
       }
@@ -902,7 +865,7 @@ export default function ListEditPage() {
         );
 
         if (!deleteRes.ok) {
-          alert(deleteRes.message || "식당 삭제에 실패했습니다.");
+          showAlert(deleteRes.message || "식당 삭제에 실패했습니다.");
 
           return;
         }
@@ -913,9 +876,6 @@ export default function ListEditPage() {
        * ------------------------------------------------- */
 
       for (const item of items) {
-        /**
-         * 새 아이템 추가
-         */
         if (item.isNew) {
           const addRes = await apiFetchJson(`/api/v1/lists/${listId}/items`, {
             method: "POST",
@@ -930,7 +890,7 @@ export default function ListEditPage() {
           });
 
           if (!addRes.ok) {
-            alert(
+            showAlert(
               addRes.message || `${item.restaurantName} 추가에 실패했습니다.`,
             );
 
@@ -940,12 +900,6 @@ export default function ListEditPage() {
           continue;
         }
 
-        /**
-         * 기존 아이템 수정
-         *
-         * 백엔드:
-         * PUT /{id}/items/{itemId}
-         */
         if (!item.id) {
           continue;
         }
@@ -956,11 +910,6 @@ export default function ListEditPage() {
             method: "PUT",
 
             body: JSON.stringify({
-              /**
-               * RestaurantListItem 요청 DTO가
-               * restaurantId 필드를 가지고 있으므로
-               * 같이 보냄
-               */
               restaurantId: item.restaurantId,
 
               orderIndex: item.orderIndex,
@@ -971,7 +920,7 @@ export default function ListEditPage() {
         );
 
         if (!updateRes.ok) {
-          alert(
+          showAlert(
             updateRes.message || `${item.restaurantName} 수정에 실패했습니다.`,
           );
 
@@ -979,13 +928,13 @@ export default function ListEditPage() {
         }
       }
 
-      alert("리스트를 수정했습니다.");
+      setMoveAfterAlert(true);
 
-      router.push(`/lists?listId=${listId}`);
+      showAlert("리스트를 수정했습니다.");
     } catch (saveError) {
       console.error("리스트 수정 실패:", saveError);
 
-      alert("리스트 수정 중 오류가 발생했습니다.");
+      showAlert("리스트 수정 중 오류가 발생했습니다.");
     } finally {
       setSaving(false);
     }
@@ -1034,374 +983,392 @@ export default function ListEditPage() {
    * ========================================================= */
 
   return (
-    <AppShell
-      leftSidebar={
-        <div className="sticky top-28 space-y-5">
-          <SidebarProfile />
+    <>
+      <AppShell
+        leftSidebar={
+          <div className="sticky top-28 space-y-5">
+            <SidebarProfile />
 
-          <SidebarCard title="리스트 수정">
-            <p className="text-sm leading-6 text-muted">
-              리스트 정보와 식당, 순서와 메모를 수정할 수 있습니다.
-            </p>
-          </SidebarCard>
-        </div>
-      }
-    >
-      <div className="mx-auto max-w-3xl">
-        {/* 상단 */}
-
-        <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-white hover:bg-surface-soft"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-
-          <div>
-            <h1 className="text-2xl font-bold text-ink">리스트 수정</h1>
-
-            <p className="mt-1 text-sm text-muted">
-              리스트 정보와 식당을 수정하세요.
-            </p>
+            <SidebarCard title="리스트 수정">
+              <p className="text-sm leading-6 text-muted">
+                리스트 정보와 식당, 순서와 메모를 수정할 수 있습니다.
+              </p>
+            </SidebarCard>
           </div>
-        </div>
+        }
+      >
+        <div className="mx-auto max-w-3xl">
+          {/* 상단 */}
 
-        <div className="space-y-6">
-          {/* =================================================
-           * 리스트 기본 정보
-           * ================================================= */}
-
-          <section className="rounded-2xl border border-hairline-soft bg-white p-6">
-            <h2 className="mb-5 text-lg font-bold text-ink">리스트 정보</h2>
-
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-bold text-ink">
-                  리스트 제목
-                </label>
-
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-bold text-ink">
-                  설명
-                </label>
-
-                <textarea
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  rows={4}
-                  className="w-full resize-none rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-bold text-ink">
-                  분위기
-                </label>
-
-                <select
-                  value={moodTag}
-                  onChange={(event) => setMoodTag(event.target.value)}
-                  className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
-                >
-                  {moodTags.map((tag) => (
-                    <option key={tag} value={tag}>
-                      {tag}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-           * 식당 목록
-           * ================================================= */}
-
-          <section className="rounded-2xl border border-hairline-soft bg-white p-6">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-ink">식당 목록</h2>
-
-                <p className="mt-1 text-sm text-muted">{items.length}개</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleOpenRestaurantSearch}
-                className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-active"
-              >
-                <Plus className="h-4 w-4" />
-                식당 추가
-              </button>
-            </div>
-
-            {/* =================================================
-             * 검색 영역
-             * ================================================= */}
-
-            {showRestaurantSearch && (
-              <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-ink">식당·카페 검색</h3>
-
-                    <p className="mt-1 text-xs text-muted">
-                      음식점, 카페, 디저트를 검색해서 추가하세요.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowRestaurantSearch(false);
-
-                      setRestaurantQuery("");
-
-                      setRestaurantResults([]);
-
-                      setRestaurantIdByPlaceId({});
-
-                      setRestaurantSearchError("");
-                    }}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <form
-                  onSubmit={handleRestaurantSearchSubmit}
-                  className="flex gap-2"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-hairline bg-white px-4 py-3">
-                    <Search className="h-4 w-4 shrink-0 text-muted" />
-
-                    <input
-                      type="text"
-                      value={restaurantQuery}
-                      onChange={(event) =>
-                        setRestaurantQuery(event.target.value)
-                      }
-                      placeholder="예: 서면 초밥, 전포 카페"
-                      className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                      autoFocus
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={restaurantSearching || !kakaoReady}
-                    className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
-                  >
-                    {restaurantSearching ? "검색 중..." : "검색"}
-                  </button>
-                </form>
-
-                {!kakaoReady && !restaurantSearchError && (
-                  <div className="mt-4 flex items-center justify-center gap-2 py-4 text-sm text-muted">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    카카오 검색 서비스를 불러오는 중입니다.
-                  </div>
-                )}
-
-                {restaurantSearchError && (
-                  <p className="mt-4 text-center text-sm text-red-500">
-                    {restaurantSearchError}
-                  </p>
-                )}
-
-                {restaurantResults.length > 0 && (
-                  <div className="mt-4">
-                    <p className="mb-3 text-sm font-bold text-ink">
-                      검색 결과{" "}
-                      <span className="text-primary">
-                        {restaurantResults.length}개
-                      </span>
-                    </p>
-
-                    <div className="max-h-96 space-y-2 overflow-y-auto">
-                      {restaurantResults.map((restaurant) => {
-                        const alreadyAdded = isAlreadyAdded(
-                          restaurant.kakaoPlaceId,
-                        );
-
-                        const adding = isAddingPlace(restaurant.kakaoPlaceId);
-
-                        return (
-                          <div
-                            key={restaurant.kakaoPlaceId}
-                            className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${
-                              alreadyAdded
-                                ? "border-primary/20 bg-primary/5"
-                                : "border-hairline-soft bg-white"
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="truncate font-bold text-ink">
-                                  {restaurant.name}
-                                </p>
-
-                                {alreadyAdded && (
-                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                                    리스트에 있음
-                                  </span>
-                                )}
-                              </div>
-
-                              <p className="mt-1 text-xs text-muted">
-                                {getDisplayCategory(restaurant.category)}
-                              </p>
-
-                              <p className="mt-1 line-clamp-1 text-xs text-body">
-                                {restaurant.roadAddress || restaurant.address}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              disabled={alreadyAdded || adding}
-                              onClick={() => handleAddRestaurant(restaurant)}
-                              className={`min-w-16 rounded-lg px-3 py-2 text-xs font-bold ${
-                                alreadyAdded
-                                  ? "cursor-not-allowed bg-surface-strong text-muted"
-                                  : adding
-                                    ? "bg-primary/50 text-white"
-                                    : "bg-primary text-white hover:bg-primary-active"
-                              }`}
-                            >
-                              {alreadyAdded
-                                ? "추가됨"
-                                : adding
-                                  ? "추가 중"
-                                  : "추가"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* =================================================
-             * 현재 식당 목록
-             * ================================================= */}
-
-            <div className="space-y-4">
-              {items.map((item, index) => (
-                <div
-                  key={item.id ?? `new-${item.restaurantId}`}
-                  className="rounded-2xl bg-surface-soft p-4"
-                >
-                  <div className="flex gap-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {index + 1}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-ink">
-                              {item.restaurantName}
-                            </h3>
-
-                            {item.isNew && (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                                새로 추가
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="mt-1 text-xs text-muted">
-                            {getDisplayCategory(item.category)}
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(index)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <textarea
-                        value={item.memo ?? ""}
-                        onChange={(event) =>
-                          handleMemoChange(index, event.target.value)
-                        }
-                        rows={2}
-                        placeholder="메모를 입력하세요"
-                        className="mt-4 w-full resize-none rounded-xl border border-hairline bg-white px-3 py-2 text-sm outline-none focus:border-primary"
-                      />
-
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveUp(index)}
-                          disabled={index === 0}
-                          className="flex items-center gap-1 rounded-lg border border-hairline bg-white px-3 py-1.5 text-xs disabled:opacity-40"
-                        >
-                          <ArrowUp className="h-3.5 w-3.5" />
-                          위로
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleMoveDown(index)}
-                          disabled={index === items.length - 1}
-                          className="flex items-center gap-1 rounded-lg border border-hairline bg-white px-3 py-1.5 text-xs disabled:opacity-40"
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" />
-                          아래로
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* =================================================
-           * 하단 버튼
-           * ================================================= */}
-
-          <div className="flex justify-end gap-3 pb-10">
+          <div className="mb-6 flex items-center gap-3">
             <button
               type="button"
               onClick={() => router.back()}
-              disabled={saving}
-              className="rounded-xl border border-hairline bg-white px-5 py-3 text-sm font-bold text-muted disabled:opacity-60"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-white hover:bg-surface-soft"
             >
-              취소
+              <ArrowLeft className="h-5 w-5" />
             </button>
 
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
-            >
-              {saving ? "수정 중..." : "수정 완료"}
-            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-ink">리스트 수정</h1>
+
+              <p className="mt-1 text-sm text-muted">
+                리스트 정보와 식당을 수정하세요.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* 리스트 기본 정보 */}
+
+            <section className="rounded-2xl border border-hairline-soft bg-white p-6">
+              <h2 className="mb-5 text-lg font-bold text-ink">리스트 정보</h2>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-ink">
+                    리스트 제목
+                  </label>
+
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-ink">
+                    설명
+                  </label>
+
+                  <textarea
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    rows={4}
+                    className="w-full resize-none rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-ink">
+                    분위기
+                  </label>
+
+                  <select
+                    value={moodTag}
+                    onChange={(event) => setMoodTag(event.target.value)}
+                    className="w-full rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-sm outline-none focus:border-primary"
+                  >
+                    {moodTags.map((tag) => (
+                      <option key={tag} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            {/* 식당 목록 */}
+
+            <section className="rounded-2xl border border-hairline-soft bg-white p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-ink">식당 목록</h2>
+
+                  <p className="mt-1 text-sm text-muted">{items.length}개</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenRestaurantSearch}
+                  className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-active"
+                >
+                  <Plus className="h-4 w-4" />
+                  식당 추가
+                </button>
+              </div>
+
+              {/* 검색 영역 */}
+
+              {showRestaurantSearch && (
+                <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="mb-4 flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-ink">식당·카페 검색</h3>
+
+                      <p className="mt-1 text-xs text-muted">
+                        음식점, 카페, 디저트를 검색해서 추가하세요.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRestaurantSearch(false);
+
+                        setRestaurantQuery("");
+
+                        setRestaurantResults([]);
+
+                        setRestaurantIdByPlaceId({});
+
+                        setRestaurantSearchError("");
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={handleRestaurantSearchSubmit}
+                    className="flex gap-2"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-hairline bg-white px-4 py-3">
+                      <Search className="h-4 w-4 shrink-0 text-muted" />
+
+                      <input
+                        type="text"
+                        value={restaurantQuery}
+                        onChange={(event) =>
+                          setRestaurantQuery(event.target.value)
+                        }
+                        placeholder="예: 서면 초밥, 전포 카페"
+                        className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                        autoFocus
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={restaurantSearching || !kakaoReady}
+                      className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                    >
+                      {restaurantSearching ? "검색 중..." : "검색"}
+                    </button>
+                  </form>
+
+                  {!kakaoReady && !restaurantSearchError && (
+                    <div className="mt-4 flex items-center justify-center gap-2 py-4 text-sm text-muted">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      카카오 검색 서비스를 불러오는 중입니다.
+                    </div>
+                  )}
+
+                  {restaurantSearchError && (
+                    <p className="mt-4 text-center text-sm text-red-500">
+                      {restaurantSearchError}
+                    </p>
+                  )}
+
+                  {restaurantResults.length > 0 && (
+                    <div className="mt-4">
+                      <p className="mb-3 text-sm font-bold text-ink">
+                        검색 결과{" "}
+                        <span className="text-primary">
+                          {restaurantResults.length}개
+                        </span>
+                      </p>
+
+                      <div className="max-h-96 space-y-2 overflow-y-auto">
+                        {restaurantResults.map((restaurant) => {
+                          const alreadyAdded = isAlreadyAdded(
+                            restaurant.kakaoPlaceId,
+                          );
+
+                          const adding = isAddingPlace(restaurant.kakaoPlaceId);
+
+                          return (
+                            <div
+                              key={restaurant.kakaoPlaceId}
+                              className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${
+                                alreadyAdded
+                                  ? "border-primary/20 bg-primary/5"
+                                  : "border-hairline-soft bg-white"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate font-bold text-ink">
+                                    {restaurant.name}
+                                  </p>
+
+                                  {alreadyAdded && (
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                      리스트에 있음
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="mt-1 text-xs text-muted">
+                                  {getDisplayCategory(restaurant.category)}
+                                </p>
+
+                                <p className="mt-1 line-clamp-1 text-xs text-body">
+                                  {restaurant.roadAddress || restaurant.address}
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={alreadyAdded || adding}
+                                onClick={() => handleAddRestaurant(restaurant)}
+                                className={`min-w-16 rounded-lg px-3 py-2 text-xs font-bold ${
+                                  alreadyAdded
+                                    ? "cursor-not-allowed bg-surface-strong text-muted"
+                                    : adding
+                                      ? "bg-primary/50 text-white"
+                                      : "bg-primary text-white hover:bg-primary-active"
+                                }`}
+                              >
+                                {alreadyAdded
+                                  ? "추가됨"
+                                  : adding
+                                    ? "추가 중"
+                                    : "추가"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 현재 식당 목록 */}
+
+              <div className="space-y-4">
+                {items.map((item, index) => (
+                  <div
+                    key={item.id ?? `new-${item.restaurantId}`}
+                    className="rounded-2xl bg-surface-soft p-4"
+                  >
+                    <div className="flex gap-4">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                        {index + 1}
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-ink">
+                                {item.restaurantName}
+                              </h3>
+
+                              {item.isNew && (
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                  새로 추가
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="mt-1 text-xs text-muted">
+                              {getDisplayCategory(item.category)}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(index)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <textarea
+                          value={item.memo ?? ""}
+                          onChange={(event) =>
+                            handleMemoChange(index, event.target.value)
+                          }
+                          rows={2}
+                          placeholder="메모를 입력하세요"
+                          className="mt-4 w-full resize-none rounded-xl border border-hairline bg-white px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveUp(index)}
+                            disabled={index === 0}
+                            className="flex items-center gap-1 rounded-lg border border-hairline bg-white px-3 py-1.5 text-xs disabled:opacity-40"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                            위로
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleMoveDown(index)}
+                            disabled={index === items.length - 1}
+                            className="flex items-center gap-1 rounded-lg border border-hairline bg-white px-3 py-1.5 text-xs disabled:opacity-40"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                            아래로
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* 하단 버튼 */}
+
+            <div className="flex justify-end gap-3 pb-10">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                disabled={saving}
+                className="rounded-xl border border-hairline bg-white px-5 py-3 text-sm font-bold text-muted disabled:opacity-60"
+              >
+                취소
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {saving ? "수정 중..." : "수정 완료"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </AppShell>
+      </AppShell>
+
+      {/* =====================================================
+       * 일반 알림창
+       *
+       * 외부 CommonAlert 파일 사용 안 함
+       * ===================================================== */}
+
+      {alertOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/35 px-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="px-8 py-8">
+              <p className="text-lg leading-7 text-ink">{alertMessage}</p>
+            </div>
+
+            <div className="flex justify-end border-t border-hairline px-6 py-4">
+              <button
+                type="button"
+                onClick={handleAlertClose}
+                className="rounded-lg px-4 py-2 text-base font-bold text-primary transition-colors hover:bg-primary/5"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

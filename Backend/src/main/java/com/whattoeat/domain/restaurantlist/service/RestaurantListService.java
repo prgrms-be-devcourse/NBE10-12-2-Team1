@@ -194,7 +194,7 @@ public class RestaurantListService {
     ) {
         RestaurantList restaurantList = restaurantListRepository.findById(listId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("리스트를 찾을 수 없습니다.")
+                        new ListNotFoundException(listId)
                 );
 
         if (!restaurantList.getUser().getId().equals(userId)) {
