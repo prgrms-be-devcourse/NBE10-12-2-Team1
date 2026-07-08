@@ -16,5 +16,6 @@ public interface FeedRepository extends JpaRepository<Feed, Long> {
     Page<Feed> findByRestaurantId(Long restaurantId, Pageable pageable);
 
     Page<Feed> findByUser_IdIn(Collection<Long> userIds, Pageable pageable);
+    Page<Feed> findByUser_IdInOrderByIdDesc(Collection<Long> userIds, Pageable pageable);
     List<Feed> findByUser_IdNotIn(Collection<Long> userIds);
 }
