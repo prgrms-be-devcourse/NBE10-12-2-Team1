@@ -113,8 +113,17 @@ jobs:
               fi
             fi
 
-            mv new/*.jar app.jar
-            mv new/application.yaml application.yaml
+            JAR_FILE=$(find new -type f -name "*.jar" | head -1)
+            YAML_FILE=$(find new -type f -name "application.yaml" | head -1)
+
+            if [ -z "$JAR_FILE" ] || [ -z "$YAML_FILE" ]; then
+              echo "jar or application.yaml not found under new/ (strip_components mismatch?)"
+              find new
+              exit 1
+            fi
+
+            mv "$JAR_FILE" app.jar
+            mv "$YAML_FILE" application.yaml
             rm -rf new
 
             nohup java -jar -Dspring.config.location=./application.yaml -Dserver.port=8081 app.jar > app.log 2>&1 &
