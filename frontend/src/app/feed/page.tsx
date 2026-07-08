@@ -206,6 +206,7 @@ function FeedContent() {
       }),
     );
 
+    setOpenMenuFeedId(null);
     router.push(`/feed/write?edit=${post.feedId}`);
   };
 
