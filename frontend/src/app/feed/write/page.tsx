@@ -24,6 +24,17 @@ interface KakaoRestaurant {
   restaurantId?: number;
 }
 
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  x: string;
+  y: string;
+}
+
 interface EditingFeed {
   feedId: number;
   content: string;
@@ -43,6 +54,10 @@ function WritePostContent() {
   const editFeedId = searchParams.get("edit");
   const isEditMode = Boolean(editFeedId);
 
+  const kakaoKey =
+    process.env.NEXT_PUBLIC_KAKAO_JS_KEY ||
+    process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
+
   const [content, setContent] = useState("");
   const [selectedMood, setSelectedMood] = useState("혼밥");
   const [query, setQuery] = useState("");
@@ -51,6 +66,10 @@ function WritePostContent() {
     useState<KakaoRestaurant | null>(null);
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [kakaoReady, setKakaoReady] = useState(false);
+  const [kakaoLoadFailed, setKakaoLoadFailed] = useState(false);
+
   const [recentPosts, setRecentPosts] = useState<
     { feedId: number; nickname: string; content: string }[]
   >([]);
@@ -104,6 +123,81 @@ function WritePostContent() {
   }, [isEditMode, editFeedId, router]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const markReady = () => {
+      if (window.kakao?.maps?.services) {
+        setKakaoReady(true);
+        setKakaoLoadFailed(false);
+      }
+    };
+
+    const loadKakaoMaps = () => {
+      if (!window.kakao?.maps) return;
+
+      window.kakao.maps.load(() => {
+        if (window.kakao?.maps?.services) {
+          setKakaoReady(true);
+          setKakaoLoadFailed(false);
+        } else {
+          setKakaoLoadFailed(true);
+        }
+      });
+    };
+
+    if (window.kakao?.maps?.services) {
+      markReady();
+      return;
+    }
+
+    if (window.kakao?.maps) {
+      loadKakaoMaps();
+      return;
+    }
+
+    const existingScript = document.getElementById(
+      "kakao-map-sdk",
+    ) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.addEventListener("load", loadKakaoMaps);
+      existingScript.addEventListener("error", () => setKakaoLoadFailed(true));
+
+      const check = window.setInterval(() => {
+        if (window.kakao?.maps) {
+          window.clearInterval(check);
+          loadKakaoMaps();
+        }
+      }, 100);
+
+      return () => {
+        existingScript.removeEventListener("load", loadKakaoMaps);
+        window.clearInterval(check);
+      };
+    }
+
+    if (!kakaoKey) {
+      setKakaoLoadFailed(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "kakao-map-sdk";
+    script.src =
+      `https://dapi.kakao.com/v2/maps/sdk.js` +
+      `?appkey=${kakaoKey}` +
+      `&libraries=services` +
+      `&autoload=false`;
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.referrerPolicy = "origin";
+    script.onload = loadKakaoMaps;
+    script.onerror = () => setKakaoLoadFailed(true);
+
+    document.head.appendChild(script);
+  }, [kakaoKey]);
+
+  useEffect(() => {
     const loadRecent = async () => {
       const res = await apiFetchJson<{
         feeds: { feedId: number; nickname: string; content: string }[];
@@ -121,14 +215,20 @@ function WritePostContent() {
   ) => {
     e?.preventDefault();
     if (!query.trim()) return;
-    setSearching(true);
 
-    const services = window.kakao?.maps?.services;
-    if (!services) {
+    if (kakaoLoadFailed) {
       alert("카카오맵 SDK를 불러오지 못했습니다.");
-      setSearching(false);
       return;
     }
+
+    const services = window.kakao?.maps?.services;
+
+    if (!kakaoReady || !services) {
+      alert("카카오맵 SDK를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    setSearching(true);
 
     const places = new services.Places();
     places.keywordSearch(
