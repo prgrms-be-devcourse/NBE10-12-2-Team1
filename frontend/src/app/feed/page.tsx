@@ -205,9 +205,9 @@ function FeedContent() {
         restaurantName: post.restaurantName,
       }),
     );
+
     setOpenMenuFeedId(null);
     router.push(`/feed/write?edit=${post.feedId}`);
-
   };
 
   const handleDeleteFeed = async (feedId: number) => {
