@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
@@ -158,7 +158,7 @@ function getDisplayCategory(category: string): string {
   return parts.join(" · ");
 }
 
-export default function SearchPage() {
+function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
@@ -1045,5 +1045,13 @@ export default function SearchPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function SearchPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <SearchPage />
+    </Suspense>
   );
 }
