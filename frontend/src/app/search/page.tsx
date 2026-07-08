@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Navigation, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
@@ -176,6 +176,13 @@ function SearchPage() {
   const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
 
   const [mounted, setMounted] = useState(false);
+
+  /**
+   * 검색 결과 페이지네이션
+   */
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const itemsPerPage = 3;
 
   /**
    * 지도 HTML 영역
@@ -800,6 +807,22 @@ function SearchPage() {
   };
 
   /**
+   * 검색어 변경
+   */
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setCurrentPage(0);
+  };
+
+  /**
+   * 카테고리 변경
+   */
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    setCurrentPage(0);
+  };
+
+  /**
    * 검색 버튼
    *
    * 검색어 있음
@@ -886,8 +909,27 @@ function SearchPage() {
     matchesCategory(restaurant, activeCategory),
   );
 
+  /**
+   * 페이지네이션
+   */
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  const currentItems = filtered.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage,
+  );
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
+  };
+
   return (
     <AppShell
+      fullWidth
       leftSidebar={
         <div className="sticky top-28 space-y-5">
           <SidebarProfile />
@@ -942,7 +984,7 @@ function SearchPage() {
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => handleQueryChange(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-muted-soft"
                   placeholder="지역, 식당, 카페, 디저트를 검색하세요"
                 />
@@ -977,7 +1019,7 @@ function SearchPage() {
                 <button
                   key={category}
                   type="button"
-                  onClick={() => setActiveCategory(category)}
+                  onClick={() => handleCategoryChange(category)}
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                     category === activeCategory
                       ? "bg-primary text-white"
@@ -1003,15 +1045,26 @@ function SearchPage() {
                   <span className="text-primary">{filtered.length}개</span>
                 </p>
 
-                <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
-                  {filtered.map((restaurant) => (
-                    <button
-                      key={restaurant.kakaoPlaceId}
-                      type="button"
-                      onClick={() => handleSelect(restaurant)}
-                      className="w-72 shrink-0 text-left"
-                    >
-                      <article className="group flex h-[300px] w-full flex-col overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
+                <div className="flex items-stretch gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 0 || currentItems.length === 0}
+                    aria-label="이전 검색 결과"
+                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-4 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-7 w-7" />
+                  </button>
+
+                  <div className="grid flex-1 grid-cols-3 gap-4">
+                    {currentItems.map((restaurant) => (
+                      <button
+                        key={restaurant.kakaoPlaceId}
+                        type="button"
+                        onClick={() => handleSelect(restaurant)}
+                        className="w-full text-left"
+                      >
+                        <article className="group flex h-[300px] w-full flex-col overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
                         {/* 이미지 */}
                         <div className="h-36 w-full shrink-0 overflow-hidden bg-surface-strong">
                           <img
@@ -1035,10 +1088,27 @@ function SearchPage() {
                             {restaurant.roadAddress || restaurant.address}
                           </p>
                         </div>
-                      </article>
-                    </button>
-                  ))}
+                        </article>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages - 1 || currentItems.length === 0}
+                    aria-label="다음 검색 결과"
+                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-4 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-7 w-7" />
+                  </button>
                 </div>
+
+                {totalPages > 1 && (
+                  <p className="mt-3 text-center text-xs text-muted">
+                    {currentPage + 1} / {totalPages}
+                  </p>
+                )}
               </>
             )}
           </div>
