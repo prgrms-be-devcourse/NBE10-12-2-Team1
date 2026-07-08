@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -223,6 +224,48 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.reissue(invalidToken))
                 .isInstanceOf(JwtException.class);
     }
+    // ========== oauth exchange ==========
+
+    @Test
+    @DisplayName("1회용 코드 발급 시 Redis에 저장")
+    void createOAuthCodeSuccess() {
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+
+        String code = authService.createOAuthCode(1L);
+
+        assertThat(code).isNotBlank();
+        verify(valueOperations, times(1))
+                .set(eq("oauth-code:" + code), eq("1"), any(java.time.Duration.class));
+    }
+
+    @Test
+    @DisplayName("유효한 코드 교환 시 토큰과 유저 정보 반환")
+    void exchangeOAuthCodeSuccess() {
+        String code = "one-time-code";
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("oauth-code:" + code)).willReturn("1");
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtil.generateAccessToken(user)).willReturn("mocked-access-token");
+        given(jwtUtil.generateRefreshToken(user)).willReturn("mocked-refresh-token");
+
+        AuthResult result = authService.exchangeOAuthCode(code);
+
+        assertThat(result.accessToken()).isEqualTo("mocked-access-token");
+        assertThat(result.refreshToken()).isEqualTo("mocked-refresh-token");
+        verify(redisTemplate, times(1)).delete("oauth-code:" + code);
+    }
+
+    @Test
+    @DisplayName("존재하지 않거나 만료된 코드 교환 시 InvalidCredentialsException 발생")
+    void exchangeOAuthCodeFailNotFound() {
+        String code = "unknown-code";
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("oauth-code:" + code)).willReturn(null);
+
+        assertThatThrownBy(() -> authService.exchangeOAuthCode(code))
+                .isInstanceOf(InvalidCredentialsException.class);
+    }
+
     // ========== logout ==========
 
     @Test
