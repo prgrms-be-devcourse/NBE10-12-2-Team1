@@ -475,7 +475,7 @@ export default function ListEditPage() {
     };
 
     document.head.appendChild(script);
-  }, []);
+  }, [kakaoKey]);
 
   /* =========================================================
    * 검색 결과의 장소들을 DB Restaurant과 연결
