@@ -170,6 +170,7 @@ export default function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser>(() => getStoredUser() ?? fallbackUser);
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -245,6 +246,13 @@ export default function AppShell({
                 <input
                   type="text"
                   placeholder="맛집, 지역 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                    }
+                  }}
                   className="ml-3 bg-transparent text-base text-ink placeholder:text-muted-soft focus:outline-hidden w-56"
                   suppressHydrationWarning
                 />
