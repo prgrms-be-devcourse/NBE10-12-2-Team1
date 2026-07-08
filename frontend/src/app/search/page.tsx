@@ -6,6 +6,31 @@ import { Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
 
+interface KakaoPlaceItem {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  y: string;
+  x: string;
+}
+
+interface KakaoMarker {
+  setMap: (map: unknown | null) => void;
+}
+
+interface KakaoMap {
+  setCenter: (center: unknown) => void;
+  setBounds: (bounds: unknown) => void;
+  setLevel: (level: number) => void;
+}
+
+interface KakaoLatLngBounds {
+  extend: (position: unknown) => void;
+}
+
 interface HotPlace {
   id: number;
   name: string;
@@ -197,7 +222,6 @@ export default function SearchPage() {
       }
 
       /**
-       * 서울시청 고정 대신
        * 처음에는 대한민국 전체가
        * 대략 보이도록 생성
        */
@@ -235,9 +259,7 @@ export default function SearchPage() {
           kakaoMap.setLevel(5);
         },
 
-        (locationError) => {
-          console.log("초기 위치 조회 실패:", locationError);
-        },
+        () => {},
 
         {
           enableHighAccuracy: true,
@@ -258,6 +280,7 @@ export default function SearchPage() {
      */
     if (window.kakao?.maps) {
       loadMap();
+
       return;
     }
 
@@ -274,6 +297,7 @@ export default function SearchPage() {
       const check = setInterval(() => {
         if (window.kakao?.maps) {
           clearInterval(check);
+
           loadMap();
         }
       }, 100);
@@ -360,17 +384,17 @@ export default function SearchPage() {
 
     markersRef.current = [];
 
-    const filtered = results.filter((restaurant) =>
+    const filteredResults = results.filter((restaurant) =>
       matchesCategory(restaurant, activeCategory),
     );
 
-    if (filtered.length === 0) {
+    if (filteredResults.length === 0) {
       return;
     }
 
     const bounds = new window.kakao.maps.LatLngBounds() as KakaoLatLngBounds;
 
-    filtered.forEach((restaurant) => {
+    filteredResults.forEach((restaurant) => {
       if (!window.kakao?.maps) {
         return;
       }
@@ -401,6 +425,7 @@ export default function SearchPage() {
    * 1. 키워드 검색
    *
    * 예:
+   * - 부산 맛집
    * - 서면 맛집
    * - 초밥
    * - 스타벅스
@@ -414,7 +439,15 @@ export default function SearchPage() {
       return;
     }
 
+    /**
+     * 이전에 카테고리를 선택한 상태에서
+     * 새로운 검색을 하면 결과가 숨을 수 있으므로
+     * 전체 카테고리로 초기화
+     */
+    setActiveCategory("전체");
+
     setLoading(true);
+
     setError("");
 
     const maps = window.kakao?.maps;
@@ -425,6 +458,7 @@ export default function SearchPage() {
       setError("카카오맵 SDK를 불러오지 못했습니다.");
 
       setLoading(false);
+
       return;
     }
 
@@ -435,10 +469,6 @@ export default function SearchPage() {
         trimmedQuery,
 
       (data: KakaoPlaceItem[], status: string) => {
-        console.log("키워드 검색 상태:", status);
-
-        console.log("키워드 검색 결과:", data);
-
         if (status === services.Status.OK) {
           /**
            * 검색 결과 중
@@ -471,10 +501,8 @@ export default function SearchPage() {
 
       {
         /**
-         * FD6 제한 제거
-         *
-         * 그래야 카페·디저트도
-         * 키워드 검색 가능
+         * 카카오 장소 검색은
+         * 한 페이지 최대 15개
          */
         size: 15,
       },
@@ -501,6 +529,7 @@ export default function SearchPage() {
    */
   const fetchNearbyPlaces = (lat: number, lng: number) => {
     setLoading(true);
+
     setError("");
 
     const maps = window.kakao?.maps;
@@ -511,6 +540,7 @@ export default function SearchPage() {
       setError("카카오맵 SDK를 불러오지 못했습니다.");
 
       setLoading(false);
+
       return;
     }
 
@@ -557,8 +587,6 @@ export default function SearchPage() {
       "FD6",
 
       (data: KakaoPlaceItem[], status: string) => {
-        console.log("현재 위치 음식점 검색:", status, data);
-
         if (status === services.Status.OK) {
           restaurantResults = data;
         }
@@ -583,8 +611,6 @@ export default function SearchPage() {
       "CE7",
 
       (data: KakaoPlaceItem[], status: string) => {
-        console.log("현재 위치 카페 검색:", status, data);
-
         if (status === services.Status.OK) {
           cafeResults = data;
         }
@@ -618,6 +644,7 @@ export default function SearchPage() {
     }
 
     setLoading(true);
+
     setError("");
 
     const services = window.kakao?.maps?.services;
@@ -626,6 +653,7 @@ export default function SearchPage() {
       setError("카카오맵 SDK를 불러오지 못했습니다.");
 
       setLoading(false);
+
       return;
     }
 
@@ -673,8 +701,6 @@ export default function SearchPage() {
       "FD6",
 
       (data: KakaoPlaceItem[], status: string) => {
-        console.log("현재 지도 음식점 검색:", status, data);
-
         if (status === services.Status.OK) {
           restaurantResults = data;
         }
@@ -697,8 +723,6 @@ export default function SearchPage() {
       "CE7",
 
       (data: KakaoPlaceItem[], status: string) => {
-        console.log("현재 지도 카페 검색:", status, data);
-
         if (status === services.Status.OK) {
           cafeResults = data;
         }
@@ -763,9 +787,7 @@ export default function SearchPage() {
         fetchNearbyPlaces(lat, lng);
       },
 
-      (locationError) => {
-        console.error("현재 위치 조회 실패:", locationError);
-
+      () => {
         alert("현재 위치를 가져올 수 없습니다.");
       },
 
