@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, startTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
@@ -75,26 +75,28 @@ function WritePostContent() {
         return;
       }
 
-      setContent(editingFeed.content);
+      startTransition(() => {
+        setContent(editingFeed.content);
 
-      if (editingFeed.restaurantId && editingFeed.restaurantName) {
-        setSelectedRestaurant({
-          restaurantId: editingFeed.restaurantId,
-          kakaoPlaceId: "",
-          name: editingFeed.restaurantName,
-          category: "",
-          address: "",
-          roadAddress: "",
-          region1: "",
-          region2: "",
-          region3: "",
-          phone: "",
-          lat: 0,
-          lng: 0,
-        });
-      } else {
-        setSelectedRestaurant(null);
-      }
+        if (editingFeed.restaurantId && editingFeed.restaurantName) {
+          setSelectedRestaurant({
+            restaurantId: editingFeed.restaurantId,
+            kakaoPlaceId: "",
+            name: editingFeed.restaurantName,
+            category: "",
+            address: "",
+            roadAddress: "",
+            region1: "",
+            region2: "",
+            region3: "",
+            phone: "",
+            lat: 0,
+            lng: 0,
+          });
+        } else {
+          setSelectedRestaurant(null);
+        }
+      });
     } catch {
       alert("수정할 피드 정보를 불러오지 못했습니다.");
       router.replace("/feed");
