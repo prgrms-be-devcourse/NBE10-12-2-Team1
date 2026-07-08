@@ -92,11 +92,48 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            kill $(cat /home/ubuntu/whattoeat/app.pid) 2>/dev/null || true
-            sleep 3
-            mv /home/ubuntu/whattoeat/new/*.jar /home/ubuntu/whattoeat/app.jar
-            mv /home/ubuntu/whattoeat/new/application.yaml /home/ubuntu/whattoeat/application.yaml
-            rm -rf /home/ubuntu/whattoeat/new
+            set -e
             cd /home/ubuntu/whattoeat
+
+            OLD_PID=""
+            if [ -f app.pid ]; then
+              OLD_PID=$(cat app.pid)
+            fi
+
+            if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+              kill "$OLD_PID" 2>/dev/null || true
+              for i in $(seq 1 30); do
+                kill -0 "$OLD_PID" 2>/dev/null || break
+                sleep 1
+              done
+              if kill -0 "$OLD_PID" 2>/dev/null; then
+                echo "old process $OLD_PID did not stop gracefully, forcing kill"
+                kill -9 "$OLD_PID" 2>/dev/null || true
+                sleep 2
+              fi
+            fi
+
+            mv new/*.jar app.jar
+            mv new/application.yaml application.yaml
+            rm -rf new
+
             nohup java -jar -Dspring.config.location=./application.yaml -Dserver.port=8081 app.jar > app.log 2>&1 &
-            echo $! > /home/ubuntu/whattoeat/app.pid
+            NEW_PID=$!
+            echo $NEW_PID > app.pid
+
+            HEALTHY=false
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8081/api/v1/restaurants > /dev/null; then
+                HEALTHY=true
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$HEALTHY" != "true" ]; then
+              echo "backend failed to become healthy after restart"
+              tail -100 app.log
+              exit 1
+            fi
+
+            echo "backend restarted successfully (pid=$NEW_PID)"
