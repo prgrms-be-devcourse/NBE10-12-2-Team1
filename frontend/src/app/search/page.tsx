@@ -929,6 +929,7 @@ function SearchPage() {
 
   return (
     <AppShell
+      fullWidth
       leftSidebar={
         <div className="sticky top-28 space-y-5">
           <SidebarProfile />
@@ -1050,9 +1051,9 @@ function SearchPage() {
                     onClick={handlePrevPage}
                     disabled={currentPage === 0 || currentItems.length === 0}
                     aria-label="이전 검색 결과"
-                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-2 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-4 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-7 w-7" />
                   </button>
 
                   <div className="grid flex-1 grid-cols-3 gap-4">
@@ -1097,9 +1098,9 @@ function SearchPage() {
                     onClick={handleNextPage}
                     disabled={currentPage >= totalPages - 1 || currentItems.length === 0}
                     aria-label="다음 검색 결과"
-                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-2 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex shrink-0 items-center justify-center self-stretch rounded-xl border border-hairline-soft bg-surface px-4 text-muted transition-colors hover:border-primary/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-7 w-7" />
                   </button>
                 </div>
 
