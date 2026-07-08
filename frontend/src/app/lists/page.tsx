@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Bookmark, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
-
 import { apiFetchJson } from "@/lib/api";
 
 /* =========================================================
@@ -310,17 +309,9 @@ export default function ListsPage() {
       return;
     }
 
-    /* -------------------------------------------------------
-     * orderIndex 기준 정렬
-     * ------------------------------------------------------- */
-
     const sortedItems = [...selectedDetail.items].sort(
       (a, b) => a.orderIndex - b.orderIndex,
     );
-
-    /* -------------------------------------------------------
-     * 정상 좌표가 있는 식당만 사용
-     * ------------------------------------------------------- */
 
     const itemsWithCoordinates = sortedItems.filter((item) => {
       if (
@@ -338,10 +329,6 @@ export default function ListsPage() {
 
       return Number.isFinite(lat) && Number.isFinite(lng);
     });
-
-    /* -------------------------------------------------------
-     * 좌표 없음
-     * ------------------------------------------------------- */
 
     if (itemsWithCoordinates.length === 0) {
       setMapError("지도에 표시할 식당 위치 정보가 없습니다.");
@@ -362,8 +349,6 @@ export default function ListsPage() {
 
       const maps = window.kakao?.maps;
 
-      /* 카카오 SDK 로딩 대기 */
-
       if (!maps) {
         retryTimer = window.setTimeout(initializeMap, 100);
 
@@ -382,18 +367,12 @@ export default function ListsPage() {
           Number(firstItem.lng),
         );
 
-        /* 지도 생성 */
-
         const map = new maps.Map(mapContainerRef.current, {
           center: firstPosition,
           level: 5,
         });
 
-        /* 전체 식당 범위 */
-
         const bounds = new maps.LatLngBounds();
-
-        /* 식당별 번호 마커 */
 
         itemsWithCoordinates.forEach((item) => {
           const itemIndex = sortedItems.findIndex(
@@ -435,14 +414,10 @@ export default function ListsPage() {
           });
         });
 
-        /* 여러 식당이면 모두 보이도록 조정 */
-
         if (itemsWithCoordinates.length > 1) {
           map.setBounds(bounds);
         }
       };
-
-      /* autoload=false 대응 */
 
       if (typeof maps.load === "function") {
         maps.load(renderMap);
@@ -465,6 +440,7 @@ export default function ListsPage() {
   /* =========================================================
    * 다른 사람 리스트
    *
+   * 중앙 "다른 사람 리스트" 탭에서만 사용
    * 공개 리스트 중 본인 리스트 제외
    * ========================================================= */
 
@@ -473,12 +449,26 @@ export default function ListsPage() {
   );
 
   /* =========================================================
-   * 최근 생성된 다른 사람 리스트
+   * 인기 맛집 리스트
+   *
+   * 내 리스트 + 다른 사람 리스트 모두 포함
    * ========================================================= */
 
-  const recentLists = [...otherLists].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  const popularLists = publicLists.slice(0, 5);
+
+  /* =========================================================
+   * 최근 생성된 리스트
+   *
+   * 내 리스트 + 다른 사람 리스트 모두 포함
+   * 생성일 최신순
+   * ========================================================= */
+
+  const recentLists = [...publicLists]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, 5);
 
   /* =========================================================
    * 현재 선택한 리스트가 이미 저장됐는지 확인
@@ -503,13 +493,13 @@ export default function ListsPage() {
   };
 
   /* =========================================================
-   * 인기 / 최근 리스트 클릭
+   * 사이드바 리스트 클릭
    * ========================================================= */
 
-  const handleSelectPublicList = (listId: number) => {
-    setActiveTab("other");
+  const handleSelectSidebarList = (listId: number) => {
+    const isMyList = myLists.some((list) => list.id === listId);
 
-    setSelectedDetail(null);
+    setActiveTab(isMyList ? "my" : "other");
 
     setSelectedId(listId);
 
@@ -525,8 +515,6 @@ export default function ListsPage() {
       return;
     }
 
-    /* 내 리스트가 아니면 삭제 금지 */
-
     if (activeTab !== "my") {
       return;
     }
@@ -536,7 +524,7 @@ export default function ListsPage() {
     }
 
     const confirmed = confirm(
-      `${item.restaurantName}을(를) 리스트에서 삭제할까요?`,
+      `리스트에서 '${item.restaurantName}'을 삭제할까요?`,
     );
 
     if (!confirmed) {
@@ -561,12 +549,6 @@ export default function ListsPage() {
         return;
       }
 
-      /* -----------------------------------------------------
-       * 오른쪽 상세에서 삭제
-       *
-       * selectedDetail이 바뀌면 지도 useEffect도 다시 실행됨
-       * ----------------------------------------------------- */
-
       setSelectedDetail((prev) => {
         if (!prev) {
           return null;
@@ -578,11 +560,18 @@ export default function ListsPage() {
         };
       });
 
-      /* -----------------------------------------------------
-       * 가운데 리스트 카드 식당 개수 감소
-       * ----------------------------------------------------- */
-
       setMyLists((prev) =>
+        prev.map((list) =>
+          list.id === currentListId
+            ? {
+                ...list,
+                itemCount: Math.max(0, list.itemCount - 1),
+              }
+            : list,
+        ),
+      );
+
+      setPublicLists((prev) =>
         prev.map((list) =>
           list.id === currentListId
             ? {
@@ -748,8 +737,6 @@ export default function ListsPage() {
       }`}
     >
       <div className="flex items-center gap-4">
-        {/* 이미지 */}
-
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
           <img
             src="/list-placeholder.png"
@@ -757,8 +744,6 @@ export default function ListsPage() {
             className="h-full w-full object-cover"
           />
         </div>
-
-        {/* 정보 */}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -807,8 +792,6 @@ export default function ListsPage() {
       }`}
     >
       <div className="flex items-center gap-4">
-        {/* 이미지 */}
-
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-strong">
           <img
             src="/list-placeholder.png"
@@ -816,8 +799,6 @@ export default function ListsPage() {
             className="h-full w-full object-cover"
           />
         </div>
-
-        {/* 정보 */}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -857,74 +838,80 @@ export default function ListsPage() {
         <div className="sticky top-28 space-y-5">
           <SidebarProfile />
 
-          {/* =================================================
-           * 인기 맛집 리스트
-           * ================================================= */}
+          {/* 인기 맛집 리스트 */}
 
           <SidebarCard title="인기 맛집 리스트">
             <div className="space-y-4">
-              {otherLists.slice(0, 5).map((list) => (
-                <button
-                  key={list.id}
-                  type="button"
-                  onClick={() => handleSelectPublicList(list.id)}
-                  className="block w-full rounded-xl bg-surface-soft p-4 text-left transition-colors hover:bg-hairline-soft/50"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-base font-bold text-ink">
-                      {list.title}
+              {popularLists.length === 0 ? (
+                <p className="py-2 text-sm text-muted">
+                  등록된 공개 리스트가 없습니다.
+                </p>
+              ) : (
+                popularLists.map((list) => (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() => handleSelectSidebarList(list.id)}
+                    className="block w-full rounded-xl bg-surface-soft p-4 text-left transition-colors hover:bg-hairline-soft/50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-base font-bold text-ink">
+                        {list.title}
+                      </p>
+
+                      <span className="shrink-0 rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
+                        {list.moodTag}
+                      </span>
+                    </div>
+
+                    <p className="mt-1.5 text-sm text-muted">
+                      by {list.nickname} · 식당 {list.itemCount}개
                     </p>
-
-                    <span className="shrink-0 rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
-                      {list.moodTag}
-                    </span>
-                  </div>
-
-                  <p className="mt-1.5 text-sm text-muted">
-                    by {list.nickname} · 식당 {list.itemCount}개
-                  </p>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           </SidebarCard>
 
-          {/* =================================================
-           * 최근 생성된 리스트
-           * ================================================= */}
+          {/* 최근 생성된 리스트 */}
 
           <SidebarCard title="최근 생성된 리스트">
             <div className="space-y-4">
-              {recentLists.slice(0, 5).map((list) => (
-                <button
-                  key={list.id}
-                  type="button"
-                  onClick={() => handleSelectPublicList(list.id)}
-                  className="block w-full rounded-xl bg-surface-soft p-4 text-left transition-colors hover:bg-hairline-soft/50"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-base font-bold text-ink">
-                      {list.title}
+              {recentLists.length === 0 ? (
+                <p className="py-2 text-sm text-muted">
+                  최근 생성된 리스트가 없습니다.
+                </p>
+              ) : (
+                recentLists.map((list) => (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() => handleSelectSidebarList(list.id)}
+                    className="block w-full rounded-xl bg-surface-soft p-4 text-left transition-colors hover:bg-hairline-soft/50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-base font-bold text-ink">
+                        {list.title}
+                      </p>
+
+                      <span className="shrink-0 rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
+                        {list.moodTag}
+                      </span>
+                    </div>
+
+                    <p className="mt-1.5 text-sm text-muted">
+                      by {list.nickname} · 식당 {list.itemCount}개
                     </p>
-
-                    <span className="shrink-0 rounded-full bg-tag-mood px-2.5 py-1 text-xs font-bold text-ink">
-                      {list.moodTag}
-                    </span>
-                  </div>
-
-                  <p className="mt-1.5 text-sm text-muted">
-                    by {list.nickname} · 식당 {list.itemCount}개
-                  </p>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           </SidebarCard>
         </div>
       }
     >
       <div className="w-full min-w-0 space-y-5">
-        {/* =================================================
-         * 페이지 상단
-         * ================================================= */}
+        {/* 페이지 상단 */}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-ink">맛집 리스트</h2>
@@ -939,9 +926,7 @@ export default function ListsPage() {
           </button>
         </div>
 
-        {/* =================================================
-         * 로딩 / 에러
-         * ================================================= */}
+        {/* 로딩 / 에러 */}
 
         {loading ? (
           <div className="space-y-4">
@@ -953,9 +938,7 @@ export default function ListsPage() {
           <p className="text-center text-sm text-red-500">{error}</p>
         ) : (
           <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-            {/* =================================================
-             * 리스트 목록
-             * ================================================= */}
+            {/* 리스트 목록 */}
 
             <div className="min-w-0 space-y-3">
               {/* 탭 */}
@@ -1032,21 +1015,15 @@ export default function ListsPage() {
                 ))}
             </div>
 
-            {/* =================================================
-             * 오른쪽 상세
-             * ================================================= */}
+            {/* 오른쪽 상세 */}
 
             <div className="min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface">
               {selectedDetail ? (
                 <>
-                  {/* =============================================
-                   * 상세 상단
-                   * ============================================= */}
+                  {/* 상세 상단 */}
 
                   <div className="flex flex-col gap-4 border-b border-hairline-soft p-6 sm:flex-row sm:items-start sm:justify-between">
-                    {/* 리스트 정보 */}
-
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="break-words text-2xl font-bold text-ink">
                           {selectedDetail.title}
@@ -1066,15 +1043,15 @@ export default function ListsPage() {
                           by {selectedDetail.nickname}
                         </p>
                       )}
-
-                      <p className="mt-2 text-sm text-muted-soft">
-                        식당 {selectedItems.length}개
-                      </p>
                     </div>
 
-                    {/* 버튼 */}
+                    {/* 식당 개수 + 버튼 */}
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-3">
+                      <span className="text-sm text-muted">
+                        식당 {selectedItems.length}개
+                      </span>
+
                       {/* 내 리스트 */}
 
                       {activeTab === "my" && (
@@ -1155,23 +1132,17 @@ export default function ListsPage() {
                     </div>
                   </div>
 
-                  {/* =============================================
-                   * 식당 없음
-                   * ============================================= */}
+                  {/* 식당 없음 */}
 
                   {selectedItems.length === 0 ? (
                     <p className="py-24 text-center text-sm text-muted">
                       등록된 식당이 없습니다.
                     </p>
                   ) : (
-                    /* ===========================================
-                     * 식당 목록 + 지도
-                     * =========================================== */
+                    /* 식당 목록 + 지도 */
 
                     <div className="grid min-w-0 lg:grid-cols-[minmax(360px,2fr)_minmax(0,3fr)]">
-                      {/* =========================================
-                       * 리스트 코스
-                       * ========================================= */}
+                      {/* 리스트 코스 */}
 
                       <div className="min-w-0 border-b border-hairline-soft p-6 lg:border-r lg:border-b-0">
                         <h4 className="mb-5 text-base font-bold text-ink">
@@ -1182,75 +1153,79 @@ export default function ListsPage() {
                           {selectedItems.map((item, index) => (
                             <div
                               key={item.id}
-                              className="flex min-w-0 gap-4 rounded-2xl bg-surface-soft p-5"
+                              className="rounded-2xl bg-surface-soft p-4"
                             >
-                              {/* 번호 */}
+                              {/* 상단:
+                                  번호 + 식당명 + 카테고리 + 삭제 */}
 
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                                {index + 1}
-                              </div>
+                              <div className="flex min-w-0 items-center gap-3">
+                                {/* 번호 */}
 
-                              {/* 식당 정보 */}
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                  {index + 1}
+                                </div>
 
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="break-words text-lg font-bold text-ink">
-                                      {item.restaurantName}
-                                    </p>
+                                {/* 식당명 + 카테고리 */}
 
-                                    {item.category && (
-                                      <p className="mt-1 text-sm text-muted-soft">
-                                        {item.category}
-                                      </p>
-                                    )}
-                                  </div>
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  <p className="min-w-0 truncate text-lg font-bold text-ink">
+                                    {item.restaurantName}
+                                  </p>
 
-                                  {/* =================================
-                                   * 내 리스트에서만 삭제 버튼 표시
-                                   * ================================= */}
-
-                                  {activeTab === "my" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteItem(item)}
-                                      disabled={deletingItemId === item.id}
-                                      aria-label={`${item.restaurantName} 삭제`}
-                                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
+                                  {item.category && (
+                                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-muted">
+                                      {item.category}
+                                    </span>
                                   )}
                                 </div>
 
-                                {/* 주소 */}
+                                {/* 삭제 버튼 */}
 
-                                {(item.roadAddress || item.address) && (
-                                  <div className="mt-3 flex items-start gap-1.5 text-sm text-muted">
-                                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-
-                                    <span className="break-words">
-                                      {item.roadAddress || item.address}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* 한줄평 */}
-
-                                {item.memo && (
-                                  <p className="mt-3 break-words text-base text-muted">
-                                    {item.memo}
-                                  </p>
+                                {activeTab === "my" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteItem(item)}
+                                    disabled={deletingItemId === item.id}
+                                    aria-label={`${item.restaurantName} 삭제`}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
                                 )}
                               </div>
+
+                              {/* 주소
+                                  번호 영역 안에 넣지 않고
+                                  카드 전체 너비 사용 */}
+
+                              {(item.roadAddress || item.address) && (
+                                <div className="mt-3 flex min-w-0 items-center gap-1.5 text-sm text-muted">
+                                  <MapPin className="h-4 w-4 shrink-0" />
+
+                                  <span
+                                    className="min-w-0 truncate"
+                                    title={
+                                      item.roadAddress || item.address || ""
+                                    }
+                                  >
+                                    {item.roadAddress || item.address}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* 한줄평 */}
+
+                              {item.memo && (
+                                <p className="mt-2 break-words text-sm leading-6 text-body">
+                                  {item.memo}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* =========================================
-                       * 지도
-                       * ========================================= */}
+                      {/* 지도 */}
 
                       <div className="min-w-0 p-6">
                         <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
