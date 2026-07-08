@@ -99,6 +99,7 @@ export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(
     () => getStoredUser() ?? fallbackUser,
   );
+
   const [mounted, setMounted] = useState(false);
 
   const [followingCount, setFollowingCount] = useState<number | null>(null);
@@ -506,6 +507,7 @@ export default function AppShell({
             {mainNav.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
               return (
                 <Link
                   key={item.href}

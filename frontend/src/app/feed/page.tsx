@@ -10,8 +10,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
-  Check,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -60,9 +58,6 @@ function FeedContent() {
     null,
   );
   const [openMenuFeedId, setOpenMenuFeedId] = useState<number | null>(null);
-  const [editingFeedId, setEditingFeedId] = useState<number | null>(null);
-  const [editContent, setEditContent] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
 
   const handleOpenComments = (feedId: number) => {
     setActiveCommentFeedId(feedId);
@@ -203,55 +198,18 @@ function FeedContent() {
     }
   };
 
-  const handleStartEdit = (post: Feed) => {
-    setEditingFeedId(post.feedId);
-    setEditContent(post.content);
-    setOpenMenuFeedId(null);
-  };
+  const handleEditFeed = (post: Feed) => {
+    sessionStorage.setItem(
+      "editingFeed",
+      JSON.stringify({
+        feedId: post.feedId,
+        content: post.content,
+        restaurantId: post.restaurantId,
+        restaurantName: post.restaurantName,
+      }),
+    );
 
-  const handleCancelEdit = () => {
-    setEditingFeedId(null);
-    setEditContent("");
-  };
-
-  const handleUpdateFeed = async (post: Feed) => {
-    const nextContent = editContent.trim();
-
-    if (!nextContent) {
-      alert("내용을 입력해주세요.");
-      return;
-    }
-
-    setSavingEdit(true);
-
-    try {
-      const res = await apiFetchJson(`/api/v1/feeds/${post.feedId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          content: nextContent,
-          restaurantId: post.restaurantId,
-        }),
-      });
-
-      if (res.ok) {
-        setPosts((prev) =>
-          prev.map((item) =>
-            item.feedId === post.feedId
-              ? {
-                  ...item,
-                  content: nextContent,
-                }
-              : item,
-          ),
-        );
-        setEditingFeedId(null);
-        setEditContent("");
-      } else {
-        alert(res.message || "피드 수정에 실패했습니다.");
-      }
-    } finally {
-      setSavingEdit(false);
-    }
+    router.push(`/feed/write?edit=${post.feedId}`);
   };
 
   const handleDeleteFeed = async (feedId: number) => {
@@ -416,7 +374,7 @@ function FeedContent() {
                         <div className="absolute right-0 top-8 z-20 w-28 overflow-hidden rounded-lg border border-hairline-soft bg-surface shadow-lg">
                           <button
                             type="button"
-                            onClick={() => handleStartEdit(post)}
+                            onClick={() => handleEditFeed(post)}
                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-surface-soft"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -437,46 +395,9 @@ function FeedContent() {
                 </div>
 
                 {/* Content */}
-                {editingFeedId === post.feedId ? (
-                  <div className="mt-4 space-y-3">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={4}
-                      maxLength={1000}
-                      className="w-full resize-none rounded-xl border border-hairline bg-surface-soft p-4 text-sm leading-relaxed text-body focus:border-primary focus:outline-hidden"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-soft">
-                        {editContent.length}/1000
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          disabled={savingEdit}
-                          className="flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm font-semibold text-muted hover:bg-surface-soft disabled:opacity-70"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          취소
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateFeed(post)}
-                          disabled={savingEdit}
-                          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-70"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          {savingEdit ? "저장 중..." : "저장"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm leading-relaxed text-body">
-                    {post.content}
-                  </p>
-                )}
+                <p className="mt-4 text-sm leading-relaxed text-body">
+                  {post.content}
+                </p>
 
                 {/* Restaurant */}
                 {post.restaurantId && post.restaurantName && (
