@@ -13,7 +13,6 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
-
 import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 
 import { apiFetchJson } from "@/lib/api";
@@ -100,6 +99,7 @@ export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(
     () => getStoredUser() ?? fallbackUser,
   );
+
   const [mounted, setMounted] = useState(false);
 
   const [followingCount, setFollowingCount] = useState<number | null>(null);
@@ -177,12 +177,14 @@ export function SidebarProfile() {
     };
 
     window.addEventListener("follow-state-change", handleFollowStateChange);
+    window.addEventListener("feed-state-change", handleFollowStateChange);
 
     return () => {
       window.removeEventListener(
         "follow-state-change",
         handleFollowStateChange,
       );
+      window.removeEventListener("feed-state-change", handleFollowStateChange);
     };
   }, [user.userId]);
 
@@ -234,7 +236,6 @@ export function SidebarProfile() {
     <Link
       href="/profile"
       className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors"
-
     >
       <div className="flex items-center gap-4">
         <img
@@ -276,6 +277,7 @@ export function SidebarProfile() {
     </Link>
   );
 }
+
 /* =========================================================
  * 사이드바 카드
  * ========================================================= */
@@ -324,7 +326,6 @@ export default function AppShell({
   const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
-
   const [user, setUser] = useState<CurrentUser>(
     () => getStoredUser() ?? fallbackUser,
   );
@@ -506,6 +507,7 @@ export default function AppShell({
             {mainNav.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
               return (
                 <Link
                   key={item.href}

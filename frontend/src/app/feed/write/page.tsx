@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -21,6 +21,14 @@ interface KakaoRestaurant {
   phone: string;
   lat: number;
   lng: number;
+  restaurantId?: number;
+}
+
+interface EditingFeed {
+  feedId: number;
+  content: string;
+  restaurantId: number | null;
+  restaurantName: string | null;
 }
 
 const guideItems = [
@@ -29,22 +37,75 @@ const guideItems = [
   "솔직한 후기일수록 다른 사용자들에게 도움이 돼요.",
 ];
 
-export default function WritePostPage() {
+function WritePostContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editFeedId = searchParams.get("edit");
+  const isEditMode = Boolean(editFeedId);
+
   const [content, setContent] = useState("");
   const [selectedMood, setSelectedMood] = useState("혼밥");
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<KakaoRestaurant[]>([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<KakaoRestaurant | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] =
+    useState<KakaoRestaurant | null>(null);
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [recentPosts, setRecentPosts] = useState<{ feedId: number; nickname: string; content: string }[]>([]);
+  const [recentPosts, setRecentPosts] = useState<
+    { feedId: number; nickname: string; content: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (!isEditMode || !editFeedId) return;
+
+    const raw = sessionStorage.getItem("editingFeed");
+
+    if (!raw) {
+      alert("수정할 피드 정보를 찾을 수 없습니다.");
+      router.replace("/feed");
+      return;
+    }
+
+    try {
+      const editingFeed = JSON.parse(raw) as EditingFeed;
+
+      if (String(editingFeed.feedId) !== editFeedId) {
+        alert("수정할 피드 정보가 올바르지 않습니다.");
+        router.replace("/feed");
+        return;
+      }
+
+      setContent(editingFeed.content);
+
+      if (editingFeed.restaurantId && editingFeed.restaurantName) {
+        setSelectedRestaurant({
+          restaurantId: editingFeed.restaurantId,
+          kakaoPlaceId: "",
+          name: editingFeed.restaurantName,
+          category: "",
+          address: "",
+          roadAddress: "",
+          region1: "",
+          region2: "",
+          region3: "",
+          phone: "",
+          lat: 0,
+          lng: 0,
+        });
+      } else {
+        setSelectedRestaurant(null);
+      }
+    } catch {
+      alert("수정할 피드 정보를 불러오지 못했습니다.");
+      router.replace("/feed");
+    }
+  }, [isEditMode, editFeedId, router]);
 
   useEffect(() => {
     const loadRecent = async () => {
-      const res = await apiFetchJson<{ feeds: { feedId: number; nickname: string; content: string }[] }>(
-        "/api/v1/feeds/recommend"
-      );
+      const res = await apiFetchJson<{
+        feeds: { feedId: number; nickname: string; content: string }[];
+      }>("/api/v1/feeds/recommend");
       if (res.ok && res.data) {
         setRecentPosts(res.data.feeds.slice(0, 3));
       }
@@ -53,7 +114,9 @@ export default function WritePostPage() {
     loadRecent();
   }, []);
 
-  const handleSearch = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+  const handleSearch = async (
+    e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent,
+  ) => {
     e?.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
@@ -71,7 +134,9 @@ export default function WritePostPage() {
       (data: KakaoPlaceItem[], status: string) => {
         if (status === services.Status.OK) {
           const mapped: KakaoRestaurant[] = data.map((item) => {
-            const addressParts = item.address_name ? item.address_name.split(" ") : [];
+            const addressParts = item.address_name
+              ? item.address_name.split(" ")
+              : [];
             return {
               kakaoPlaceId: item.id,
               name: item.place_name,
@@ -96,7 +161,7 @@ export default function WritePostPage() {
       {
         category_group_code: "FD6",
         size: 15,
-      }
+      },
     );
   };
 
@@ -109,44 +174,63 @@ export default function WritePostPage() {
     let restaurantId: number | null = null;
 
     if (selectedRestaurant) {
-      const saveRes = await apiFetchJson<{ id: number }>("/api/v1/restaurants", {
-        method: "POST",
-        body: JSON.stringify({
-          kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
-          name: selectedRestaurant.name,
-          categoryName: selectedRestaurant.category,
-          address: selectedRestaurant.address,
-          roadAddress: selectedRestaurant.roadAddress,
-          region1: selectedRestaurant.region1,
-          region2: selectedRestaurant.region2,
-          region3: selectedRestaurant.region3,
-          phone: selectedRestaurant.phone,
-          lat: selectedRestaurant.lat,
-          lng: selectedRestaurant.lng,
-        }),
-      });
+      if (selectedRestaurant.restaurantId) {
+        restaurantId = selectedRestaurant.restaurantId;
+      } else {
+        const saveRes = await apiFetchJson<{ id: number }>(
+          "/api/v1/restaurants",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              kakaoPlaceId: selectedRestaurant.kakaoPlaceId,
+              name: selectedRestaurant.name,
+              categoryName: selectedRestaurant.category,
+              address: selectedRestaurant.address,
+              roadAddress: selectedRestaurant.roadAddress,
+              region1: selectedRestaurant.region1,
+              region2: selectedRestaurant.region2,
+              region3: selectedRestaurant.region3,
+              phone: selectedRestaurant.phone,
+              lat: selectedRestaurant.lat,
+              lng: selectedRestaurant.lng,
+            }),
+          },
+        );
 
-      if (!saveRes.ok || !saveRes.data) {
-        alert(saveRes.message || "식당 저장에 실패했습니다.");
-        setSubmitting(false);
-        return;
+        if (!saveRes.ok || !saveRes.data) {
+          alert(saveRes.message || "식당 저장에 실패했습니다.");
+          setSubmitting(false);
+          return;
+        }
+
+        restaurantId = saveRes.data.id;
       }
-
-      restaurantId = saveRes.data.id;
     }
 
-    const feedRes = await apiFetchJson("/api/v1/feeds", {
-      method: "POST",
-      body: JSON.stringify({
-        content: content.trim(),
-        restaurantId,
-      }),
-    });
+    const feedRes = await apiFetchJson(
+      isEditMode ? `/api/v1/feeds/${editFeedId}` : "/api/v1/feeds",
+      {
+        method: isEditMode ? "PUT" : "POST",
+        body: JSON.stringify({
+          content: content.trim(),
+          restaurantId,
+        }),
+      },
+    );
 
     if (feedRes.ok) {
+      if (isEditMode) {
+        sessionStorage.removeItem("editingFeed");
+      }
+
       router.push("/feed");
     } else {
-      alert(feedRes.message || "피드 작성에 실패했습니다.");
+      alert(
+        feedRes.message ||
+          (isEditMode
+            ? "피드 수정에 실패했습니다."
+            : "피드 작성에 실패했습니다."),
+      );
     }
 
     setSubmitting(false);
@@ -165,7 +249,10 @@ export default function WritePostPage() {
             <p className="text-sm font-bold text-ink mb-3">작성 가이드</p>
             <ul className="space-y-2.5">
               {guideItems.map((item, i) => (
-                <li key={i} className="flex gap-2 text-xs text-body leading-relaxed">
+                <li
+                  key={i}
+                  className="flex gap-2 text-xs text-body leading-relaxed"
+                >
                   <Lightbulb className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
                   {item}
                 </li>
@@ -177,22 +264,37 @@ export default function WritePostPage() {
     >
       <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <Link href="/feed" className="flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink transition-colors">
+          <Link
+            href="/feed"
+            className="flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink transition-colors"
+          >
             <ArrowLeft className="h-4 w-4" />
             피드로 돌아가기
           </Link>
-          <h2 className="text-xl font-bold text-ink">새 포스트 작성</h2>
+          <h2 className="text-xl font-bold text-ink">
+            {isEditMode ? "피드 수정" : "새 포스트 작성"}
+          </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-surface p-6 border border-hairline-soft shadow-sm space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl bg-surface p-6 border border-hairline-soft shadow-sm space-y-5"
+        >
           {/* Tagged restaurant */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-muted mb-2 block">태그된 식당 (선택)</label>
+            <label className="text-xs font-bold text-muted mb-2 block">
+              태그된 식당 (선택)
+            </label>
             {selectedRestaurant ? (
               <div className="flex items-center justify-between rounded-xl bg-primary-soft p-3">
                 <div>
-                  <p className="text-sm font-bold text-ink">{selectedRestaurant.name}</p>
-                  <p className="text-xs text-muted">{selectedRestaurant.roadAddress || selectedRestaurant.address}</p>
+                  <p className="text-sm font-bold text-ink">
+                    {selectedRestaurant.name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {selectedRestaurant.roadAddress ||
+                      selectedRestaurant.address}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -237,18 +339,24 @@ export default function WritePostPage() {
                       className="w-full rounded-xl border border-hairline-soft bg-surface-soft p-3 text-left hover:border-primary/30 transition-colors"
                     >
                       <p className="text-sm font-bold text-ink">{r.name}</p>
-                      <p className="text-xs text-muted">{r.roadAddress || r.address}</p>
+                      <p className="text-xs text-muted">
+                        {r.roadAddress || r.address}
+                      </p>
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-muted">식당을 선택하지 않아도 포스트를 작성할 수 있어요.</p>
+                <p className="text-xs text-muted">
+                  식당을 선택하지 않아도 포스트를 작성할 수 있어요.
+                </p>
               </>
             )}
           </div>
 
           {/* Mood tags */}
           <div>
-            <label className="text-xs font-bold text-muted mb-2 block">분위기 태그</label>
+            <label className="text-xs font-bold text-muted mb-2 block">
+              분위기 태그
+            </label>
             <div className="flex flex-wrap gap-2">
               {moods.map((mood) => (
                 <button
@@ -269,7 +377,9 @@ export default function WritePostPage() {
 
           {/* Content */}
           <div>
-            <label className="text-xs font-bold text-muted mb-2 block">포스트 내용</label>
+            <label className="text-xs font-bold text-muted mb-2 block">
+              포스트 내용
+            </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -279,18 +389,24 @@ export default function WritePostPage() {
               className="w-full rounded-xl border border-hairline bg-surface-soft p-4 text-sm focus:border-primary focus:outline-hidden resize-none"
               required
             />
-            <p className="mt-1 text-right text-xs text-muted-soft">{content.length}/1000</p>
+            <p className="mt-1 text-right text-xs text-muted-soft">
+              {content.length}/1000
+            </p>
           </div>
 
           {/* Photo upload */}
           <div>
-            <label className="text-xs font-bold text-muted mb-2 block">사진 추가 (선택)</label>
+            <label className="text-xs font-bold text-muted mb-2 block">
+              사진 추가 (선택)
+            </label>
             <button
               type="button"
               className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors"
             >
               <ImagePlus className="h-5 w-5" />
-              <span className="text-sm font-medium">클릭하거나 드래그하여 사진 추가</span>
+              <span className="text-sm font-medium">
+                클릭하거나 드래그하여 사진 추가
+              </span>
             </button>
           </div>
 
@@ -302,7 +418,13 @@ export default function WritePostPage() {
               className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
               <Send className="h-4 w-4" />
-              {submitting ? "등록 중..." : "포스트 올리기"}
+              {isEditMode
+                ? submitting
+                  ? "수정 중..."
+                  : "수정하기"
+                : submitting
+                  ? "등록 중..."
+                  : "포스트 올리기"}
             </button>
           </div>
         </form>
@@ -311,7 +433,11 @@ export default function WritePostPage() {
   );
 }
 
-function LeftRecentPosts({ posts }: { posts: { feedId: number; nickname: string; content: string }[] }) {
+function LeftRecentPosts({
+  posts,
+}: {
+  posts: { feedId: number; nickname: string; content: string }[];
+}) {
   return (
     <div className="rounded-2xl bg-surface p-4 border border-hairline-soft">
       <p className="text-sm font-bold text-ink mb-3">최근 피드</p>
@@ -325,7 +451,9 @@ function LeftRecentPosts({ posts }: { posts: { feedId: number; nickname: string;
                 {p.nickname[0]}
               </div>
               <div>
-                <p className="text-xs font-bold text-ink group-hover:text-primary transition-colors">{p.nickname}</p>
+                <p className="text-xs font-bold text-ink group-hover:text-primary transition-colors">
+                  {p.nickname}
+                </p>
                 <p className="text-xs text-muted line-clamp-2">{p.content}</p>
               </div>
             </Link>
@@ -333,5 +461,21 @@ function LeftRecentPosts({ posts }: { posts: { feedId: number; nickname: string;
         </div>
       )}
     </div>
+  );
+}
+export default function WritePostPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell>
+          <div className="space-y-5">
+            <div className="h-10 w-40 rounded-lg bg-surface-soft animate-pulse" />
+            <div className="h-96 rounded-2xl bg-surface border border-hairline-soft animate-pulse" />
+          </div>
+        </AppShell>
+      }
+    >
+      <WritePostContent />
+    </Suspense>
   );
 }
