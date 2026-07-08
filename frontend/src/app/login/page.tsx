@@ -68,7 +68,8 @@ export default function LoginPage() {
 
   const handleKakaoLogin = () => {
     setLoading(true);
-    window.location.href = `${OAUTH_BASE}/oauth2/authorization/kakao`;
+    const redirectUri = encodeURIComponent(window.location.origin);
+    window.location.href = `${OAUTH_BASE}/oauth2/authorization/kakao?redirectUri=${redirectUri}`;
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {

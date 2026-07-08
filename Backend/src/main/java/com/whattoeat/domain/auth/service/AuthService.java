@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -92,6 +93,37 @@ public class AuthService {
         saveRefreshToken(user.getId(), refreshToken);
         return new AuthResult(accessToken, refreshToken, AuthUserResponse.from(user));
     }
+    // OAuth2 로그인은 백엔드 도메인으로 직접 리다이렉트되므로, 그 응답에서 쿠키를 바로 굽지 않고
+    // 1회용 코드만 프론트로 넘긴 뒤 프론트가 /api 프록시로 교환하게 해서 쿠키가 프론트 도메인에 스코프되도록 한다.
+    public String createOAuthCode(Long userId) {
+        String code = UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set(
+                "oauth-code:" + code,
+                String.valueOf(userId),
+                Duration.ofSeconds(60)
+        );
+        return code;
+    }
+
+    @Transactional
+    public AuthResult exchangeOAuthCode(String code) {
+        String key = "oauth-code:" + code;
+        String userIdValue = redisTemplate.opsForValue().get(key);
+        redisTemplate.delete(key);
+
+        if (userIdValue == null) {
+            throw new InvalidCredentialsException("유효하지 않거나 만료된 코드입니다.");
+        }
+
+        User user = userRepository.findById(Long.parseLong(userIdValue))
+                .orElseThrow(() -> new InvalidCredentialsException("유효하지 않은 코드입니다."));
+
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+        saveRefreshToken(user.getId(), refreshToken);
+        return new AuthResult(accessToken, refreshToken, AuthUserResponse.from(user));
+    }
+
     public void logout(String token){
         long remaining = jwtUtil.getRemainingExpiration(token);
         if (remaining > 0) {

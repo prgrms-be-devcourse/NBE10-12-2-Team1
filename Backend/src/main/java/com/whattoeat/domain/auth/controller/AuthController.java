@@ -39,6 +39,15 @@ public class AuthController {
         return ResponseEntity.ok(RsData.success(result.userProfile(), "로그인 성공"));
     }
 
+    @PostMapping("/oauth/exchange")
+    public ResponseEntity<RsData<AuthUserResponse>> exchangeOAuthCode(@Valid @RequestBody OAuthExchangeRequest request) {
+        AuthResult result = authService.exchangeOAuthCode(request.code());
+        rq.setCookie("accessToken", result.accessToken(), 60 * 60);
+        rq.setCookie("refreshToken", result.refreshToken(), 60 * 60 * 24 * 7);
+
+        return ResponseEntity.ok(RsData.success(result.userProfile(), "로그인 성공"));
+    }
+
     @PostMapping("/reissue")
     public ResponseEntity<RsData<Void>> reissue() {
         String refreshToken = rq.getCookieValue("refreshToken");
