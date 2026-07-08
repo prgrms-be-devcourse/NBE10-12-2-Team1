@@ -20,6 +20,7 @@ interface KakaoRestaurant {
   region1: string;
   region2: string;
   region3: string;
+  region4: string;
   phone: string;
   lat: number;
   lng: number;
@@ -39,6 +40,7 @@ interface RestaurantResponse {
   region1: string;
   region2: string;
   region3: string;
+  region4: string;
   phone: string;
   lat: number;
   lng: number;
@@ -331,6 +333,7 @@ export default function CreateListPage() {
             region1: addressParts[0] || "",
             region2: addressParts[1] || "",
             region3: addressParts[2] || "",
+            region4: addressParts[3] || "",
             phone: item.phone || "",
             lat: Number(item.y),
             lng: Number(item.x),
@@ -397,6 +400,7 @@ export default function CreateListPage() {
           region1: restaurant.region1,
           region2: restaurant.region2,
           region3: restaurant.region3,
+          region4: restaurant.region4,
           phone: restaurant.phone,
           lat: restaurant.lat,
           lng: restaurant.lng,

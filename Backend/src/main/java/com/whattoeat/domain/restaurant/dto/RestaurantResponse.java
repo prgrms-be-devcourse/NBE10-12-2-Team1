@@ -16,10 +16,12 @@ public class RestaurantResponse {
             String region1,
             String region2,
             String region3,
+            String region4,
             String phone,
             Double lat,
             Double lng
-    ) {}
+    ) {
+    }
 
     public record Recommend(
             Long id,
@@ -31,6 +33,7 @@ public class RestaurantResponse {
             String region1,
             String region2,
             String region3,
+            String region4,
             String phone,
             Double lat,
             Double lng,
@@ -47,6 +50,7 @@ public class RestaurantResponse {
                     restaurant.getRegion1(),
                     restaurant.getRegion2(),
                     restaurant.getRegion3(),
+                    restaurant.getRegion4(),
                     restaurant.getPhone(),
                     restaurant.getLat(),
                     restaurant.getLng(),

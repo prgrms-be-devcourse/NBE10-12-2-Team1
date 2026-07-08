@@ -14,7 +14,8 @@ public class RestaurantRequest {
             Double lat,
             Integer radius,
             Integer page
-    ){}
+    ) {
+    }
 
     // 카카오 응답을 Restaurant 저장용을 변환
     public record FromKakao(
@@ -29,10 +30,12 @@ public class RestaurantRequest {
             String region1,
             String region2,
             String region3,
+            String region4,
             String phone,
             @NotNull(message = "위도는 필수입니다.")
             Double lat,
             @NotNull(message = "경도는 필수입니다.")
             Double lng
-    ){}
+    ) {
+    }
 }

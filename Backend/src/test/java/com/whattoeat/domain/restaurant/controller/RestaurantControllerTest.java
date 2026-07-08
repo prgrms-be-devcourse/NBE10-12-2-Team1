@@ -52,6 +52,7 @@ class RestaurantControllerTest {
                 "서울",
                 "강남구",
                 "역삼동",
+                null,
                 "02-0000-0000",
                 37.5,
                 127.0
@@ -61,7 +62,7 @@ class RestaurantControllerTest {
     @Test
     void recommend_성공() throws Exception {
         Restaurant restaurant = createRestaurant("kakao-1", "맛있는식당", Category.KOREAN);
-        given(restaurantService.recommend(null, null, null, null)).willReturn(restaurant);
+        given(restaurantService.recommend(null, null, null, null, null)).willReturn(restaurant);
 
         mockMvc.perform(get("/api/v1/restaurants/recommend"))
                 .andExpect(status().isOk())
@@ -74,7 +75,7 @@ class RestaurantControllerTest {
     @Test
     void recommend_카테고리_파라미터로_조회() throws Exception {
         Restaurant restaurant = createRestaurant("kakao-2", "한식당", Category.KOREAN);
-        given(restaurantService.recommend(Category.KOREAN, null, null, null)).willReturn(restaurant);
+        given(restaurantService.recommend(Category.KOREAN, null, null, null, null)).willReturn(restaurant);
 
         mockMvc.perform(get("/api/v1/restaurants/recommend")
                         .param("category", "KOREAN"))
@@ -85,7 +86,7 @@ class RestaurantControllerTest {
     @Test
     void recommend_지역_파라미터로_조회() throws Exception {
         Restaurant restaurant = createRestaurant("kakao-3", "서울식당", Category.WESTERN);
-        given(restaurantService.recommend(null, "서울", "강남구", null)).willReturn(restaurant);
+        given(restaurantService.recommend(null, "서울", "강남구", null, null)).willReturn(restaurant);
 
         mockMvc.perform(get("/api/v1/restaurants/recommend")
                         .param("region1", "서울")
@@ -97,7 +98,7 @@ class RestaurantControllerTest {
 
     @Test
     void recommend_조건에_맞는_식당_없으면_404() throws Exception {
-        given(restaurantService.recommend(Category.CAFE, "제주", null, null))
+        given(restaurantService.recommend(Category.CAFE, "제주", null, null, null))
                 .willThrow(new RestaurantNotFoundException("조건에 맞는 식당이 없습니다."));
 
         mockMvc.perform(get("/api/v1/restaurants/recommend")
@@ -117,7 +118,7 @@ class RestaurantControllerTest {
     @Test
     @DisplayName("kakaoPlaceId로 조회 시 DB에 있으면 200 반환")
     void getByKakaoPlaceId_성공() throws Exception {
-        Restaurant restaurant = createRestaurant("kakao-1","맛집", Category.KOREAN);
+        Restaurant restaurant = createRestaurant("kakao-1", "맛집", Category.KOREAN);
         given(restaurantService.findByKakaoPlaceId("kakao-1")).willReturn(restaurant);
 
         mockMvc.perform(get("/api/v1/restaurants")

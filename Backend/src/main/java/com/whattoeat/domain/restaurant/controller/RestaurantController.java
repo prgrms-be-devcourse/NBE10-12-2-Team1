@@ -25,21 +25,22 @@ public class RestaurantController {
             @RequestParam(required = false) Category category,
             @RequestParam(required = false) String region1,
             @RequestParam(required = false) String region2,
-            @RequestParam(required = false) String region3
+            @RequestParam(required = false) String region3,
+            @RequestParam(required = false) String region4
     ) {
         RestaurantResponse.Recommend restaurant = new RestaurantResponse.Recommend(
-                restaurantService.recommend(category, region1, region2, region3)
+                restaurantService.recommend(category, region1, region2, region3, region4)
         );
         return RsData.success(restaurant, "식당 추천이 완료되었습니다.");
     }
 
     // 식당 조회 (kakaoPlaceId로 단건 조회 or 전체 목록)
     @GetMapping
-    public RsData<?> getRestaurants(@RequestParam(required = false) String kakaoPlaceId){
-        if(kakaoPlaceId != null && !kakaoPlaceId.isBlank()){
+    public RsData<?> getRestaurants(@RequestParam(required = false) String kakaoPlaceId) {
+        if (kakaoPlaceId != null && !kakaoPlaceId.isBlank()) {
             Restaurant restaurant = restaurantService.findByKakaoPlaceId(kakaoPlaceId);
             return RsData.success(
-                    new RestaurantResponse.Recommend(restaurant),"식당 조회가 완료되었습니다.");
+                    new RestaurantResponse.Recommend(restaurant), "식당 조회가 완료되었습니다.");
         }
 
         List<RestaurantResponse.Recommend> result = restaurantService.findAll()
@@ -68,7 +69,7 @@ public class RestaurantController {
     public RsData<RestaurantResponse.Recommend> getRestaurantById(@PathVariable Long id) {
         Restaurant restaurant = restaurantService.findById(id);
         return RsData.success(new RestaurantResponse.Recommend(restaurant),
-                "식당 조회가 완료 되었습니다." );
+                "식당 조회가 완료 되었습니다.");
     }
 
 }

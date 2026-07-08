@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import CommentModal from "@/components/CommentModal";
 import { apiFetchJson } from "@/lib/api";
 
 interface Restaurant {
@@ -36,6 +37,7 @@ interface Feed {
   nickname: string;
   profileImage: string | null;
   likeCount: number;
+  isLikedByMe: boolean;
   commentCount: number;
   restaurantId: number | null;
   restaurantName: string | null;
@@ -54,6 +56,8 @@ export default function RestaurantDetailPage() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [activeCommentFeedId, setActiveCommentFeedId] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -93,6 +97,43 @@ export default function RestaurantDetailPage() {
 
     load();
   }, [rawId]);
+
+  const handleOpenComments = (feedId: number) => {
+    setActiveCommentFeedId(feedId);
+    setCommentModalOpen(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentModalOpen(false);
+    setActiveCommentFeedId(null);
+  };
+
+  const handleCommentCountChange = (feedId: number, count: number) => {
+    setFeeds((prev) =>
+      prev.map((post) => (post.feedId === feedId ? { ...post, commentCount: count } : post))
+    );
+  };
+
+  const handleLikeToggle = async (feedId: number, currentlyLiked: boolean) => {
+    const res = await apiFetchJson(`/api/v1/feeds/${feedId}/like`, {
+      method: currentlyLiked ? "DELETE" : "POST",
+    });
+    if (res.ok) {
+      setFeeds((prev) =>
+        prev.map((post) =>
+          post.feedId === feedId
+            ? {
+                ...post,
+                isLikedByMe: !currentlyLiked,
+                likeCount: currentlyLiked ? post.likeCount - 1 : post.likeCount + 1,
+              }
+            : post
+        )
+      );
+    } else {
+      alert(res.message || "좋아요 처리에 실패했습니다.");
+    }
+  };
 
   if (loading) {
     return (
@@ -173,7 +214,11 @@ export default function RestaurantDetailPage() {
                   <span className="font-bold text-ink">{feeds.length}</span>개
                 </p>
               </div>
-              <button className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface-soft text-muted hover:text-primary transition-colors">
+              <button
+                disabled
+                title="준비 중"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface-soft text-muted opacity-50 cursor-not-allowed"
+              >
                 <Heart className="h-5 w-5" />
               </button>
             </div>
@@ -239,11 +284,19 @@ export default function RestaurantDetailPage() {
                     {post.content}
                   </p>
                   <div className="mt-3 flex items-center gap-5">
-                    <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary">
-                      <Heart className="h-4 w-4" />
+                    <button
+                      onClick={() => handleLikeToggle(post.feedId, post.isLikedByMe)}
+                      className={`flex items-center gap-1.5 text-sm transition-colors ${
+                        post.isLikedByMe ? "text-red-500" : "text-muted hover:text-primary"
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${post.isLikedByMe ? "fill-current" : ""}`} />
                       <span>좋아요 {post.likeCount}</span>
                     </button>
-                    <button className="flex items-center gap-1.5 text-sm text-muted hover:text-primary">
+                    <button
+                      onClick={() => handleOpenComments(post.feedId)}
+                      className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors"
+                    >
                       <MessageCircle className="h-4 w-4" />
                       <span>댓글 {post.commentCount}</span>
                     </button>
@@ -254,6 +307,13 @@ export default function RestaurantDetailPage() {
           )}
         </div>
       </div>
+      {commentModalOpen && activeCommentFeedId !== null && (
+        <CommentModal
+          feedId={activeCommentFeedId}
+          onClose={handleCloseComments}
+          onCountChange={(count) => handleCommentCountChange(activeCommentFeedId, count)}
+        />
+      )}
     </AppShell>
   );
 }

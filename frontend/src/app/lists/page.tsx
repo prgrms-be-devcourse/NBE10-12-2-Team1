@@ -367,12 +367,16 @@ export default function ListsPage() {
     });
 
     if (itemsWithCoordinates.length === 0) {
-      setMapError("지도에 표시할 식당 위치 정보가 없습니다.");
+      window.setTimeout(() => {
+        setMapError("지도에 표시할 식당 위치 정보가 없습니다.");
+      }, 0);
 
       return;
     }
 
-    setMapError("");
+    window.setTimeout(() => {
+      setMapError("");
+    }, 0);
 
     let retryTimer: number | undefined;
 

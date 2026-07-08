@@ -209,6 +209,8 @@ export default function ListEditPage() {
 
   const listId = Number(params.id);
 
+  const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
+
   /* =======================================================
    * 리스트 기본 정보
    * ======================================================= */
@@ -245,7 +247,13 @@ export default function ListEditPage() {
 
   const [restaurantSearching, setRestaurantSearching] = useState(false);
 
-  const [restaurantSearchError, setRestaurantSearchError] = useState("");
+  const [restaurantSearchError, setRestaurantSearchError] = useState(() => {
+    if (!kakaoKey) {
+      return "카카오맵 JS 키가 설정되지 않았습니다.";
+    }
+
+    return "";
+  });
 
   /* =======================================================
    * Kakao 장소 ID → DB Restaurant ID
@@ -271,11 +279,23 @@ export default function ListEditPage() {
    * 화면 상태
    * ======================================================= */
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (!Number.isFinite(listId) || listId <= 0) {
+      return false;
+    }
+
+    return true;
+  });
 
   const [saving, setSaving] = useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    if (!Number.isFinite(listId) || listId <= 0) {
+      return "올바르지 않은 리스트 번호입니다.";
+    }
+
+    return "";
+  });
 
   /* =======================================================
    * 알림창
@@ -319,10 +339,6 @@ export default function ListEditPage() {
 
   useEffect(() => {
     if (!Number.isFinite(listId) || listId <= 0) {
-      setError("올바르지 않은 리스트 번호입니다.");
-
-      setLoading(false);
-
       return;
     }
 
@@ -392,8 +408,6 @@ export default function ListEditPage() {
       return;
     }
 
-    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
-
     const loadKakaoServices = () => {
       if (!window.kakao?.maps) {
         return;
@@ -435,8 +449,6 @@ export default function ListEditPage() {
     }
 
     if (!kakaoKey) {
-      setRestaurantSearchError("카카오맵 JS 키가 설정되지 않았습니다.");
-
       return;
     }
 
@@ -463,7 +475,7 @@ export default function ListEditPage() {
     };
 
     document.head.appendChild(script);
-  }, []);
+  }, [kakaoKey]);
 
   /* =========================================================
    * 검색 결과의 장소들을 DB Restaurant과 연결

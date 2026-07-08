@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Navigation, Search } from "lucide-react";
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -158,10 +158,12 @@ function getDisplayCategory(category: string): string {
   return parts.join(" · ");
 }
 
-export default function SearchPage() {
+function SearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
 
   const [activeCategory, setActiveCategory] = useState("전체");
 
@@ -257,7 +259,7 @@ export default function SearchPage() {
           kakaoMap.setLevel(5);
         },
 
-        (locationError) => {},
+        () => {},
 
         {
           enableHighAccuracy: true,
@@ -430,8 +432,8 @@ export default function SearchPage() {
    * - 전포 디저트
    * - 케이크
    */
-  const fetchKeywordSearch = () => {
-    const trimmedQuery = query.trim();
+  const fetchKeywordSearch = useCallback(async (searchQuery: string): Promise<void> => {
+    const trimmedQuery = searchQuery.trim();
 
     if (!trimmedQuery) {
       return;
@@ -462,8 +464,9 @@ export default function SearchPage() {
 
     const places = new services.Places();
 
-    places.keywordSearch(
-      trimmedQuery,
+    return new Promise((resolve) => {
+      places.keywordSearch(
+        trimmedQuery,
 
       (data: KakaoPlaceItem[], status: string) => {
         if (status === services.Status.OK) {
@@ -493,6 +496,7 @@ export default function SearchPage() {
         }
 
         setLoading(false);
+        resolve();
       },
 
       {
@@ -503,7 +507,21 @@ export default function SearchPage() {
         size: 15,
       },
     );
-  };
+  });
+}, []);
+
+/**
+ * URL q 파라미터로 진입 시
+ * 카카오맵 로드 후 자동 검색
+ */
+  useEffect(() => {
+    const run = async () => {
+      if (initialQuery && map) {
+        await fetchKeywordSearch(initialQuery);
+      }
+    };
+    run();
+  }, [initialQuery, map, fetchKeywordSearch]);
 
   /**
    * 2. 현재 위치 주변
@@ -769,7 +787,7 @@ export default function SearchPage() {
         fetchNearbyPlaces(lat, lng);
       },
 
-      (locationError) => {
+      () => {
         alert("현재 위치를 가져올 수 없습니다.");
       },
 
@@ -795,7 +813,7 @@ export default function SearchPage() {
     e.preventDefault();
 
     if (query.trim()) {
-      fetchKeywordSearch();
+      fetchKeywordSearch(query);
 
       return;
     }
@@ -1027,5 +1045,13 @@ export default function SearchPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function SearchPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <SearchPage />
+    </Suspense>
   );
 }
