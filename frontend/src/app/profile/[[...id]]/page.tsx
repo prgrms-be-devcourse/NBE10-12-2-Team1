@@ -320,9 +320,10 @@ export default function ProfilePage() {
               {activeTab === "내 리스트" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {myLists.map((list) => (
-                    <div
+                    <Link
                       key={list.id}
-                      className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm"
+                      href={`/lists?selected=${list.id}`}
+                      className="overflow-hidden rounded-2xl border border-hairline-soft bg-surface shadow-sm transition-colors hover:border-primary/30"
                     >
                       <div className="h-36 bg-surface-strong">
                         <img
@@ -344,7 +345,7 @@ export default function ProfilePage() {
                           <span>식당 {list.itemCount}개</span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

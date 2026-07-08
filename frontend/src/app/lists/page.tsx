@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Bookmark, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
@@ -98,8 +98,9 @@ type ConfirmAction =
  * 페이지
  * ========================================================= */
 
-export default function ListsPage() {
+function ListsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   /* ---------------------------------------------------------
    * 리스트 목록
@@ -121,7 +122,11 @@ export default function ListsPage() {
    * 선택한 리스트
    * --------------------------------------------------------- */
 
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const initialSelectedParam = searchParams.get("selected");
+
+  const [selectedId, setSelectedId] = useState<number | null>(
+    initialSelectedParam ? Number(initialSelectedParam) : null,
+  );
 
   const [selectedDetail, setSelectedDetail] = useState<
     ListDetail | SavedListDetail | null
@@ -1428,5 +1433,13 @@ export default function ListsPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function ListsPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ListsPage />
+    </Suspense>
   );
 }
