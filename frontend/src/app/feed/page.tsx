@@ -36,14 +36,20 @@ interface RecommendFoodie {
 function FeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") === "recommended" ? "recommended" : "following";
+  const activeTab =
+    searchParams.get("tab") === "recommended" ? "recommended" : "following";
 
   const [posts, setPosts] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>([]);
+  const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>(
+    [],
+  );
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [activeCommentFeedId, setActiveCommentFeedId] = useState<number | null>(null);
+  const [activeCommentFeedId, setActiveCommentFeedId] = useState<number | null>(
+    null,
+  );
 
   const handleOpenComments = (feedId: number) => {
     setActiveCommentFeedId(feedId);
@@ -57,17 +63,25 @@ function FeedContent() {
 
   const handleCommentCountChange = (feedId: number, count: number) => {
     setPosts((prev) =>
-      prev.map((post) => (post.feedId === feedId ? { ...post, commentCount: count } : post))
+      prev.map((post) =>
+        post.feedId === feedId ? { ...post, commentCount: count } : post,
+      ),
     );
   };
 
   useEffect(() => {
     const stored = getStoredUser();
-    if (stored?.userId) return;
 
-    apiFetchJson<{ id: number; nickname: string; profileImage: string | null; email: string }>(
-      "/api/v1/users/me"
-    ).then((res) => {
+    if (stored?.userId) {
+      setCurrentUserId(stored.userId);
+    }
+
+    apiFetchJson<{
+      id: number;
+      nickname: string;
+      profileImage: string | null;
+      email: string;
+    }>("/api/v1/users/me").then((res) => {
       if (res.ok && res.data) {
         setStoredUser({
           userId: res.data.id,
@@ -75,6 +89,9 @@ function FeedContent() {
           profileImage: res.data.profileImage,
           email: res.data.email,
         });
+
+        setCurrentUserId(res.data.id);
+
         window.dispatchEvent(new Event("login-state-change"));
       }
     });
@@ -85,7 +102,10 @@ function FeedContent() {
       setLoading(true);
       setError("");
 
-      const endpoint = activeTab === "following" ? "/api/v1/feeds/following" : "/api/v1/feeds/recommend";
+      const endpoint =
+        activeTab === "following"
+          ? "/api/v1/feeds/following"
+          : "/api/v1/feeds/recommend";
       const res = await apiFetchJson<FeedListPageResponse>(endpoint);
 
       if (res.ok && res.data) {
@@ -102,13 +122,20 @@ function FeedContent() {
   }, [activeTab]);
 
   useEffect(() => {
+    if (!currentUserId) return;
+
     const loadFoodies = async () => {
-      const res = await apiFetchJson<FeedListPageResponse>("/api/v1/feeds/recommend");
+      const res = await apiFetchJson<FeedListPageResponse>(
+        "/api/v1/feeds/recommend",
+      );
       if (!res.ok || !res.data?.feeds) return;
 
       const seen = new Set<number>();
       const unique: RecommendFoodie[] = [];
+
       for (const feed of res.data.feeds) {
+        if (feed.userId === currentUserId) continue;
+
         if (!seen.has(feed.userId)) {
           seen.add(feed.userId);
           unique.push({
@@ -117,26 +144,33 @@ function FeedContent() {
             profileImage: feed.profileImage,
           });
         }
+
         if (unique.length >= 3) break;
       }
+
       setRecommendFoodies(unique);
     };
 
     loadFoodies();
-  }, []);
+  }, [currentUserId]);
 
   const handleFollow = async (userId: number) => {
-    const res = await apiFetchJson(`/api/v1/follows/${userId}`, { method: "POST" });
-    if (!res.ok) {
+    const res = await apiFetchJson(`/api/v1/follows/${userId}`, {
+      method: "POST",
+    });
+
+    if (res.ok) {
+      setRecommendFoodies((prev) => prev.filter((f) => f.userId !== userId));
+      window.dispatchEvent(new Event("follow-state-change"));
+    } else {
       alert(res.message || "팔로우에 실패했습니다.");
     }
   };
 
   const handleLikeToggle = async (feedId: number, currentlyLiked: boolean) => {
-    const res = await apiFetchJson(
-      `/api/v1/feeds/${feedId}/like`,
-      { method: currentlyLiked ? "DELETE" : "POST" }
-    );
+    const res = await apiFetchJson(`/api/v1/feeds/${feedId}/like`, {
+      method: currentlyLiked ? "DELETE" : "POST",
+    });
     if (res.ok) {
       setPosts((prev) =>
         prev.map((post) =>
@@ -144,10 +178,12 @@ function FeedContent() {
             ? {
                 ...post,
                 isLikedByMe: !currentlyLiked,
-                likeCount: currentlyLiked ? post.likeCount - 1 : post.likeCount + 1,
+                likeCount: currentlyLiked
+                  ? post.likeCount - 1
+                  : post.likeCount + 1,
               }
-            : post
-        )
+            : post,
+        ),
       );
     } else {
       alert(res.message || "좋아요 처리에 실패했습니다.");
@@ -169,15 +205,23 @@ function FeedContent() {
                 <p className="text-sm text-muted">추천 푸디가 없습니다.</p>
               ) : (
                 recommendFoodies.map((f) => (
-                  <div key={f.userId} className="flex items-center justify-between group">
-                    <Link href={`/profile/${f.userId}`} className="flex items-center gap-3">
+                  <div
+                    key={f.userId}
+                    className="flex items-center justify-between group"
+                  >
+                    <Link
+                      href={`/profile/${f.userId}`}
+                      className="flex items-center gap-3"
+                    >
                       <img
                         src={f.profileImage || "/default-profile.png"}
                         alt=""
                         className="h-10 w-10 rounded-full object-cover"
                       />
                       <div>
-                        <p className="text-base font-bold text-ink group-hover:text-primary transition-colors">{f.nickname}</p>
+                        <p className="text-base font-bold text-ink group-hover:text-primary transition-colors">
+                          {f.nickname}
+                        </p>
                       </div>
                     </Link>
                     <button
@@ -242,10 +286,16 @@ function FeedContent() {
         ) : (
           <div className="space-y-4">
             {posts.map((post) => (
-              <article key={post.feedId} className="rounded-2xl bg-surface p-5 border border-hairline-soft shadow-sm">
+              <article
+                key={post.feedId}
+                className="rounded-2xl bg-surface p-5 border border-hairline-soft shadow-sm"
+              >
                 {/* Author */}
                 <div className="flex items-center justify-between">
-                  <Link href={`/profile/${post.userId}`} className="flex items-center gap-3 group">
+                  <Link
+                    href={`/profile/${post.userId}`}
+                    className="flex items-center gap-3 group"
+                  >
                     <img
                       src={post.profileImage || "/default-profile.png"}
                       alt=""
@@ -253,12 +303,16 @@ function FeedContent() {
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-ink group-hover:text-primary transition-colors">{post.nickname}</p>
+                        <p className="text-sm font-bold text-ink group-hover:text-primary transition-colors">
+                          {post.nickname}
+                        </p>
                         <span className="text-xs text-primary font-semibold">
                           {activeTab === "following" ? "팔로잉" : "추천"}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-soft">{new Date(post.createdAt).toLocaleString()}</p>
+                      <p className="text-xs text-muted-soft">
+                        {new Date(post.createdAt).toLocaleString()}
+                      </p>
                     </div>
                   </Link>
                   <button className="rounded-full p-1.5 text-muted hover:bg-surface-soft">
@@ -267,7 +321,9 @@ function FeedContent() {
                 </div>
 
                 {/* Content */}
-                <p className="mt-4 text-sm leading-relaxed text-body">{post.content}</p>
+                <p className="mt-4 text-sm leading-relaxed text-body">
+                  {post.content}
+                </p>
 
                 {/* Restaurant */}
                 {post.restaurantId && post.restaurantName && (
@@ -284,12 +340,18 @@ function FeedContent() {
                 {/* Actions */}
                 <div className="mt-4 flex items-center gap-5 border-t border-hairline-soft pt-3">
                   <button
-                    onClick={() => handleLikeToggle(post.feedId, post.isLikedByMe)}
+                    onClick={() =>
+                      handleLikeToggle(post.feedId, post.isLikedByMe)
+                    }
                     className={`flex items-center gap-1.5 text-sm transition-colors ${
-                      post.isLikedByMe ? "text-red-500" : "text-muted hover:text-primary"
+                      post.isLikedByMe
+                        ? "text-red-500"
+                        : "text-muted hover:text-primary"
                     }`}
                   >
-                    <Heart className={`h-4 w-4 ${post.isLikedByMe ? "fill-current" : ""}`} />
+                    <Heart
+                      className={`h-4 w-4 ${post.isLikedByMe ? "fill-current" : ""}`}
+                    />
                     <span>좋아요 {post.likeCount}</span>
                   </button>
                   <button
@@ -309,7 +371,9 @@ function FeedContent() {
         <CommentModal
           feedId={activeCommentFeedId}
           onClose={handleCloseComments}
-          onCountChange={(count) => handleCommentCountChange(activeCommentFeedId, count)}
+          onCountChange={(count) =>
+            handleCommentCountChange(activeCommentFeedId, count)
+          }
         />
       )}
     </AppShell>

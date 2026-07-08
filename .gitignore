@@ -43,7 +43,7 @@ Backend/build/
 
 ### yaml ###
 /Backend/src/main/resources/application.yaml
-
+/Backend/src/main/resources/application-test.yaml
 ### 기획아카이빙/기능정의서/erd img ###
 /기획아카이빙img/
 /기능정의서img/

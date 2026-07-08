@@ -5,13 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
-  List,
-  LogOut,
   Map,
-  Search,
-  Settings,
+  List,
   Sparkles,
   User,
+  Search,
+  LogOut,
+  Settings,
 } from "lucide-react";
 
 import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
@@ -100,7 +100,6 @@ export function SidebarProfile() {
   const [user, setUser] = useState<CurrentUser>(
     () => getStoredUser() ?? fallbackUser,
   );
-
   const [mounted, setMounted] = useState(false);
 
   const [followingCount, setFollowingCount] = useState<number | null>(null);
@@ -155,7 +154,6 @@ export function SidebarProfile() {
           followerCount: number;
           followingCount: number;
         }>(`/api/v1/follows/users/${user.userId}/count`),
-
         apiFetchJson<FeedListPageResponse>(
           `/api/v1/feeds?userId=${user.userId}`,
         ),
@@ -173,6 +171,19 @@ export function SidebarProfile() {
     };
 
     loadCounts();
+
+    const handleFollowStateChange = () => {
+      loadCounts();
+    };
+
+    window.addEventListener("follow-state-change", handleFollowStateChange);
+
+    return () => {
+      window.removeEventListener(
+        "follow-state-change",
+        handleFollowStateChange,
+      );
+    };
   }, [user.userId]);
 
   /* ---------------------------------------------------------
@@ -222,7 +233,8 @@ export function SidebarProfile() {
   return (
     <Link
       href="/profile"
-      className="block rounded-2xl border border-hairline-soft bg-surface p-5 transition-colors hover:border-primary/30"
+      className="block rounded-2xl bg-surface p-5 border border-hairline-soft hover:border-primary/30 transition-colors"
+
     >
       <div className="flex items-center gap-4">
         <img
@@ -264,7 +276,6 @@ export function SidebarProfile() {
     </Link>
   );
 }
-
 /* =========================================================
  * 사이드바 카드
  * ========================================================= */
@@ -495,7 +506,6 @@ export default function AppShell({
             {mainNav.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
-
               return (
                 <Link
                   key={item.href}
