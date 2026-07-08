@@ -487,8 +487,8 @@ class RestaurantListServiceTest {
                         MoodTag.DATE
                 )
         )
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("리스트를 찾을 수 없습니다.");
+                .isInstanceOf(ListNotFoundException.class)
+                .hasMessage("리스트를 찾을 수 없습니다: 1");
     }
 
     @Test
