@@ -3,6 +3,7 @@ package com.whattoeat.global.jwt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.jsonwebtoken.Claims;
@@ -75,17 +76,18 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("위변조된 토큰이면 401 응답 반환")
+    @DisplayName("위변조된 토큰이면 인증 정보 없이 다음 필터로 진행 (permitAll 엔드포인트를 막지 않기 위함)")
     void v2() throws Exception {
         given(jwtUtil.parseToken(INVALID_TOKEN)).willThrow(new JwtException("invalid token"));
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + INVALID_TOKEN);
         MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
 
-        jwtAuthenticationFilter.doFilter(request, response, mock(FilterChain.class));
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
-        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
@@ -99,8 +101,8 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("블랙리스트에 있는 토큰으로 요청 시 401 반환")
-    void blacklistedToken_returns401() throws Exception {
+    @DisplayName("블랙리스트에 있는 토큰으로 요청 시 인증 정보 없이 다음 필터로 진행")
+    void blacklistedToken_skipsAuthentication() throws Exception {
         Claims claims = mock(Claims.class);
         given(jwtUtil.parseToken(VALID_TOKEN)).willReturn(claims);
         given(claims.get("tokenType", String.class)).willReturn("access");
@@ -110,10 +112,11 @@ class JwtAuthenticationFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + VALID_TOKEN);
         MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
 
-        jwtAuthenticationFilter.doFilter(request, response, mock(FilterChain.class));
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
-        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
