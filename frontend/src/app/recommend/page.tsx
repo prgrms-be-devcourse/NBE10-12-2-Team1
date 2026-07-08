@@ -646,9 +646,18 @@ export default function RecommendPage() {
       {resultModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl bg-surface p-8 shadow-2xl animate-in fade-in-50 zoom-in-95">
-            <div className="text-center mb-6">
-              <p className="text-sm font-bold text-primary mb-1">오늘의 추천</p>
-              <h3 className="text-xl font-bold text-ink">이런 곳은 어때요?</h3>
+            <div className="mb-6 flex items-center justify-between border-b border-hairline-soft pb-3">
+              <div className="text-center">
+                <p className="text-sm font-bold text-primary mb-1">오늘의 추천</p>
+                <h3 className="text-xl font-bold text-ink">이런 곳은 어때요?</h3>
+              </div>
+              <button
+                onClick={() => setResultModalOpen(false)}
+                className="text-muted hover:text-ink"
+                aria-label="닫기"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {recommendError ? (
@@ -761,6 +770,14 @@ export default function RecommendPage() {
                     리스트 저장
                   </button>
                 </div>
+
+                <button
+                  onClick={() => setResultModalOpen(false)}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface-soft py-3 text-sm font-bold text-muted hover:bg-surface transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  추천 페이지로 돌아가기
+                </button>
               </>
             )}
           </div>
