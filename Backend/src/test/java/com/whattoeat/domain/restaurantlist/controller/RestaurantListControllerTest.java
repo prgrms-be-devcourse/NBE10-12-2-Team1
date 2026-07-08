@@ -3,11 +3,11 @@ package com.whattoeat.domain.restaurantlist.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -440,5 +440,86 @@ class RestaurantListControllerTest {
 
         verify(restaurantListService)
                 .copyList(userId, originalListId);
+    }
+
+    @Test
+    void 식당_리스트_기본_정보_수정_성공() throws Exception {
+        // given
+        Long listId = 1L;
+        Long userId = 1L;
+
+        RestaurantList restaurantList = mock(RestaurantList.class);
+        User user = mock(User.class);
+
+        given(restaurantList.getId())
+                .willReturn(listId);
+
+        given(restaurantList.getUser())
+                .willReturn(user);
+
+        given(user.getId())
+                .willReturn(userId);
+
+        given(user.getNickname())
+                .willReturn("푸디");
+
+        given(restaurantList.getTitle())
+                .willReturn("수정된 리스트 제목");
+
+        given(restaurantList.getDescription())
+                .willReturn("수정된 리스트 설명");
+
+        given(restaurantList.getMoodTag())
+                .willReturn(MoodTag.DATE);
+
+        given(restaurantList.getItems())
+                .willReturn(List.of());
+
+        given(restaurantListService.update(
+                listId,
+                userId,
+                "수정된 리스트 제목",
+                "수정된 리스트 설명",
+                MoodTag.DATE
+        )).willReturn(restaurantList);
+
+        String requestBody = """
+            {
+                "title": "수정된 리스트 제목",
+                "description": "수정된 리스트 설명",
+                "moodTag": "DATE"
+            }
+            """;
+
+        // when & then
+        mockMvc.perform(
+                        put("/api/v1/lists/{id}", listId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message")
+                        .value("리스트 정보가 변경되었습니다."))
+                .andExpect(jsonPath("$.data.listId").value(1))
+                .andExpect(jsonPath("$.data.userId").value(1))
+                .andExpect(jsonPath("$.data.nickname").value("푸디"))
+                .andExpect(jsonPath("$.data.title")
+                        .value("수정된 리스트 제목"))
+                .andExpect(jsonPath("$.data.description")
+                        .value("수정된 리스트 설명"))
+                .andExpect(jsonPath("$.data.moodTag").value("DATE"))
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items").isEmpty());
+
+        then(restaurantListService)
+                .should()
+                .update(
+                        listId,
+                        userId,
+                        "수정된 리스트 제목",
+                        "수정된 리스트 설명",
+                        MoodTag.DATE
+                );
     }
 }

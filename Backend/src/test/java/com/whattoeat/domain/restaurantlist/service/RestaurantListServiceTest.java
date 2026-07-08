@@ -35,6 +35,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.mockito.ArgumentMatchers.anyString;
+
+import static org.mockito.BDDMockito.then;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class RestaurantListServiceTest {
@@ -417,5 +423,113 @@ class RestaurantListServiceTest {
         verify(restaurantListRepository, never()).findById(originalListId);
         verify(restaurantListRepository, never()).save(any(RestaurantList.class));
         verify(restaurantListItemRepository, never()).save(any(RestaurantListItem.class));
+    }
+
+    @Test
+    void 맛집리스트_기본정보_수정_성공() {
+        // given
+        Long listId = 1L;
+        Long userId = 1L;
+
+        String title = "수정된 리스트 제목";
+        String description = "수정된 리스트 설명";
+        MoodTag moodTag = MoodTag.DATE;
+
+        RestaurantList restaurantList = mock(RestaurantList.class);
+        User user = mock(User.class);
+
+        given(restaurantListRepository.findById(listId))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantList.getUser())
+                .willReturn(user);
+
+        given(user.getId())
+                .willReturn(userId);
+
+        // when
+        RestaurantList result = restaurantListService.update(
+                listId,
+                userId,
+                title,
+                description,
+                moodTag
+        );
+
+        // then
+        assertThat(result).isSameAs(restaurantList);
+
+        then(restaurantList)
+                .should()
+                .update(
+                        title,
+                        description,
+                        moodTag
+                );
+    }
+
+    @Test
+    void 맛집리스트_기본정보_수정_실패_리스트없음() {
+        // given
+        Long listId = 1L;
+        Long userId = 1L;
+
+        given(restaurantListRepository.findById(listId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() ->
+                restaurantListService.update(
+                        listId,
+                        userId,
+                        "수정된 제목",
+                        "수정된 설명",
+                        MoodTag.DATE
+                )
+        )
+                .isInstanceOf(ListNotFoundException.class)
+                .hasMessage("리스트를 찾을 수 없습니다: 1");
+    }
+
+    @Test
+    void 맛집리스트_기본정보_수정_실패_본인리스트아님() {
+        // given
+        Long listId = 1L;
+
+        Long requestUserId = 1L;
+        Long ownerUserId = 2L;
+
+        RestaurantList restaurantList = mock(RestaurantList.class);
+        User owner = mock(User.class);
+
+        given(restaurantListRepository.findById(listId))
+                .willReturn(Optional.of(restaurantList));
+
+        given(restaurantList.getUser())
+                .willReturn(owner);
+
+        given(owner.getId())
+                .willReturn(ownerUserId);
+
+        // when & then
+        assertThatThrownBy(() ->
+                restaurantListService.update(
+                        listId,
+                        requestUserId,
+                        "수정된 제목",
+                        "수정된 설명",
+                        MoodTag.DATE
+                )
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("본인의 리스트만 수정할 수 있습니다.");
+
+        then(restaurantList)
+                .should(never())
+                .update(
+                        anyString(),
+                        anyString(),
+                        any(MoodTag.class)
+                );
     }
 }

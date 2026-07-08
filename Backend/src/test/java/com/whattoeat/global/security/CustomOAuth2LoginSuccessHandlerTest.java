@@ -2,8 +2,6 @@ package com.whattoeat.global.security;
 
 import com.whattoeat.domain.auth.service.AuthService;
 import com.whattoeat.domain.user.entity.User;
-import com.whattoeat.global.jwt.JwtUtil;
-import com.whattoeat.global.rq.Rq;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,18 +18,11 @@ import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 public class CustomOAuth2LoginSuccessHandlerTest {
     @Mock
-    private JwtUtil jwtUtil;
-
-    @Mock
     private AuthService authService;
-
-    @Mock
-    private Rq rq;
 
     @Mock
     private User user;
@@ -56,20 +47,15 @@ public class CustomOAuth2LoginSuccessHandlerTest {
 
         KakaoOAuth2User principal = new KakaoOAuth2User(user);
         given(authentication.getPrincipal()).willReturn(principal);
-        given(jwtUtil.generateAccessToken(user)).willReturn("access-token");
-        given(jwtUtil.generateRefreshToken(user)).willReturn("refresh-token");
-
+        given(authService.createOAuthCode(user.getId())).willReturn("one-time-code");
     }
 
     @Test
-    @DisplayName("로그인 성공")
+    @DisplayName("로그인 성공 시 1회용 코드를 발급하고 프론트 콜백으로 리다이렉트한다")
     void success() throws Exception {
         handler.onAuthenticationSuccess(req, res, authentication);
 
-        then(authService).should().saveRefreshToken(user.getId(), "refresh-token");
-        then(rq).should().setCookie("accessToken", "access-token", 60 * 60);
-        then(rq).should().setCookie("refreshToken", "refresh-token", 60 * 60 * 24 * 7);
-        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/feed");
+        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/oauth/callback?code=one-time-code");
     }
 
     @Test
@@ -80,6 +66,6 @@ public class CustomOAuth2LoginSuccessHandlerTest {
         );
         req.setParameter("state", state);
         handler.onAuthenticationSuccess(req, res, authentication);
-        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage/feed");
+        assertThat(res.getRedirectedUrl()).isEqualTo("http://localhost:3000/mypage/oauth/callback?code=one-time-code");
     }
 }

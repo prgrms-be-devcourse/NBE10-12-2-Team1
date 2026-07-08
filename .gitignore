@@ -77,3 +77,4 @@ Backend/build/
 /.understand-anything/
 /skills-lock.json
 /Backend/application.yaml
+.DS_Store

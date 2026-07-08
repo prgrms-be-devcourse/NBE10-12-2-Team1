@@ -72,11 +72,17 @@ public class RestaurantListResponse {
 
     // 단건 상세 안의 식당 아이템
     public record RestaurantListItemDetail(
-            Long id, // itemId
+            Long id,
             Long listId,
             Long restaurantId,
             String restaurantName,
             Category category,
+
+            String address,
+            String roadAddress,
+            Double lat,
+            Double lng,
+
             Integer orderIndex,
             String memo,
             LocalDateTime createdAt
@@ -88,6 +94,12 @@ public class RestaurantListResponse {
                     item.getRestaurant().getId(),
                     item.getRestaurant().getName(),
                     item.getRestaurant().getCategory(),
+
+                    item.getRestaurant().getAddress(),
+                    item.getRestaurant().getRoadAddress(),
+                    item.getRestaurant().getLat(),
+                    item.getRestaurant().getLng(),
+
                     item.getOrderIndex(),
                     item.getMemo(),
                     item.getCreatedAt()
