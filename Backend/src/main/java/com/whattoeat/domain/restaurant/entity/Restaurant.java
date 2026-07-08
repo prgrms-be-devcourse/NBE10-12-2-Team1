@@ -12,12 +12,13 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "restaurant",
-    indexes = {
-        @Index(name = "idx_restaurant_category", columnList = "category"),
-        @Index(name = "idx_restaurant_region1", columnList = "region1"),
-        @Index(name = "idx_restaurant_region2", columnList = "region2"),
-        @Index(name = "idx_restaurant_region3", columnList = "region3")
-    }
+        indexes = {
+                @Index(name = "idx_restaurant_category", columnList = "category"),
+                @Index(name = "idx_restaurant_region1", columnList = "region1"),
+                @Index(name = "idx_restaurant_region2", columnList = "region2"),
+                @Index(name = "idx_restaurant_region3", columnList = "region3"),
+                @Index(name = "idx_restaurant_region4", columnList = "region4")
+        }
 )
 @Getter
 @NoArgsConstructor
@@ -47,6 +48,9 @@ public class Restaurant extends BaseEntity {
     @Column(name = "region3", length = 50)
     private String region3;
 
+    @Column(name = "region4", length = 50)
+    private String region4;
+
     @Column(name = "phone", length = 50)
     private String phone;
 
@@ -65,6 +69,7 @@ public class Restaurant extends BaseEntity {
             String region1,
             String region2,
             String region3,
+            String region4,
             String phone,
             double lat,
             double lng
@@ -77,6 +82,7 @@ public class Restaurant extends BaseEntity {
         this.region1 = region1;
         this.region2 = region2;
         this.region3 = region3;
+        this.region4 = region4;
         this.phone = phone;
         this.lat = lat;
         this.lng = lng;
