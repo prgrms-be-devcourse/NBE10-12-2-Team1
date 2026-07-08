@@ -184,4 +184,29 @@ public class RestaurantListService {
         return restaurantListRepository.findByIdWithItems(copyList.getId())
                 .orElseThrow(() -> new ListNotFoundException(copyList.getId()));
     }
+
+    public RestaurantList update(
+            Long listId,
+            Long userId,
+            String title,
+            String description,
+            MoodTag moodTag
+    ) {
+        RestaurantList restaurantList = restaurantListRepository.findById(listId)
+                .orElseThrow(() ->
+                        new ListNotFoundException(listId)
+                );
+
+        if (!restaurantList.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("본인의 리스트만 수정할 수 있습니다.");
+        }
+
+        restaurantList.update(
+                title,
+                description,
+                moodTag
+        );
+
+        return restaurantList;
+    }
 }

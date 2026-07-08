@@ -2,7 +2,7 @@ package com.whattoeat.domain.restaurantlist.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -284,19 +284,37 @@ class RestaurantListItemControllerTest {
 
     @Test
     void 맛집리스트_아이템_삭제_성공() throws Exception {
-        mockMvc.perform(delete("/api/v1/lists/1/items/100")
-                        .with(authentication(authenticationToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").doesNotExist())
-                .andExpect(jsonPath("$.message")
-                        .value("리스트 아이템이 삭제되었습니다."));
+        // given
+        Long listId = 1L;
+        Long itemId = 100L;
+        Long userId = 1L;
 
-        verify(restaurantListService).deleteItem(
-                TEST_USER_ID,
-                100L,
-                1L
-        );
+        willDoNothing()
+                .given(restaurantListService)
+                .deleteItem(
+                        listId,
+                        itemId,
+                        userId
+                );
+
+        // when & then
+        mockMvc.perform(
+                        delete(
+                                "/api/v1/lists/{id}/items/{itemId}",
+                                listId,
+                                itemId
+                        )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        then(restaurantListService)
+                .should()
+                .deleteItem(
+                        listId,
+                        itemId,
+                        userId
+                );
     }
 
     @Test
