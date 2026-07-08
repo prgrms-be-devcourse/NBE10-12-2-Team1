@@ -132,7 +132,7 @@ public class FeedService {
 
         List<Feed> feeds = new ArrayList<>(feedRepository.findByUser_IdNotIn(excludedUserIds));
 
-        Collections.shuffle(feeds);
+        feeds.sort(Comparator.comparing(Feed::getId).reversed());
 
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), feeds.size());
