@@ -75,6 +75,26 @@ interface SavedListDetail {
 }
 
 /* =========================================================
+ * Polyline 타입
+ *
+ * kakao.maps.d.ts에 아직 Polyline 선언이 없으므로
+ * 이 페이지에서 사용할 타입만 선언
+ * ========================================================= */
+
+interface KakaoPolylineOptions {
+  map: unknown;
+  path: unknown[];
+  strokeWeight?: number;
+  strokeColor?: string;
+  strokeOpacity?: number;
+  strokeStyle?: string;
+}
+
+interface KakaoMapsWithPolyline {
+  Polyline: new (options: KakaoPolylineOptions) => unknown;
+}
+
+/* =========================================================
  * 탭
  * ========================================================= */
 
@@ -414,6 +434,31 @@ export default function ListsPage() {
 
         const bounds = new maps.LatLngBounds();
 
+        /* =====================================================
+         * 리스트 순서대로 선 연결
+         * ===================================================== */
+
+        if (itemsWithCoordinates.length > 1) {
+          const linePath = itemsWithCoordinates.map(
+            (item) => new maps.LatLng(Number(item.lat), Number(item.lng)),
+          );
+
+          const mapsWithPolyline = maps as typeof maps & KakaoMapsWithPolyline;
+
+          new mapsWithPolyline.Polyline({
+            map,
+            path: linePath,
+            strokeWeight: 4,
+            strokeColor: "#ff6b00",
+            strokeOpacity: 0.7,
+            strokeStyle: "solid",
+          });
+        }
+
+        /* =====================================================
+         * 번호 마커 표시
+         * ===================================================== */
+
         itemsWithCoordinates.forEach((item) => {
           const itemIndex = sortedItems.findIndex(
             (sortedItem) => sortedItem.id === item.id,
@@ -450,7 +495,8 @@ export default function ListsPage() {
             map,
             position,
             content,
-            yAnchor: 1.2,
+            xAnchor: 0.5,
+            yAnchor: 0.5,
           });
         });
 
@@ -672,8 +718,6 @@ export default function ListsPage() {
 
   /* =========================================================
    * 저장 취소 확인창 열기
-   *
-   * 저장한 리스트 탭 / 다른 사람 리스트 탭 모두 사용
    * ========================================================= */
 
   const handleUnsave = () => {
@@ -688,12 +732,6 @@ export default function ListsPage() {
 
   /* =========================================================
    * 실제 저장 취소
-   *
-   * 저장한 리스트 탭:
-   * 저장 취소 후 목록에서 사라지므로 상세 화면 비움
-   *
-   * 다른 사람 리스트 탭:
-   * 공개 리스트 자체는 남아 있으므로 상세 화면 유지
    * ========================================================= */
 
   const executeUnsave = async () => {
@@ -863,7 +901,6 @@ export default function ListsPage() {
             {activeTab === "other" && (
               <>
                 <span>by {list.nickname}</span>
-
                 <span>·</span>
               </>
             )}
@@ -916,9 +953,7 @@ export default function ListsPage() {
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm text-muted-soft">
             <span>by {list.nickname}</span>
-
             <span>·</span>
-
             <span>식당 {list.items.length}개</span>
           </div>
         </div>
@@ -937,8 +972,6 @@ export default function ListsPage() {
         leftSidebar={
           <div className="sticky top-28 space-y-5">
             <SidebarProfile />
-
-            {/* 인기 맛집 리스트 */}
 
             <SidebarCard title="인기 맛집 리스트">
               <div className="space-y-4">
@@ -972,8 +1005,6 @@ export default function ListsPage() {
                 )}
               </div>
             </SidebarCard>
-
-            {/* 최근 생성된 리스트 */}
 
             <SidebarCard title="최근 생성된 리스트">
               <div className="space-y-4">
@@ -1011,8 +1042,6 @@ export default function ListsPage() {
         }
       >
         <div className="w-full min-w-0 space-y-5">
-          {/* 페이지 상단 */}
-
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-ink">맛집 리스트</h2>
 
@@ -1026,23 +1055,16 @@ export default function ListsPage() {
             </button>
           </div>
 
-          {/* 로딩 / 에러 */}
-
           {loading ? (
             <div className="space-y-4">
               <div className="h-24 animate-pulse rounded-2xl border border-hairline-soft bg-surface" />
-
               <div className="h-24 animate-pulse rounded-2xl border border-hairline-soft bg-surface" />
             </div>
           ) : error ? (
             <p className="text-center text-sm text-red-500">{error}</p>
           ) : (
             <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-              {/* 리스트 목록 */}
-
               <div className="min-w-0 space-y-3">
-                {/* 탭 */}
-
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -1081,8 +1103,6 @@ export default function ListsPage() {
                   </button>
                 </div>
 
-                {/* 내 리스트 */}
-
                 {activeTab === "my" &&
                   (myLists.length === 0 ? (
                     <p className="py-10 text-center text-sm text-muted">
@@ -1092,8 +1112,6 @@ export default function ListsPage() {
                     myLists.map(renderSummaryCard)
                   ))}
 
-                {/* 저장한 리스트 */}
-
                 {activeTab === "saved" &&
                   (savedLists.length === 0 ? (
                     <p className="py-10 text-center text-sm text-muted">
@@ -1102,8 +1120,6 @@ export default function ListsPage() {
                   ) : (
                     savedLists.map(renderSavedCard)
                   ))}
-
-                {/* 다른 사람 리스트 */}
 
                 {activeTab === "other" &&
                   (otherLists.length === 0 ? (
@@ -1115,13 +1131,9 @@ export default function ListsPage() {
                   ))}
               </div>
 
-              {/* 오른쪽 상세 */}
-
               <div className="min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface">
                 {selectedDetail ? (
                   <>
-                    {/* 상세 상단 */}
-
                     <div className="flex flex-col gap-4 border-b border-hairline-soft p-6 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1145,14 +1157,10 @@ export default function ListsPage() {
                         )}
                       </div>
 
-                      {/* 식당 개수 + 버튼 */}
-
                       <div className="flex shrink-0 flex-wrap items-center gap-3">
                         <span className="text-sm text-muted">
                           식당 {selectedItems.length}개
                         </span>
-
-                        {/* 내 리스트 */}
 
                         {activeTab === "my" && (
                           <button
@@ -1168,8 +1176,6 @@ export default function ListsPage() {
                             수정
                           </button>
                         )}
-
-                        {/* 저장한 리스트 */}
 
                         {activeTab === "saved" && (
                           <>
@@ -1194,8 +1200,6 @@ export default function ListsPage() {
                             </button>
                           </>
                         )}
-
-                        {/* 다른 사람 리스트 */}
 
                         {activeTab === "other" && (
                           <>
@@ -1236,18 +1240,12 @@ export default function ListsPage() {
                       </div>
                     </div>
 
-                    {/* 식당 없음 */}
-
                     {selectedItems.length === 0 ? (
                       <p className="py-24 text-center text-sm text-muted">
                         등록된 식당이 없습니다.
                       </p>
                     ) : (
-                      /* 식당 목록 + 지도 */
-
                       <div className="grid min-w-0 lg:grid-cols-[minmax(360px,2fr)_minmax(0,3fr)]">
-                        {/* 리스트 코스 */}
-
                         <div className="min-w-0 border-b border-hairline-soft p-6 lg:border-r lg:border-b-0">
                           <h4 className="mb-5 text-base font-bold text-ink">
                             리스트 코스
@@ -1259,17 +1257,11 @@ export default function ListsPage() {
                                 key={item.id}
                                 className="flex min-w-0 gap-4 rounded-2xl bg-surface-soft p-4"
                               >
-                                {/* 번호 */}
-
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                                   {index + 1}
                                 </div>
 
-                                {/* 식당 정보 */}
-
                                 <div className="min-w-0 flex-1">
-                                  {/* 식당명 + 카테고리 + 삭제 */}
-
                                   <div className="flex min-w-0 items-center gap-2">
                                     <p className="min-w-0 truncate text-lg font-bold text-ink">
                                       {item.restaurantName}
@@ -1294,8 +1286,6 @@ export default function ListsPage() {
                                     )}
                                   </div>
 
-                                  {/* 주소 */}
-
                                   {(item.roadAddress || item.address) && (
                                     <div className="mt-2 flex min-w-0 items-center gap-1.5 text-sm text-muted">
                                       <MapPin className="h-4 w-4 shrink-0" />
@@ -1311,8 +1301,6 @@ export default function ListsPage() {
                                     </div>
                                   )}
 
-                                  {/* 한줄평 */}
-
                                   {item.memo && (
                                     <p className="mt-2 break-words text-sm leading-6 text-body">
                                       {item.memo}
@@ -1323,8 +1311,6 @@ export default function ListsPage() {
                             ))}
                           </div>
                         </div>
-
-                        {/* 지도 */}
 
                         <div className="min-w-0 p-6">
                           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
@@ -1366,10 +1352,6 @@ export default function ListsPage() {
         </div>
       </AppShell>
 
-      {/* =====================================================
-       * 일반 알림창
-       * ===================================================== */}
-
       {alertOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/35 px-4">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -1389,10 +1371,6 @@ export default function ListsPage() {
           </div>
         </div>
       )}
-
-      {/* =====================================================
-       * 삭제 / 저장 취소 확인창
-       * ===================================================== */}
 
       {confirmAction !== null && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/35 px-4">
