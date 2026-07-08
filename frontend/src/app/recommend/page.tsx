@@ -81,6 +81,21 @@ interface RecommendRestaurant {
   createdAt: string;
 }
 
+interface KakaoRestaurant {
+  kakaoPlaceId: string;
+  name: string;
+  category: string;
+  address: string;
+  roadAddress: string;
+  region1: string;
+  region2: string;
+  region3: string;
+  region4: string;
+  phone: string;
+  lat: number;
+  lng: number;
+}
+
 function categoryLabel(enumValue: string): string {
   const found = Object.entries(categoryToEnum).find(([, v]) => v === enumValue);
   return found ? found[0] : enumValue;
@@ -108,6 +123,7 @@ export default function RecommendPage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<KakaoMap | null>(null);
   const markerRef = useRef<KakaoMarker | null>(null);
+  const placesRef = useRef<KakaoPlaces | null>(null);
 
   const locationLabel =
     selectedRegion1 +
@@ -191,18 +207,65 @@ export default function RecommendPage() {
   }, []);
 
   useEffect(() => {
+    let retryTimer: number | undefined;
+    let cancelled = false;
+
+    const initializeKakao = () => {
+      if (cancelled) return;
+
+      const maps = window.kakao?.maps;
+      if (!maps) {
+        retryTimer = window.setTimeout(initializeKakao, 100);
+        return;
+      }
+
+      const createPlaces = () => {
+        if (cancelled) return;
+        if (!maps.services) {
+          setRecommendError("카카오맵 services 라이브러리를 불러오지 못했습니다.");
+          return;
+        }
+        placesRef.current = new maps.services.Places();
+      };
+
+      if (typeof maps.load === "function") {
+        maps.load(createPlaces);
+      } else {
+        createPlaces();
+      }
+    };
+
+    initializeKakao();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!resultModalOpen || !current || !mapRef.current || !window.kakao?.maps) return;
 
-    const center = new window.kakao.maps.LatLng(current.lat, current.lng);
-    const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
-      center,
-      level: 3,
-    }) as KakaoMap;
-    setMap(kakaoMap);
+    const initMap = () => {
+      if (!mapRef.current || !window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) return;
 
-    markerRef.current?.setMap(null);
-    const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap }) as KakaoMarker;
-    markerRef.current = marker;
+      const center = new window.kakao.maps.LatLng(current.lat, current.lng);
+      const kakaoMap = new window.kakao.maps.Map(mapRef.current, {
+        center,
+        level: 3,
+      }) as KakaoMap;
+      setMap(kakaoMap);
+
+      markerRef.current?.setMap(null);
+      const marker = new window.kakao.maps.Marker({ position: center, map: kakaoMap }) as KakaoMarker;
+      markerRef.current = marker;
+    };
+
+    if (typeof window.kakao.maps.load === "function") {
+      window.kakao.maps.load(initMap);
+    } else {
+      initMap();
+    }
 
     return () => {
       markerRef.current?.setMap(null);
@@ -210,25 +273,149 @@ export default function RecommendPage() {
     };
   }, [resultModalOpen, current]);
 
+  const buildSearchKeyword = (): string => {
+    const parts = [selectedRegion1];
+    if (selectedRegion2 && selectedRegion2 !== "전체") parts.push(selectedRegion2);
+    if (selectedRegion3 && selectedRegion3 !== "전체") parts.push(selectedRegion3);
+    if (selectedRegion4 && selectedRegion4 !== "전체") parts.push(selectedRegion4);
+    if (selectedCategory && selectedCategory !== "기타") parts.push(selectedCategory);
+    return parts.join(" ");
+  };
+
+  const searchKakaoRestaurants = (
+    keyword: string,
+    options?: { location?: { lat: number; lng: number } },
+  ): Promise<KakaoRestaurant[]> => {
+    return new Promise((resolve, reject) => {
+      const maps = window.kakao?.maps;
+      if (!maps || !placesRef.current || !maps.services) {
+        reject(new Error("카카오맵 검색 서비스를 불러오는 중입니다."));
+        return;
+      }
+
+      const services = maps.services;
+      const searchOptions: Record<string, unknown> = {
+        category_group_code: "FD6",
+        size: 15,
+      };
+
+      if (options?.location) {
+        searchOptions.location = new maps.LatLng(options.location.lat, options.location.lng);
+        searchOptions.sort = "DISTANCE";
+      }
+
+      placesRef.current.keywordSearch(
+        keyword,
+        (data: KakaoPlaceItem[], status: string) => {
+          if (status === services.Status.OK) {
+            const mapped: KakaoRestaurant[] = data.map((item: KakaoPlaceItem) => {
+              const addressParts = item.address_name ? item.address_name.split(" ") : [];
+              return {
+                kakaoPlaceId: item.id,
+                name: item.place_name,
+                category: item.category_name,
+                address: item.address_name,
+                roadAddress: item.road_address_name,
+                region1: addressParts[0] || "",
+                region2: addressParts[1] || "",
+                region3: addressParts[2] || "",
+                region4: addressParts[3] || "",
+                phone: item.phone || "",
+                lat: Number(item.y),
+                lng: Number(item.x),
+              };
+            });
+            resolve(mapped);
+          } else if (status === services.Status.ZERO_RESULT) {
+            resolve([]);
+          } else {
+            reject(new Error("검색 결과를 불러오지 못했습니다."));
+          }
+        },
+        searchOptions,
+      );
+    });
+  };
+
+  const ensureRestaurant = async (
+    restaurant: KakaoRestaurant,
+  ): Promise<RecommendRestaurant | null> => {
+    const findRes = await apiFetchJson<RecommendRestaurant>(
+      `/api/v1/restaurants?kakaoPlaceId=${restaurant.kakaoPlaceId}`,
+    );
+
+    if (findRes.ok && findRes.data) {
+      return findRes.data;
+    }
+
+    const saveRes = await apiFetchJson<RecommendRestaurant>("/api/v1/restaurants", {
+      method: "POST",
+      body: JSON.stringify({
+        kakaoPlaceId: restaurant.kakaoPlaceId,
+        name: restaurant.name,
+        categoryName: restaurant.category,
+        address: restaurant.address,
+        roadAddress: restaurant.roadAddress,
+        region1: restaurant.region1,
+        region2: restaurant.region2,
+        region3: restaurant.region3,
+        region4: restaurant.region4,
+        phone: restaurant.phone,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+      }),
+    });
+
+    if (!saveRes.ok || !saveRes.data) {
+      setRecommendError(saveRes.message || "식당 저장에 실패했습니다.");
+      return null;
+    }
+
+    return saveRes.data;
+  };
+
   const fetchRecommend = async () => {
     setRecommendLoading(true);
     setRecommendError("");
 
-    const params = new URLSearchParams();
-    params.set("category", categoryToEnum[selectedCategory]);
-    if (selectedRegion1 && selectedRegion1 !== "전체") params.set("region1", selectedRegion1);
-    if (selectedRegion2 && selectedRegion2 !== "전체") params.set("region2", selectedRegion2);
-    if (selectedRegion3 && selectedRegion3 !== "전체") params.set("region3", selectedRegion3);
-    if (selectedRegion4 && selectedRegion4 !== "전체") params.set("region4", selectedRegion4);
+    try {
+      const keyword = buildSearchKeyword();
+      const options: { location?: { lat: number; lng: number } } = {};
 
-    const res = await apiFetchJson<RecommendRestaurant>(
-      `/api/v1/restaurants/recommend?${params.toString()}`
-    );
+      if (sortBy === "distance") {
+        const position = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+          if (!navigator.geolocation) {
+            resolve(null);
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => resolve(null),
+          );
+        });
+        if (position) options.location = position;
+      }
 
-    if (res.ok && res.data) {
-      setCurrent(res.data);
-    } else {
-      setRecommendError(res.message || "추천을 불러오지 못했습니다.");
+      const results = await searchKakaoRestaurants(keyword, options);
+
+      if (results.length === 0) {
+        setRecommendError("조건에 맞는 식당이 없습니다.");
+        setCurrent(null);
+        setRecommendLoading(false);
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * results.length);
+      const selected = results[randomIndex];
+      const saved = await ensureRestaurant(selected);
+
+      if (saved) {
+        setCurrent(saved);
+      } else {
+        setCurrent(null);
+      }
+    } catch (error) {
+      setRecommendError(error instanceof Error ? error.message : "추천을 불러오지 못했습니다.");
       setCurrent(null);
     }
 
