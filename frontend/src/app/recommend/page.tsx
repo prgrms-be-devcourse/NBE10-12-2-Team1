@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
+import regionsData from "@/data/regions.json";
 
 const categories = ["한식", "일식", "양식", "중식", "분식", "카페", "아시안", "기타"];
 
@@ -58,29 +59,10 @@ const sorts = [
   { key: "distance", label: "거리순", icon: Navigation },
 ];
 
-const locationData: Record<string, string[]> = {
-  서울: ["전체", "강남구", "마포구", "종로구", "성동구", "중구"],
-  부산: ["전체", "해운대구", "수영구", "남구", "북구"],
-  대구: ["전체", "중구", "동구", "서구", "남구"],
-  경기: ["수원시", "고양시", "용인시", "성남시", "부천시"],
-  강원: ["춘천시", "원주시", "강릉시"],
-};
+type RegionNode = string[] | Record<string, string[]>;
+type RegionData = Record<string, RegionNode>;
 
-const towns: Record<string, string[]> = {
-  "서울 강남구": ["전체", "역삼1동", "역삼2동"],
-  "서울 마포구": ["전체", "서교동", "연남동"],
-  "서울 종로구": ["전체", "종로1.2.3.4가동", "혜화동"],
-  "서울 성동구": ["전체", "성수1가1동", "송정동"],
-  "서울 중구": ["전체", "을지로동", "명동"],
-  "부산 해운대구": ["전체", "우동", "중동"],
-  "부산 수영구": ["전체", "광안동"],
-  "대구 중구": ["전체", "동인동"],
-  "대구 동구": ["전체", "신암동"],
-  "경기 수원시": ["전체", "팔달구", "장안구"],
-  "경기 고양시": ["전체", "일산서구", "일산동구"],
-  "강원 춘천시": ["전체", "소양동"],
-  "강원 원주시": ["전체", "명륜동"],
-};
+const typedRegionsData = regionsData as unknown as RegionData;
 
 interface RecommendRestaurant {
   id: number;
@@ -92,6 +74,7 @@ interface RecommendRestaurant {
   region1: string;
   region2: string;
   region3: string;
+  region4: string;
   phone: string;
   lat: number;
   lng: number;
@@ -111,9 +94,10 @@ export default function RecommendPage() {
   const [sortBy, setSortBy] = useState("random");
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState("서울");
-  const [selectedDistrict, setSelectedDistrict] = useState("중구");
-  const [selectedTown, setSelectedTown] = useState("을지로동");
+  const [selectedRegion1, setSelectedRegion1] = useState("서울");
+  const [selectedRegion2, setSelectedRegion2] = useState("중구");
+  const [selectedRegion3, setSelectedRegion3] = useState("을지로동");
+  const [selectedRegion4, setSelectedRegion4] = useState("");
 
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [recommendLoading, setRecommendLoading] = useState(false);
@@ -126,9 +110,74 @@ export default function RecommendPage() {
   const markerRef = useRef<KakaoMarker | null>(null);
 
   const locationLabel =
-    selectedCity +
-    (selectedDistrict === "전체" ? "" : ` ${selectedDistrict}`) +
-    (selectedTown === "전체" ? "" : ` ${selectedTown}`);
+    selectedRegion1 +
+    (selectedRegion2 === "전체" ? "" : ` ${selectedRegion2}`) +
+    (selectedRegion3 === "전체" ? "" : ` ${selectedRegion3}`) +
+    (selectedRegion4 && selectedRegion4 !== "전체" ? ` ${selectedRegion4}` : "");
+
+  const region1List = Object.keys(typedRegionsData);
+
+  const getRegion2List = (r1: string): string[] => {
+    const node = typedRegionsData[r1];
+    if (!node) return [];
+    return Object.keys(node);
+  };
+
+  const getRegion3Node = (
+    r1: string,
+    r2: string,
+  ): RegionNode | undefined => {
+    const node = typedRegionsData[r1];
+    if (!node) return undefined;
+    return (node as Record<string, RegionNode>)[r2];
+  };
+
+  const getRegion3List = (r1: string, r2: string): string[] => {
+    const child = getRegion3Node(r1, r2);
+    if (!child) return [];
+    if (Array.isArray(child)) return child;
+    return ["전체", ...Object.keys(child)];
+  };
+
+  const getRegion4List = (r1: string, r2: string, r3: string): string[] => {
+    const child = getRegion3Node(r1, r2);
+    if (!child || Array.isArray(child)) return ["전체"];
+    const leaf = (child as Record<string, string[]>)[r3];
+    return leaf || ["전체"];
+  };
+
+  const handleRegion1Change = (r1: string) => {
+    const r2List = getRegion2List(r1);
+    const r2 = r2List[0] || "전체";
+    const r3List = getRegion3List(r1, r2);
+    const r3 = r3List[0] || "전체";
+    const r4List = getRegion4List(r1, r2, r3);
+    const r4 = r4List[0] || "";
+
+    setSelectedRegion1(r1);
+    setSelectedRegion2(r2);
+    setSelectedRegion3(r3);
+    setSelectedRegion4(r4);
+  };
+
+  const handleRegion2Change = (r2: string) => {
+    const r3List = getRegion3List(selectedRegion1, r2);
+    const r3 = r3List[0] || "전체";
+    const r4List = getRegion4List(selectedRegion1, r2, r3);
+    const r4 = r4List[0] || "";
+
+    setSelectedRegion2(r2);
+    setSelectedRegion3(r3);
+    setSelectedRegion4(r4);
+  };
+
+  const handleRegion3Change = (r3: string) => {
+    const r4List = getRegion4List(selectedRegion1, selectedRegion2, r3);
+    const r4 = r4List[0] || "";
+
+    setSelectedRegion3(r3);
+    setSelectedRegion4(r4);
+  };
 
   useEffect(() => {
     const loadHotPlaces = async () => {
@@ -167,9 +216,10 @@ export default function RecommendPage() {
 
     const params = new URLSearchParams();
     params.set("category", categoryToEnum[selectedCategory]);
-    if (selectedCity && selectedCity !== "전체") params.set("region1", selectedCity);
-    if (selectedDistrict && selectedDistrict !== "전체") params.set("region2", selectedDistrict);
-    if (selectedTown && selectedTown !== "전체") params.set("region3", selectedTown);
+    if (selectedRegion1 && selectedRegion1 !== "전체") params.set("region1", selectedRegion1);
+    if (selectedRegion2 && selectedRegion2 !== "전체") params.set("region2", selectedRegion2);
+    if (selectedRegion3 && selectedRegion3 !== "전체") params.set("region3", selectedRegion3);
+    if (selectedRegion4 && selectedRegion4 !== "전체") params.set("region4", selectedRegion4);
 
     const res = await apiFetchJson<RecommendRestaurant>(
       `/api/v1/restaurants/recommend?${params.toString()}`
@@ -329,7 +379,7 @@ export default function RecommendPage() {
       {/* Location modal */}
       {locationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl animate-in fade-in-50 zoom-in-95">
+          <div className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl animate-in fade-in-50 zoom-in-95">
             <div className="flex items-center justify-between border-b border-hairline-soft pb-3">
               <h3 className="text-base font-bold text-ink">위치 선택</h3>
               <button onClick={() => setLocationModalOpen(false)} className="text-muted hover:text-ink">
@@ -337,52 +387,59 @@ export default function RecommendPage() {
               </button>
             </div>
 
-            <div className="mt-4 grid h-72 grid-cols-3 gap-2">
+            <div className="mt-4 grid h-72 grid-cols-4 gap-2">
               <div className="overflow-y-auto rounded-lg border border-hairline-soft bg-surface-soft">
-                {Object.keys(locationData).map((city) => (
+                {region1List.map((r1) => (
                   <button
-                    key={city}
-                    onClick={() => {
-                      setSelectedCity(city);
-                      setSelectedDistrict(locationData[city][0]);
-                      setSelectedTown(towns[`${city} ${locationData[city][0]}`]?.[0] || "전체");
-                    }}
+                    key={r1}
+                    onClick={() => handleRegion1Change(r1)}
                     className={`block w-full px-3 py-2 text-left text-sm ${
-                      selectedCity === city ? "bg-primary text-white" : "text-ink hover:bg-white"
+                      selectedRegion1 === r1 ? "bg-primary text-white" : "text-ink hover:bg-white"
                     }`}
                   >
-                    {city}
+                    {r1}
                   </button>
                 ))}
               </div>
 
               <div className="overflow-y-auto rounded-lg border border-hairline-soft bg-surface-soft">
-                {locationData[selectedCity]?.map((district) => (
+                {getRegion2List(selectedRegion1).map((r2) => (
                   <button
-                    key={district}
-                    onClick={() => {
-                      setSelectedDistrict(district);
-                      setSelectedTown(towns[`${selectedCity} ${district}`]?.[0] || "전체");
-                    }}
+                    key={r2}
+                    onClick={() => handleRegion2Change(r2)}
                     className={`block w-full px-3 py-2 text-left text-sm ${
-                      selectedDistrict === district ? "bg-primary text-white" : "text-ink hover:bg-white"
+                      selectedRegion2 === r2 ? "bg-primary text-white" : "text-ink hover:bg-white"
                     }`}
                   >
-                    {district}
+                    {r2}
                   </button>
                 ))}
               </div>
 
               <div className="overflow-y-auto rounded-lg border border-hairline-soft bg-surface-soft">
-                {(towns[`${selectedCity} ${selectedDistrict}`] || ["전체"]).map((town) => (
+                {getRegion3List(selectedRegion1, selectedRegion2).map((r3) => (
                   <button
-                    key={town}
-                    onClick={() => setSelectedTown(town)}
+                    key={r3}
+                    onClick={() => handleRegion3Change(r3)}
                     className={`block w-full px-3 py-2 text-left text-sm ${
-                      selectedTown === town ? "bg-primary text-white" : "text-ink hover:bg-white"
+                      selectedRegion3 === r3 ? "bg-primary text-white" : "text-ink hover:bg-white"
                     }`}
                   >
-                    {town}
+                    {r3}
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-y-auto rounded-lg border border-hairline-soft bg-surface-soft">
+                {getRegion4List(selectedRegion1, selectedRegion2, selectedRegion3).map((r4) => (
+                  <button
+                    key={r4}
+                    onClick={() => setSelectedRegion4(r4)}
+                    className={`block w-full px-3 py-2 text-left text-sm ${
+                      selectedRegion4 === r4 ? "bg-primary text-white" : "text-ink hover:bg-white"
+                    }`}
+                  >
+                    {r4}
                   </button>
                 ))}
               </div>
@@ -481,7 +538,7 @@ export default function RecommendPage() {
                     </div>
                     <h4 className="text-2xl font-bold text-ink">{current.name}</h4>
                     <p className="mt-1 text-sm text-muted">
-                      {current.region1} {current.region2} {current.region3}
+                      {current.region1} {current.region2} {current.region3} {current.region4}
                     </p>
 
                     <div className="mt-4 space-y-1.5 text-sm text-body">
