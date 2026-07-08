@@ -83,7 +83,7 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           source: "Backend/build/libs/*.jar,Backend/application.yaml"
           target: "/home/ubuntu/whattoeat/new/"
-          strip_components: 2
+          strip_components: 3
 
       - name: EC2에서 재시작
         uses: appleboy/ssh-action@v1.0.3
