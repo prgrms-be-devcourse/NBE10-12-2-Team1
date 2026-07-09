@@ -443,7 +443,7 @@ function FeedContent() {
                     <img
                       src={getImageUrl(post.imageUrl) ?? undefined}
                       alt="피드 이미지"
-                      className="w-full max-h-96 object-cover"
+                      className="w-full max-h-[1080px] object-cover"
                     />
                   </div>
                 )}
