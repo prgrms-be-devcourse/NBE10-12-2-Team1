@@ -14,6 +14,7 @@ import com.whattoeat.domain.restaurant.entity.Restaurant;
 import com.whattoeat.domain.restaurant.repository.RestaurantRepository;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
+import com.whattoeat.global.upload.ImageUploadService;
 import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,7 +22,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,20 +38,28 @@ public class FeedService {
     private final ApplicationEventPublisher eventPublisher;
     private final CommentRepository commentRepository;
     private final FeedLikeRepository feedLikeRepository;
+    private final ImageUploadService imageUploadService;
 
 
     @Transactional
-    public FeedDetailResponse createFeed(User user, FeedCreateRequest feedCreateRequest) {
+    public FeedDetailResponse createFeed(
+            User user, FeedCreateRequest feedCreateRequest, MultipartFile image) throws IOException {
         Restaurant restaurant = feedCreateRequest.restaurantId() != null
                 ? restaurantRepository.findById(feedCreateRequest.restaurantId()).orElse(null)
                 : null;
-        Feed feed = feedRepository.save(feedCreateRequest.toEntity(user, restaurant));
+
+        String imageUrl = (image != null && !image.isEmpty())
+                ? imageUploadService.upload(image)
+                : null;
+
+
+        Feed feed = feedRepository.save(feedCreateRequest.toEntity(user, restaurant, imageUrl));
         eventPublisher.publishEvent(new FeedCreatedEvent(feed.getId(), user.getId()));
         return FeedDetailResponse.from(feed);
     }
 
     @Transactional(readOnly = true)
-    public Page<FeedListResponse> getFeeds(Long currentUserId,  Long userId, Long restaurantId, Pageable pageable) {
+    public Page<FeedListResponse> getFeeds(Long currentUserId, Long userId, Long restaurantId, Pageable pageable) {
         Page<Feed> feeds;
         if (userId != null) {
             feeds = feedRepository.findByUserId(userId, pageable);
@@ -63,9 +74,9 @@ public class FeedService {
         Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);
         Set<Long> likedFeedIds = findLikedFeedIds(currentUserId, feedContents);
         return feeds.map(feed -> FeedListResponse
-                .from(feed, commentCounts.getOrDefault(feed.getId(),0L),
+                .from(feed, commentCounts.getOrDefault(feed.getId(), 0L),
                         likedFeedIds.contains(feed.getId())
-                        ));
+                ));
     }
 
 
@@ -112,14 +123,14 @@ public class FeedService {
         Set<Long> likedFeedIds = findLikedFeedIds(userId, feedContents);
 
         return feeds.map(feed -> FeedListResponse
-                .from(feed, commentCounts.getOrDefault(feed.getId(),0L),
+                .from(feed, commentCounts.getOrDefault(feed.getId(), 0L),
                         likedFeedIds.contains(feed.getId())
                 ));
     }
 
     @Transactional(readOnly = true)
     public Page<FeedListResponse> getRandomRecommendedFeeds(Long userId, Pageable pageable) {
-        if(userId == null) return Page.empty(pageable);
+        if (userId == null) return Page.empty(pageable);
 
         List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
                 .stream()
@@ -141,7 +152,8 @@ public class FeedService {
     }
 
     @Transactional
-    public FeedDetailResponse updateFeed(Long feedId, Long currentUserId, FeedUpdateRequest request) {
+    public FeedDetailResponse updateFeed(
+            Long feedId, Long currentUserId, FeedUpdateRequest request, MultipartFile image) throws IOException {
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new FeedNotFoundException(feedId));
 
@@ -152,8 +164,11 @@ public class FeedService {
         Restaurant restaurant = request.restaurantId() != null
                 ? restaurantRepository.findById(request.restaurantId()).orElse(null)
                 : null;
-        feed.setContent(request.content());
-        feed.setRestaurant(restaurant);
+
+        String imageUrl = feed.getImageUrl();
+        if(image!=null&&!image.isEmpty()) imageUrl = imageUploadService.upload(image);
+
+        feed.update(request.content(), restaurant, imageUrl);
 
         return FeedDetailResponse.from(feedRepository.save(feed));
     }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense, startTransition } from "react";
+import { useState, useEffect, useRef, Suspense, startTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetch, apiFetchJson } from "@/lib/api";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -68,11 +68,14 @@ function WritePostContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const [kakaoReady, setKakaoReady] = useState(false);
-  const [kakaoLoadFailed, setKakaoLoadFailed] = useState(false);
+  const [kakaoLoadFailed, setKakaoLoadFailed] = useState(!kakaoKey);
 
   const [recentPosts, setRecentPosts] = useState<
     { feedId: number; nickname: string; content: string }[]
   >([]);
+  const [feedImageFile, setFeedImageFile] = useState<File | null>(null);
+  const [feedImagePreview, setFeedImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isEditMode || !editFeedId) return;
@@ -177,7 +180,6 @@ function WritePostContent() {
     }
 
     if (!kakaoKey) {
-      setKakaoLoadFailed(true);
       return;
     }
 
@@ -267,6 +269,29 @@ function WritePostContent() {
     );
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("10MB 이하의 이미지 파일만 첨부할 수 있습니다.");
+      e.target.value = "";
+      return;
+    }
+
+    setFeedImageFile(file);
+    setFeedImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = () => {
+    if (feedImagePreview) {
+      URL.revokeObjectURL(feedImagePreview);
+    }
+    setFeedImageFile(null);
+    setFeedImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -309,16 +334,26 @@ function WritePostContent() {
       }
     }
 
-    const feedRes = await apiFetchJson(
+    const formData = new FormData();
+    formData.append(
+      "feed",
+      new Blob(
+        [JSON.stringify({ content: content.trim(), restaurantId })],
+        { type: "application/json" },
+      ),
+    );
+    if (feedImageFile) {
+      formData.append("image", feedImageFile);
+    }
+
+    const feedRes = await apiFetch(
       isEditMode ? `/api/v1/feeds/${editFeedId}` : "/api/v1/feeds",
       {
         method: isEditMode ? "PUT" : "POST",
-        body: JSON.stringify({
-          content: content.trim(),
-          restaurantId,
-        }),
+        body: formData,
       },
     );
+    const feedJson = await feedRes.json().catch(() => ({}));
 
     if (feedRes.ok) {
       if (isEditMode) {
@@ -328,7 +363,7 @@ function WritePostContent() {
       router.push("/feed");
     } else {
       alert(
-        feedRes.message ||
+        feedJson.message ||
           (isEditMode
             ? "피드 수정에 실패했습니다."
             : "피드 작성에 실패했습니다."),
@@ -501,15 +536,38 @@ function WritePostContent() {
             <label className="text-xs font-bold text-muted mb-2 block">
               사진 추가 (선택)
             </label>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors"
-            >
-              <ImagePlus className="h-5 w-5" />
-              <span className="text-sm font-medium">
-                클릭하거나 드래그하여 사진 추가
-              </span>
-            </button>
+            {feedImagePreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-hairline-soft">
+                <img
+                  src={feedImagePreview}
+                  alt="피드 사진 미리보기"
+                  className="w-full max-h-80 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors"
+              >
+                <ImagePlus className="h-5 w-5" />
+                <span className="text-sm font-medium">클릭하여 사진 추가</span>
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
           </div>
 
           {/* Submit */}

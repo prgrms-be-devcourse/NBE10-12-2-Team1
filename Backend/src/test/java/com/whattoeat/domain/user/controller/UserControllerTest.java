@@ -1,8 +1,8 @@
 package com.whattoeat.domain.user.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,7 +18,10 @@ import com.whattoeat.global.exception.UserNotFoundException;
 import com.whattoeat.global.jwt.JwtUtil;
 import com.whattoeat.global.security.CustomUserDetails;
 import com.whattoeat.global.security.CustomUserDetailsService;
+
 import java.time.LocalDateTime;
+
+import com.whattoeat.global.upload.ImageUploadService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +31,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +39,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.web.multipart.MultipartFile;
 
 @WebMvcTest(
         controllers = UserController.class,
@@ -59,6 +63,9 @@ class UserControllerTest {
 
     @MockitoBean
     private RedisTemplate<String, String> redisTemplate;
+
+    @MockitoBean
+    private ImageUploadService imageUploadService;
 
     @AfterEach
     void clearSecurityContext() {
@@ -86,30 +93,33 @@ class UserControllerTest {
     }
 
     private UserProfileResponse createResponse(Long id, String nickname, String profileImage,
-            boolean isOwnProfile, boolean isFollowing) {
+                                               boolean isOwnProfile, boolean isFollowing) {
         return new UserProfileResponse(
                 id, nickname, profileImage, "test@example.com",
                 Provider.LOCAL, LocalDateTime.now(), isOwnProfile, isFollowing);
     }
 
-    private UpdateProfileRequest updateRequest(String nickname, String profileImage){
+    private UpdateProfileRequest updateRequest(String nickname, String profileImage) {
         return new UpdateProfileRequest(
-                nickname, profileImage, null, null, null);
+                nickname, null, null, null);
     }
 
-    // ===================== getUser 테스트 =====================
+    // ===================== getMe 테스트 =====================
 
     @Test
-    void getUser_본인_프로필_조회_성공() throws Exception {
-        UserProfileResponse response = createResponse(1L, "testNickname", "profile.jpg", true, false);
+    void getMe_본인_프로필_조회_성공() throws Exception {
+        UserProfileResponse response = createResponse(
+                1L, "testNickname", "profile.jpg", true, false);
         given(userService.getUser(1L, 1L)).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/users/1").with(withUserId(1L)))
+        mockMvc.perform(get("/api/v1/users/me").with(withUserId(1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.isOwnProfile").value(true))
                 .andExpect(jsonPath("$.data.isFollowing").value(false))
                 .andExpect(jsonPath("$.data.nickname").value("testNickname"));
     }
+
+    // ===================== getUser 테스트 =====================
 
     @Test
     void getUser_타인_프로필_조회시_팔로우_중() throws Exception {
@@ -150,27 +160,14 @@ class UserControllerTest {
                 1L, "newNickname", "new.jpg", true, false);
         given(userService.updateProfile(1L, 1L, request)).willReturn(response);
 
-        mockMvc.perform(patch("/api/v1/users/1")
+        mockMvc.perform(patch("/api/v1/users/me")
                         .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nickname").value("newNickname"))
-                .andExpect(jsonPath("$.profileImage").value("new.jpg"))
-                .andExpect(jsonPath("$.isOwnProfile").value(true));
-    }
-
-    @Test
-    void updateProfile_타인_프로필_수정시_403() throws Exception {
-        UpdateProfileRequest request = updateRequest("nickname", null);
-        given(userService.updateProfile(2L, 1L, request))
-                .willThrow(new AccessDeniedException(""));
-
-        mockMvc.perform(patch("/api/v1/users/2")
-                        .with(withUserId(1L))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(jsonPath("$.data.nickname").value("newNickname"))
+                .andExpect(jsonPath("$.data.profileImage").value("new.jpg"))
+                .andExpect(jsonPath("$.data.isOwnProfile").value(true));
     }
 
     @Test
@@ -180,7 +177,7 @@ class UserControllerTest {
                 999L, 999L, request))
                 .willThrow(new UserNotFoundException(999L));
 
-        mockMvc.perform(patch("/api/v1/users/999")
+        mockMvc.perform(patch("/api/v1/users/me")
                         .with(withUserId(999L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -191,7 +188,7 @@ class UserControllerTest {
     void updateProfile_닉네임이_blank이면_400() throws Exception {
         UpdateProfileRequest request = updateRequest("", "image.jpg");
 
-        mockMvc.perform(patch("/api/v1/users/1")
+        mockMvc.perform(patch("/api/v1/users/me")
                         .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -202,10 +199,40 @@ class UserControllerTest {
     void updateProfile_닉네임이_20자_초과이면_400() throws Exception {
         UpdateProfileRequest request = updateRequest("a".repeat(21), "image.jpg");
 
-        mockMvc.perform(patch("/api/v1/users/1")
+        mockMvc.perform(patch("/api/v1/users/me")
                         .with(withUserId(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateProfileImage_성공() throws Exception {
+        UserProfileResponse response = createResponse(
+                1L,
+                "testUser",
+                "/uploads/uuid.jpg",
+                true,
+                false);
+        given(imageUploadService.upload(any(MultipartFile.class))).willReturn("/uploads/uuid.jpg");
+        given(userService
+                .updateProfileImage(1L, "/uploads/uuid.jpg")).willReturn(response);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "image",
+                "profile.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                "image-content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/v1/users/me/image")
+                        .file(image).with(request -> {
+                            request.setMethod("PATCH");
+                            return request;
+                        })
+                        .with(withUserId(1L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileImage")
+                        .value("/uploads/uuid.jpg"));
     }
 }

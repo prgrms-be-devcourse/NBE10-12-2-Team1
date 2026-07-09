@@ -205,4 +205,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(HttpStatus.CONFLICT, e.getMessage()));
     }
+
+    @ExceptionHandler(InvalidImageFormatException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidImageFormat(InvalidImageFormatException e) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST, e.getMessage()));
+    }
 }

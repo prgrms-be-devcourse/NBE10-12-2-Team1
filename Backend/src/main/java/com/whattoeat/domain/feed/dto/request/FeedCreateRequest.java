@@ -13,7 +13,7 @@ public record FeedCreateRequest(
         @Positive(message = "음수 Id는 올 수 없습니다.")
         Long restaurantId
 ) {
-        public Feed toEntity(User user, Restaurant restaurant) {
+        public Feed toEntity(User user, Restaurant restaurant, String imageUrl) {
                 return Feed.builder()
                         .user(user)
                         .restaurant(restaurant)

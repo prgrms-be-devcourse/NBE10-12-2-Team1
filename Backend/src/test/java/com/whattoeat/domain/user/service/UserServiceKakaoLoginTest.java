@@ -63,13 +63,13 @@ public class UserServiceKakaoLoginTest {
     }
 
     @Test
-    @DisplayName("기존 회원 정보 수정")
+    @DisplayName("기존 회원은 카카오 프로필로 덮어쓰지 않는다")
     void kakaoLoginOrSignUp_existingUser_updateProfile() {
         given(userRepository.findByKakaoId(KAKAO_ID)).willReturn(Optional.of(existuser));
 
         userService.kakaoLoginOrSignUp(KAKAO_ID, "new_nickname", "new.jpg", email);
-        assertThat(existuser.getNickname()).isEqualTo("new_nickname");
-        assertThat(existuser.getProfileImage()).isEqualTo("new.jpg");
+        assertThat(existuser.getNickname()).isEqualTo("old");
+        assertThat(existuser.getProfileImage()).isEqualTo("old.jpg");
     }
 
     @Test
@@ -79,7 +79,7 @@ public class UserServiceKakaoLoginTest {
 
         userService.kakaoLoginOrSignUp(KAKAO_ID, "new_nickname", null, email);
 
-        assertThat(existuser.getNickname()).isEqualTo("new_nickname");
+        assertThat(existuser.getNickname()).isEqualTo("old");
         assertThat(existuser.getProfileImage()).isEqualTo("old.jpg");
     }
 }

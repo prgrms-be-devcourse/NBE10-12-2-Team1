@@ -60,17 +60,17 @@ class UserServiceTest {
 
     private UpdateProfileRequest updateRequest(String nickname, String profileImage) {
         return new UpdateProfileRequest(
-                nickname, profileImage, null, null, null);
+                nickname, null, null, null);
     }
 
     private UpdateProfileRequest updateEmailRequest(String email) {
         return new UpdateProfileRequest(
-                null, null, email, null, null);
+                null, email, null, null);
     }
 
     private UpdateProfileRequest updatePasswordRequest(String currentPassword, String newPassword) {
         return new UpdateProfileRequest(
-                null, null, null, currentPassword, newPassword);
+                null, null, currentPassword, newPassword);
     }
 
     // ===================== getUser 테스트 =====================
@@ -127,7 +127,7 @@ class UserServiceTest {
     // ===================== updateProfile 테스트 =====================
 
     @Test
-    void updateProfile_닉네임과_이미지를_변경한다() {
+    void updateProfile_닉네임을_변경한다() {
         User user = createUser(
                 1L,
                 "oldNickname",
@@ -140,10 +140,9 @@ class UserServiceTest {
                 .updateProfile(
                         1L,
                         1L,
-                        updateRequest("newNickname", "new.jpg"));
+                        updateRequest("newNickname", null));
 
         assertThat(response.nickname()).isEqualTo("newNickname");
-        assertThat(response.profileImage()).isEqualTo("new.jpg");
     }
 
     @Test

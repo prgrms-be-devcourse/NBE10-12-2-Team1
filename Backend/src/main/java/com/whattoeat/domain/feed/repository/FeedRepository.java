@@ -21,10 +21,8 @@ public interface FeedRepository extends JpaRepository<Feed, Long> {
     Page<Feed> findByRestaurantId(Long restaurantId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "restaurant"})
-    Page<Feed> findByUser_IdIn(Collection<Long> userIds, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"user", "restaurant"})
     Page<Feed> findByUser_IdNotInOrderByIdDesc(Collection<Long> userIds, Pageable pageable);
+
     @EntityGraph(attributePaths = {"user", "restaurant"})
      Page<Feed> findByUser_IdInOrderByIdDesc(Collection<Long> userIds, Pageable pageable);
 }

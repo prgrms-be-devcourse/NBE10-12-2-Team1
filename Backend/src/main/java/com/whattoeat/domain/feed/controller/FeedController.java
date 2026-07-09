@@ -11,9 +11,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.whattoeat.domain.feed.service.FeedService;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1/feeds")
@@ -21,11 +25,13 @@ import com.whattoeat.domain.feed.service.FeedService;
 public class FeedController {
     private final FeedService feedService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public RsData<FeedDetailResponse> createFeed(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody FeedCreateRequest feedCreateRequest) {
-        FeedDetailResponse response = feedService.createFeed(userDetails.getUser(), feedCreateRequest);
+            @RequestPart("feed") @Valid FeedCreateRequest feedCreateRequest,
+            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
+        FeedDetailResponse response = feedService.createFeed(
+                userDetails.getUser(), feedCreateRequest, image);
         return RsData.success(response, "피드가 생성되었습니다.");
     }
 
@@ -37,7 +43,7 @@ public class FeedController {
             Pageable pageable
     ) {
         Long currentUserId = userDetails != null ? userDetails.getUserId() : null;
-        Page<FeedListResponse> page = feedService.getFeeds(currentUserId,userId, restaurantId, pageable);
+        Page<FeedListResponse> page = feedService.getFeeds(currentUserId, userId, restaurantId, pageable);
         return RsData.success(FeedListPageResponse.from(page), "피드 목록 조회가 완료되었습니다.");
     }
 
@@ -59,13 +65,15 @@ public class FeedController {
         return RsData.success(FeedListPageResponse.from(page), "추천 피드 조회가 완료되었습니다.");
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public RsData<FeedDetailResponse> updateFeed(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
-            @Valid @RequestBody FeedUpdateRequest feedUpdateRequest
-    ) {
-        FeedDetailResponse response = feedService.updateFeed(id, userDetails.getUserId(), feedUpdateRequest);
+            @RequestPart("feed") @Valid FeedUpdateRequest feedUpdateRequest,
+            @RequestPart(value="image",required = false) MultipartFile image
+    ) throws IOException {
+        FeedDetailResponse response = feedService.updateFeed(
+                id, userDetails.getUserId(), feedUpdateRequest, image);
         return RsData.success(response, "피드가 수정되었습니다.");
     }
 
