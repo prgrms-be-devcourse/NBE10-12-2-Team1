@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Eye, EyeOff } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
-import { getStoredUser } from "@/lib/user";
+import { apiFetch, apiFetchJson } from "@/lib/api";
+import { getStoredUser, setStoredUser } from "@/lib/user";
 
 interface UserProfile {
   id: number;
@@ -29,6 +29,7 @@ export default function EditProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -53,11 +54,41 @@ export default function EditProfilePage() {
     load();
   }, [router]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewImage(url);
+    if (!file || !user) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("10MB 이하의 이미지 파일만 업로드할 수 있습니다.");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewImage(objectUrl);
+    setIsUploadingImage(true);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await apiFetch("/api/v1/users/me/image", {
+      method: "PATCH",
+      body: formData,
+    });
+    const json = await res.json().catch(() => ({}));
+
+    setIsUploadingImage(false);
+
+    if (res.ok && json.data) {
+      setStoredUser({
+        userId: json.data.id,
+        nickname: json.data.nickname,
+        profileImage: json.data.profileImage,
+        email: json.data.email,
+      });
+      window.dispatchEvent(new Event("login-state-change"));
+    } else {
+      alert(json.message || "프로필 이미지 변경에 실패했습니다.");
+      setPreviewImage(user.profileImage || "/default-profile.png");
     }
   };
 
@@ -70,10 +101,7 @@ export default function EditProfilePage() {
       return;
     }
 
-    const body: Record<string, string | null> = {
-      nickname,
-      profileImage: previewImage,
-    };
+    const body: Record<string, string | null> = { nickname };
 
     if (user.provider === "LOCAL") {
       body.email = email;
@@ -88,7 +116,14 @@ export default function EditProfilePage() {
       body: JSON.stringify(body),
     });
 
-    if (res.ok) {
+    if (res.ok && res.data) {
+      setStoredUser({
+        userId: res.data.id,
+        nickname: res.data.nickname,
+        profileImage: res.data.profileImage,
+        email: res.data.email,
+      });
+      window.dispatchEvent(new Event("login-state-change"));
       alert("프로필이 수정되었습니다.");
       router.push("/profile");
     } else {
@@ -231,9 +266,10 @@ export default function EditProfilePage() {
             </Link>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+              disabled={isUploadingImage}
+              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
-              저장하기
+              {isUploadingImage ? "이미지 업로드 중..." : "저장하기"}
             </button>
           </div>
         </form>
