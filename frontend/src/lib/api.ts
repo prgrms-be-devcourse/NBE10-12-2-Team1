@@ -51,7 +51,7 @@ export async function apiUploadImage(file: File): Promise<{ ok: true; url: strin
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/api/v1/images`, {
+  const res = await fetch(`${API_BASE}/api/v1/feeds/images`, {
     method: "POST",
     credentials: "include",
     body: formData,
