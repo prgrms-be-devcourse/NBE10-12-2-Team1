@@ -10,7 +10,12 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "feeds")
+@Table(name = "feeds",
+        indexes = {
+                @Index(name = "idx_feed_user_id", columnList = "user_id"),
+                @Index(name = "idx_feed_restaurant_id", columnList = "restaurant_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Feed extends BaseEntity {
