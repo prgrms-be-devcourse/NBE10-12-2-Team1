@@ -19,7 +19,6 @@ import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -132,38 +132,23 @@ public class FeedService {
     public Page<FeedListResponse> getRandomRecommendedFeeds(Long userId, Pageable pageable) {
         if (userId == null) return Page.empty(pageable);
 
-        List<Long> excludedUserIds = new ArrayList<>();
-
         List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
                 .stream()
                 .map(follow -> follow.getFollowing().getId())
                 .toList();
 
-        excludedUserIds.addAll(followingUserIds);
+        List<Long> excludedUserIds = new ArrayList<>(followingUserIds);
+        excludedUserIds.add(userId);
 
-        List<Feed> feeds = new ArrayList<>(feedRepository.findByUser_IdNotIn(excludedUserIds));
+        Page<Feed> feeds = feedRepository.findByUser_IdNotInOrderByIdDesc(excludedUserIds, pageable);
+        List<Feed> feedContents = feeds.getContent();
 
-        feeds.sort(Comparator.comparing(Feed::getId).reversed());
+        Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);
+        Set<Long> likedFeedIds = findLikedFeedIds(userId, feedContents);
 
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), feeds.size());
-
-        if (start >= feeds.size()) {
-            return Page.empty(pageable);
-        }
-        List<Feed> pagedFeeds = feeds.subList(start, end);
-
-        Map<Long, Long> commentCounts = countCommentByFeedIds(pagedFeeds);
-        Set<Long> likedFeedIds = findLikedFeedIds(userId, pagedFeeds);
-
-        List<FeedListResponse> responses = pagedFeeds
-                .stream()
-                .map(feed -> FeedListResponse
-                        .from(feed, commentCounts.getOrDefault(feed.getId(), 0L),
-                                likedFeedIds.contains(feed.getId())))
-                .toList();
-
-        return new PageImpl<>(responses, pageable, feeds.size());
+        return feeds.map(feed -> FeedListResponse
+                .from(feed, commentCounts.getOrDefault(feed.getId(), 0L),
+                        likedFeedIds.contains(feed.getId())));
     }
 
     @Transactional
@@ -183,8 +168,7 @@ public class FeedService {
         String imageUrl = feed.getImageUrl();
         if(image!=null&&!image.isEmpty()) imageUrl = imageUploadService.upload(image);
 
-        feed.setContent(request.content());
-        feed.setRestaurant(restaurant);
+        feed.update(request.content(), restaurant, imageUrl);
 
         return FeedDetailResponse.from(feedRepository.save(feed));
     }

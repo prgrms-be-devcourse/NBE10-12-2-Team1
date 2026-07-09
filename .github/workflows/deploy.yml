@@ -105,6 +105,9 @@ jobs:
             set -e
             cd /home/ubuntu/whattoeat
 
+            echo "MySQL/Redis 컨테이너 기동 확인"
+            docker start whattoeat-mysql whattoeat-redis 2>/dev/null || true
+
             OLD_PID=""
             if [ -f app.pid ]; then
               OLD_PID=$(cat app.pid)
@@ -153,6 +156,10 @@ jobs:
               echo "backend failed to become healthy after restart"
               tail -100 app.log
               exit 1
+            fi
+
+            if [ "$(docker exec whattoeat-redis redis-cli ping 2>/dev/null)" != "PONG" ]; then
+              echo "WARNING: redis is not responding — feed/notification stream will silently stop working"
             fi
 
             echo "backend restarted successfully (pid=$NEW_PID)"
