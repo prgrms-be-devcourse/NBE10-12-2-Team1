@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetchJson, apiUploadImage } from "@/lib/api";
+import { apiFetch, apiFetchJson } from "@/lib/api";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -73,8 +73,8 @@ function WritePostContent() {
   const [recentPosts, setRecentPosts] = useState<
     { feedId: number; nickname: string; content: string }[]
   >([]);
-  const [feedImageUrl, setFeedImageUrl] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [feedImageFile, setFeedImageFile] = useState<File | null>(null);
+  const [feedImagePreview, setFeedImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -269,30 +269,27 @@ function WritePostContent() {
     );
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("10MB 이하의 이미지 파일만 업로드할 수 있습니다.");
+      alert("10MB 이하의 이미지 파일만 첨부할 수 있습니다.");
       e.target.value = "";
       return;
     }
 
-    setIsUploadingImage(true);
-    const uploadRes = await apiUploadImage(file);
-    setIsUploadingImage(false);
-
-    if (uploadRes.ok) {
-      setFeedImageUrl(uploadRes.url);
-    } else {
-      alert(uploadRes.message);
-    }
+    setFeedImageFile(file);
+    setFeedImagePreview(URL.createObjectURL(file));
     e.target.value = "";
   };
 
   const handleRemoveImage = () => {
-    setFeedImageUrl(null);
+    if (feedImagePreview) {
+      URL.revokeObjectURL(feedImagePreview);
+    }
+    setFeedImageFile(null);
+    setFeedImagePreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -337,17 +334,26 @@ function WritePostContent() {
       }
     }
 
-    const feedRes = await apiFetchJson(
+    const formData = new FormData();
+    formData.append(
+      "feed",
+      new Blob(
+        [JSON.stringify({ content: content.trim(), restaurantId })],
+        { type: "application/json" },
+      ),
+    );
+    if (feedImageFile) {
+      formData.append("image", feedImageFile);
+    }
+
+    const feedRes = await apiFetch(
       isEditMode ? `/api/v1/feeds/${editFeedId}` : "/api/v1/feeds",
       {
         method: isEditMode ? "PUT" : "POST",
-        body: JSON.stringify({
-          content: content.trim(),
-          restaurantId,
-          imageUrl: feedImageUrl,
-        }),
+        body: formData,
       },
     );
+    const feedJson = await feedRes.json().catch(() => ({}));
 
     if (feedRes.ok) {
       if (isEditMode) {
@@ -357,7 +363,7 @@ function WritePostContent() {
       router.push("/feed");
     } else {
       alert(
-        feedRes.message ||
+        feedJson.message ||
           (isEditMode
             ? "피드 수정에 실패했습니다."
             : "피드 작성에 실패했습니다."),
@@ -530,10 +536,10 @@ function WritePostContent() {
             <label className="text-xs font-bold text-muted mb-2 block">
               사진 추가 (선택)
             </label>
-            {feedImageUrl ? (
+            {feedImagePreview ? (
               <div className="relative rounded-xl overflow-hidden border border-hairline-soft">
                 <img
-                  src={feedImageUrl}
+                  src={feedImagePreview}
                   alt="피드 사진 미리보기"
                   className="w-full max-h-80 object-cover"
                 />
@@ -549,13 +555,10 @@ function WritePostContent() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingImage}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors disabled:opacity-70"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors"
               >
                 <ImagePlus className="h-5 w-5" />
-                <span className="text-sm font-medium">
-                  {isUploadingImage ? "사진 업로드 중..." : "클릭하여 사진 추가"}
-                </span>
+                <span className="text-sm font-medium">클릭하여 사진 추가</span>
               </button>
             )}
             <input
@@ -571,7 +574,7 @@ function WritePostContent() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={submitting || isUploadingImage}
+              disabled={submitting}
               className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
               <Send className="h-4 w-4" />
