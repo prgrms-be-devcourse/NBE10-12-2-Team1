@@ -229,6 +229,7 @@ function FeedContent() {
         content: post.content,
         restaurantId: post.restaurantId,
         restaurantName: post.restaurantName,
+        imageUrl: post.imageUrl,
       }),
     );
 
