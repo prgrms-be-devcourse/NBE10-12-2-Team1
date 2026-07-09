@@ -25,6 +25,8 @@ jobs:
           app:
             frontend:
               url: ${{ secrets.FRONTEND_URL }}
+            upload:
+              url-prefix: http://${{ secrets.EC2_HOST }}:8081/uploads/
           jwt:
             secret: ${{ secrets.JWT_SECRET }}
             access-expiration: 3600000

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, User } from "lucide-react";
 import { CurrentUser, getStoredUser } from "@/lib/user";
+import { getImageUrl } from "@/lib/api";
 
 const protectedPaths = ["/feed", "/profile", "/search", "/recommend", "/lists", "/restaurant"];
 
@@ -98,9 +99,9 @@ export default function Header() {
           {/* 로그인 상태 분기 UI */}
           {isLoggedIn && user ? (
             <div className="flex items-center gap-3 border-l border-hairline-soft pl-6">
-              {user.profileImage ? (
+              {getImageUrl(user.profileImage) ? (
                 <img
-                  src={user.profileImage}
+                  src={getImageUrl(user.profileImage) ?? "/default-profile.png"}
                   alt="사용자 프로필"
                   className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/20"
                 />

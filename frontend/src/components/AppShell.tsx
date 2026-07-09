@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { CurrentUser, getStoredUser, setStoredUser } from "@/lib/user";
 
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, getImageUrl } from "@/lib/api";
 import { NotificationBell } from "@/components/NotificationBell";
 
 /* =========================================================
@@ -239,7 +239,7 @@ export function SidebarProfile() {
     >
       <div className="flex items-center gap-4">
         <img
-          src={user.profileImage ?? "/default-profile.png"}
+          src={getImageUrl(user.profileImage) ?? "/default-profile.png"}
           alt=""
           className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/20"
         />
@@ -537,7 +537,7 @@ export default function AppShell({
               >
                 {mounted ? (
                   <img
-                    src={user.profileImage ?? "/default-profile.png"}
+                    src={getImageUrl(user.profileImage) ?? "/default-profile.png"}
                     alt="프로필"
                     className="h-full w-full object-cover"
                   />

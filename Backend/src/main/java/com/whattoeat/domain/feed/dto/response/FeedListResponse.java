@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record FeedListResponse(
         Long feedId,
         String content,
+        String imageUrl,
         // 프론트에서 피드 카드 클릭 시 /profile/{userId} 링크 만들어 본인이 쓴 글 여부 판별 가능
         Long userId,
         String nickname,
@@ -23,6 +24,7 @@ public record FeedListResponse(
         return new FeedListResponse(
                 feed.getId(),
                 feed.getContent(),
+                feed.getImageUrl(),
                 feed.getUser().getId(),
                 feed.getUser().getNickname(),
                 feed.getUser().getProfileImage(),

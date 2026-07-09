@@ -85,13 +85,13 @@ public class SecurityConfig {
                         .authorizationEndpoint(endpoint -> endpoint
                                 .authorizationRequestResolver(customOAuth2AuthorizationRequestResolver))
                         .successHandler(customOAuth2LoginSuccessHandler)
-                        .failureHandler((request, response, exception) -> {
+                        .failureHandler((_, response, exception) -> {
                             log.error("[OAuth2] login failed: {}", exception.getMessage(), exception);
                             response.sendRedirect("/login?error");
                         })
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) ->
+                        .authenticationEntryPoint((_, response, _) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

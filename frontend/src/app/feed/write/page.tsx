@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetch, apiFetchJson } from "@/lib/api";
+import { apiFetch, apiFetchJson, getImageUrl } from "@/lib/api";
+import { resizeImageToInstagram } from "@/lib/image";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -40,6 +41,7 @@ interface EditingFeed {
   content: string;
   restaurantId: number | null;
   restaurantName: string | null;
+  imageUrl?: string | null;
 }
 
 const guideItems = [
@@ -99,6 +101,7 @@ function WritePostContent() {
 
       startTransition(() => {
         setContent(editingFeed.content);
+        setFeedImagePreview(getImageUrl(editingFeed.imageUrl));
 
         if (editingFeed.restaurantId && editingFeed.restaurantName) {
           setSelectedRestaurant({
@@ -269,7 +272,7 @@ function WritePostContent() {
     );
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -279,8 +282,13 @@ function WritePostContent() {
       return;
     }
 
-    setFeedImageFile(file);
-    setFeedImagePreview(URL.createObjectURL(file));
+    try {
+      const resized = await resizeImageToInstagram(file);
+      setFeedImageFile(resized);
+      setFeedImagePreview(URL.createObjectURL(resized));
+    } catch {
+      alert("이미지 처리에 실패했습니다.");
+    }
     e.target.value = "";
   };
 
@@ -537,11 +545,11 @@ function WritePostContent() {
               사진 추가 (선택)
             </label>
             {feedImagePreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-hairline-soft">
+              <div className="relative w-full max-w-2xl aspect-[4/5] overflow-hidden rounded-xl border border-hairline-soft mx-auto">
                 <img
                   src={feedImagePreview}
                   alt="피드 사진 미리보기"
-                  className="w-full max-h-80 object-cover"
+                  className="h-full w-full object-cover"
                 />
                 <button
                   type="button"

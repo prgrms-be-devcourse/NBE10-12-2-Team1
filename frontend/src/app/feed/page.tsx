@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, getImageUrl } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/user";
 import CommentModal from "@/components/CommentModal";
 
@@ -223,6 +223,7 @@ function FeedContent() {
         content: post.content,
         restaurantId: post.restaurantId,
         restaurantName: post.restaurantName,
+        imageUrl: post.imageUrl,
       }),
     );
 
@@ -291,7 +292,7 @@ function FeedContent() {
                       className="flex items-center gap-3"
                     >
                       <img
-                        src={f.profileImage || "/default-profile.png"}
+                        src={getImageUrl(f.profileImage) ?? "/default-profile.png"}
                         alt=""
                         className="h-10 w-10 rounded-full object-cover"
                       />
@@ -374,7 +375,7 @@ function FeedContent() {
                     className="flex items-center gap-3 group"
                   >
                     <img
-                      src={post.profileImage || "/default-profile.png"}
+                      src={getImageUrl(post.profileImage) ?? "/default-profile.png"}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover ring-1 ring-hairline-soft"
                     />
@@ -438,12 +439,14 @@ function FeedContent() {
 
                 {/* Feed image */}
                 {post.imageUrl && (
-                  <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
-                    <img
-                      src={post.imageUrl}
-                      alt="피드 이미지"
-                      className="w-full max-h-96 object-cover"
-                    />
+                  <div className="mt-3 flex justify-center">
+                    <div className="w-full max-w-2xl aspect-[4/5] overflow-hidden rounded-xl border border-hairline-soft">
+                      <img
+                        src={getImageUrl(post.imageUrl) ?? undefined}
+                        alt="피드 이미지"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                   </div>
                 )}
 

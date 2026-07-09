@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record FeedDetailResponse(
         Long feedId,
         String content,
+        String imageUrl,
         String nickname,
         String profileImage,
         int likeCount,
@@ -19,6 +20,7 @@ public record FeedDetailResponse(
         return new FeedDetailResponse(
                 feed.getId(),
                 feed.getContent(),
+                feed.getImageUrl(),
                 feed.getUser().getNickname(),
                 feed.getUser().getProfileImage(),
                 feed.getLikeCount(),

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Eye, EyeOff } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetch, apiFetchJson } from "@/lib/api";
+import { apiFetch, apiFetchJson, getImageUrl } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/user";
 
 interface UserProfile {
@@ -44,7 +44,7 @@ export default function EditProfilePage() {
         setUser(res.data);
         setNickname(res.data.nickname);
         setEmail(res.data.email);
-        setPreviewImage(res.data.profileImage || "/default-profile.png");
+        setPreviewImage(getImageUrl(res.data.profileImage) ?? "/default-profile.png");
       } else {
         alert(res.message || "프로필 정보를 불러오지 못했습니다.");
       }
@@ -88,7 +88,7 @@ export default function EditProfilePage() {
       window.dispatchEvent(new Event("login-state-change"));
     } else {
       alert(json.message || "프로필 이미지 변경에 실패했습니다.");
-      setPreviewImage(user.profileImage || "/default-profile.png");
+      setPreviewImage(getImageUrl(user.profileImage) ?? "/default-profile.png");
     }
   };
 

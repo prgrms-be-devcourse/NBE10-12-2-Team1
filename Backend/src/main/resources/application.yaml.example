@@ -1,9 +1,9 @@
 app:
   frontend:
     url: http://localhost:3000
-    upload:
-      path: uploads
-      url-prefix: /uploads/
+  upload:
+    path: uploads
+    url-prefix: http://localhost:8080/uploads/
 jwt:
   secret: dGVzdC1zZWNyZXQta2V5LWZvci10ZXN0aW5nLW9ubHktMTIzNDU2Nzg=
   access-expiration: 3600000
