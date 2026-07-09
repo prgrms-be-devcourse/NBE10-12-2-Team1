@@ -22,6 +22,7 @@ interface Feed {
   userId: number;
   nickname: string;
   profileImage: string | null;
+  imageUrl?: string | null;
   likeCount: number;
   isLikedByMe: boolean;
   commentCount: number;
@@ -396,6 +397,17 @@ function FeedContent() {
                 <p className="mt-4 text-sm leading-relaxed text-body">
                   {post.content}
                 </p>
+
+                {/* Feed image */}
+                {post.imageUrl && (
+                  <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
+                    <img
+                      src={post.imageUrl}
+                      alt="피드 이미지"
+                      className="w-full max-h-96 object-cover"
+                    />
+                  </div>
+                )}
 
                 {/* Restaurant */}
                 {post.restaurantId && post.restaurantName && (

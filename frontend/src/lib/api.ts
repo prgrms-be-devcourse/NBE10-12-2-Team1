@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 const protectedPathPrefixes = [
   "/feed",
@@ -45,4 +45,27 @@ export async function apiFetchJson<T = unknown>(path: string, options?: RequestI
   }
 
   return { ok: true, data: json.data, message: json.message };
+}
+
+export async function apiUploadImage(file: File): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE}/api/v1/images`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    if (shouldRedirectToLogin(res.status)) {
+      clearClientSession();
+      window.location.assign("/login");
+    }
+    return { ok: false, message: json.message || "이미지 업로드에 실패했습니다." };
+  }
+
+  return { ok: true, url: json.data as string };
 }

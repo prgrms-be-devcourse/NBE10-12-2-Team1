@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense, startTransition } from "react";
+import { useState, useEffect, useRef, Suspense, startTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, apiUploadImage } from "@/lib/api";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -68,11 +68,14 @@ function WritePostContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const [kakaoReady, setKakaoReady] = useState(false);
-  const [kakaoLoadFailed, setKakaoLoadFailed] = useState(false);
+  const [kakaoLoadFailed, setKakaoLoadFailed] = useState(!kakaoKey);
 
   const [recentPosts, setRecentPosts] = useState<
     { feedId: number; nickname: string; content: string }[]
   >([]);
+  const [feedImageUrl, setFeedImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isEditMode || !editFeedId) return;
@@ -177,7 +180,6 @@ function WritePostContent() {
     }
 
     if (!kakaoKey) {
-      setKakaoLoadFailed(true);
       return;
     }
 
@@ -267,6 +269,32 @@ function WritePostContent() {
     );
   };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("10MB 이하의 이미지 파일만 업로드할 수 있습니다.");
+      e.target.value = "";
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const uploadRes = await apiUploadImage(file);
+    setIsUploadingImage(false);
+
+    if (uploadRes.ok) {
+      setFeedImageUrl(uploadRes.url);
+    } else {
+      alert(uploadRes.message);
+    }
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = () => {
+    setFeedImageUrl(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -316,6 +344,7 @@ function WritePostContent() {
         body: JSON.stringify({
           content: content.trim(),
           restaurantId,
+          imageUrl: feedImageUrl,
         }),
       },
     );
@@ -501,22 +530,48 @@ function WritePostContent() {
             <label className="text-xs font-bold text-muted mb-2 block">
               사진 추가 (선택)
             </label>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors"
-            >
-              <ImagePlus className="h-5 w-5" />
-              <span className="text-sm font-medium">
-                클릭하거나 드래그하여 사진 추가
-              </span>
-            </button>
+            {feedImageUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-hairline-soft">
+                <img
+                  src={feedImageUrl}
+                  alt="피드 사진 미리보기"
+                  className="w-full max-h-80 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-hairline bg-surface-soft py-8 text-muted hover:border-primary/30 hover:text-primary transition-colors disabled:opacity-70"
+              >
+                <ImagePlus className="h-5 w-5" />
+                <span className="text-sm font-medium">
+                  {isUploadingImage ? "사진 업로드 중..." : "클릭하여 사진 추가"}
+                </span>
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
           </div>
 
           {/* Submit */}
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || isUploadingImage}
               className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
               <Send className="h-4 w-4" />

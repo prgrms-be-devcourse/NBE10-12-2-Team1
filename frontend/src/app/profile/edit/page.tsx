@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Eye, EyeOff } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
-import { getStoredUser } from "@/lib/user";
+import { apiFetchJson, apiUploadImage } from "@/lib/api";
+import { getStoredUser, setStoredUser } from "@/lib/user";
 
 interface UserProfile {
   id: number;
@@ -29,6 +29,8 @@ export default function EditProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -53,12 +55,23 @@ export default function EditProfilePage() {
     load();
   }, [router]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewImage(url);
+    if (!file) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewImage(objectUrl);
+    setIsUploadingImage(true);
+
+    const uploadRes = await apiUploadImage(file);
+    if (uploadRes.ok) {
+      setUploadedImageUrl(uploadRes.url);
+    } else {
+      alert(uploadRes.message);
+      setPreviewImage(user?.profileImage || "/default-profile.png");
+      setUploadedImageUrl(null);
     }
+    setIsUploadingImage(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +85,7 @@ export default function EditProfilePage() {
 
     const body: Record<string, string | null> = {
       nickname,
-      profileImage: previewImage,
+      profileImage: uploadedImageUrl ?? user.profileImage,
     };
 
     if (user.provider === "LOCAL") {
@@ -88,7 +101,14 @@ export default function EditProfilePage() {
       body: JSON.stringify(body),
     });
 
-    if (res.ok) {
+    if (res.ok && res.data) {
+      setStoredUser({
+        userId: res.data.id,
+        nickname: res.data.nickname,
+        profileImage: res.data.profileImage,
+        email: res.data.email,
+      });
+      window.dispatchEvent(new Event("login-state-change"));
       alert("프로필이 수정되었습니다.");
       router.push("/profile");
     } else {
@@ -231,9 +251,10 @@ export default function EditProfilePage() {
             </Link>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors"
+              disabled={isUploadingImage}
+              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary-active transition-colors disabled:opacity-70"
             >
-              저장하기
+              {isUploadingImage ? "사진 업로드 중..." : "저장하기"}
             </button>
           </div>
         </form>

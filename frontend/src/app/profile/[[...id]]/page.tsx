@@ -42,6 +42,7 @@ interface FeedListPageResponse {
     feedId: number;
     content: string;
     nickname: string;
+    imageUrl?: string | null;
     likeCount: number;
     createdAt: string;
   }[];
@@ -360,6 +361,15 @@ export default function ProfilePage() {
                       <p className="text-sm leading-6 text-body">
                         {post.content}
                       </p>
+                      {post.imageUrl && (
+                        <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
+                          <img
+                            src={post.imageUrl}
+                            alt="피드 이미지"
+                            className="w-full max-h-80 object-cover"
+                          />
+                        </div>
+                      )}
                       <p className="mt-2 text-xs text-muted-soft">
                         좋아요 {post.likeCount} ·{" "}
                         {new Date(post.createdAt).toLocaleDateString()}
