@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import CommentModal from "@/components/CommentModal";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, getImageUrl } from "@/lib/api";
 
 interface Restaurant {
   id: number;
@@ -263,7 +263,7 @@ export default function RestaurantDetailPage() {
                       className="flex items-center gap-3 group"
                     >
                       <img
-                        src={post.profileImage || "/default-profile.png"}
+                        src={getImageUrl(post.profileImage) ?? "/default-profile.png"}
                         alt=""
                         className="h-9 w-9 rounded-full object-cover group-hover:ring-2 group-hover:ring-primary/30 transition-all"
                       />

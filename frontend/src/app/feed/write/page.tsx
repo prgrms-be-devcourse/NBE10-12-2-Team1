@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, ImagePlus, Send, Lightbulb, Search } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { apiFetch, apiFetchJson, API_BASE } from "@/lib/api";
+import { apiFetch, apiFetchJson, getImageUrl } from "@/lib/api";
 
 const moods = ["혼밥", "데이트", "회식", "가족", "친구"];
 
@@ -41,12 +41,6 @@ interface EditingFeed {
   restaurantId: number | null;
   restaurantName: string | null;
   imageUrl?: string | null;
-}
-
-function getImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${API_BASE}${url}`;
 }
 
 const guideItems = [

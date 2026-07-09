@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Settings, Users, UserPlus, X, UserMinus } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, getImageUrl } from "@/lib/api";
 import { getStoredUser } from "@/lib/user";
 
 const tabs = ["내 리스트", "포스트", "저장함"];
@@ -556,7 +556,7 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-5">
               <img
-                src={user.profileImage || "/default-profile.png"}
+                src={getImageUrl(user.profileImage) ?? "/default-profile.png"}
                 alt="프로필"
                 className="h-20 w-20 rounded-full object-cover ring-4 ring-primary/15"
               />
@@ -1072,7 +1072,7 @@ function FollowListModal({
                   className="flex items-center gap-3"
                 >
                   <img
-                    src={followUser.profileImage || "/default-profile.png"}
+                    src={getImageUrl(followUser.profileImage) ?? "/default-profile.png"}
                     alt={followUser.nickname}
                     className="h-9 w-9 rounded-full object-cover"
                   />

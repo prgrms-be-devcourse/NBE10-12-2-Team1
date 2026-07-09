@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
-import { apiFetchJson, API_BASE } from "@/lib/api";
+import { apiFetchJson, getImageUrl } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/user";
 import CommentModal from "@/components/CommentModal";
 
@@ -43,12 +43,6 @@ interface RecommendFoodie {
   userId: number;
   nickname: string;
   profileImage: string | null;
-}
-
-function getImageUrl(url?: string | null): string | null {
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  return `${API_BASE}${url}`;
 }
 
 function FeedContent() {
@@ -298,7 +292,7 @@ function FeedContent() {
                       className="flex items-center gap-3"
                     >
                       <img
-                        src={f.profileImage || "/default-profile.png"}
+                        src={getImageUrl(f.profileImage) ?? "/default-profile.png"}
                         alt=""
                         className="h-10 w-10 rounded-full object-cover"
                       />
@@ -381,7 +375,7 @@ function FeedContent() {
                     className="flex items-center gap-3 group"
                   >
                     <img
-                      src={post.profileImage || "/default-profile.png"}
+                      src={getImageUrl(post.profileImage) ?? "/default-profile.png"}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover ring-1 ring-hairline-soft"
                     />

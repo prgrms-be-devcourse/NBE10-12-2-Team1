@@ -1,5 +1,12 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+export function getImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/")) return `${API_BASE}${url}`;
+  return url;
+}
+
 const protectedPathPrefixes = [
   "/feed",
   "/profile",
