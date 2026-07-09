@@ -564,7 +564,7 @@ function WritePostContent() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.heif"
               className="hidden"
               onChange={handleImageSelect}
             />

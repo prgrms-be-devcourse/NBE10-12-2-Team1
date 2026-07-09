@@ -171,7 +171,12 @@ export default function EditProfilePage() {
               />
               <label className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-md hover:bg-primary-active transition-colors">
                 <Camera className="h-4 w-4" />
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.heif"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
               </label>
             </div>
             <p className="mt-3 text-xs text-muted">프로필 사진 변경</p>
