@@ -23,6 +23,16 @@ interface ListSummary {
 }
 
 /* =========================================================
+ * 리스트 목록 페이징 응답
+ * ========================================================= */
+
+interface RestaurantListsResponse {
+  lists: ListSummary[];
+  totalPages: number;
+  totalElements: number;
+}
+
+/* =========================================================
  * 리스트 안의 식당
  * ========================================================= */
 
@@ -76,9 +86,6 @@ interface SavedListDetail {
 
 /* =========================================================
  * Polyline 타입
- *
- * kakao.maps.d.ts에 아직 Polyline 선언이 없으므로
- * 이 페이지에서 사용할 타입만 선언
  * ========================================================= */
 
 interface KakaoPolylineOptions {
@@ -131,6 +138,26 @@ function ListsPage() {
   const [publicLists, setPublicLists] = useState<ListSummary[]>([]);
 
   const [savedLists, setSavedLists] = useState<SavedListDetail[]>([]);
+
+  /* ---------------------------------------------------------
+   * 내 리스트 페이징
+   * --------------------------------------------------------- */
+
+  const [myPage, setMyPage] = useState(0);
+
+  const [myTotalPages, setMyTotalPages] = useState(0);
+
+  const [loadingMoreMyLists, setLoadingMoreMyLists] = useState(false);
+
+  /* ---------------------------------------------------------
+   * 다른 사람 리스트 페이징
+   * --------------------------------------------------------- */
+
+  const [publicPage, setPublicPage] = useState(0);
+
+  const [publicTotalPages, setPublicTotalPages] = useState(0);
+
+  const [loadingMorePublicLists, setLoadingMorePublicLists] = useState(false);
 
   /* ---------------------------------------------------------
    * 현재 탭
@@ -190,13 +217,14 @@ function ListsPage() {
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const detailPanelRef = useRef<HTMLDivElement | null>(null);
+
   /* =========================================================
    * 알림창 열기
    * ========================================================= */
 
   const showAlert = (message: string) => {
     setAlertMessage(message);
-
     setAlertOpen(true);
   };
 
@@ -209,9 +237,11 @@ function ListsPage() {
       setError("");
 
       const [myRes, publicRes, savedRes] = await Promise.all([
-        apiFetchJson<ListSummary[]>("/api/v1/lists"),
+        apiFetchJson<RestaurantListsResponse>("/api/v1/lists?page=0&size=10"),
 
-        apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
+        apiFetchJson<RestaurantListsResponse>(
+          "/api/v1/lists/others?page=0&size=10",
+        ),
 
         apiFetchJson<{
           content: SavedListDetail[];
@@ -223,21 +253,29 @@ function ListsPage() {
       /* 내 리스트 */
 
       if (myRes.ok && myRes.data) {
-        my = myRes.data;
+        my = myRes.data.lists;
 
         setMyLists(my);
+        setMyPage(0);
+        setMyTotalPages(myRes.data.totalPages);
       } else {
         setMyLists([]);
+        setMyPage(0);
+        setMyTotalPages(0);
 
         setError(myRes.message || "내 리스트를 불러오지 못했습니다.");
       }
 
-      /* 공개 리스트 */
+      /* 다른 사람 리스트 */
 
       if (publicRes.ok && publicRes.data) {
-        setPublicLists(publicRes.data);
+        setPublicLists(publicRes.data.lists);
+        setPublicPage(0);
+        setPublicTotalPages(publicRes.data.totalPages);
       } else {
         setPublicLists([]);
+        setPublicPage(0);
+        setPublicTotalPages(0);
       }
 
       /* 저장한 리스트 */
@@ -259,6 +297,104 @@ function ListsPage() {
   };
 
   /* =========================================================
+   * 내 리스트 더보기
+   * ========================================================= */
+
+  const loadMoreMyLists = async () => {
+    if (loadingMoreMyLists) {
+      return;
+    }
+
+    const nextPage = myPage + 1;
+
+    if (nextPage >= myTotalPages) {
+      return;
+    }
+
+    setLoadingMoreMyLists(true);
+
+    try {
+      const res = await apiFetchJson<RestaurantListsResponse>(
+        `/api/v1/lists?page=${nextPage}&size=10`,
+      );
+
+      if (!res.ok || !res.data) {
+        showAlert(res.message || "다음 리스트를 불러오지 못했습니다.");
+
+        return;
+      }
+
+      const data = res.data;
+
+      setMyLists((prev) => {
+        const existingIds = new Set(prev.map((list) => list.id));
+
+        const newLists = data.lists.filter((list) => !existingIds.has(list.id));
+
+        return [...prev, ...newLists];
+      });
+
+      setMyPage(nextPage);
+      setMyTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("내 리스트 추가 조회 실패:", error);
+
+      showAlert("다음 리스트를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoadingMoreMyLists(false);
+    }
+  };
+
+  /* =========================================================
+   * 다른 사람 리스트 더보기
+   * ========================================================= */
+
+  const loadMorePublicLists = async () => {
+    if (loadingMorePublicLists) {
+      return;
+    }
+
+    const nextPage = publicPage + 1;
+
+    if (nextPage >= publicTotalPages) {
+      return;
+    }
+
+    setLoadingMorePublicLists(true);
+
+    try {
+      const res = await apiFetchJson<RestaurantListsResponse>(
+        `/api/v1/lists/others?page=${nextPage}&size=10`,
+      );
+
+      if (!res.ok || !res.data) {
+        showAlert(res.message || "다음 리스트를 불러오지 못했습니다.");
+
+        return;
+      }
+
+      const data = res.data;
+
+      setPublicLists((prev) => {
+        const existingIds = new Set(prev.map((list) => list.id));
+
+        const newLists = data.lists.filter((list) => !existingIds.has(list.id));
+
+        return [...prev, ...newLists];
+      });
+
+      setPublicPage(nextPage);
+      setPublicTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("다른 사람 리스트 추가 조회 실패:", error);
+
+      showAlert("다음 리스트를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoadingMorePublicLists(false);
+    }
+  };
+
+  /* =========================================================
    * 최초 로딩
    * ========================================================= */
 
@@ -272,7 +408,14 @@ function ListsPage() {
     const load = async () => {
       const my = await loadLists();
 
-      if (my.length > 0) {
+      const selectedListId = initialSelectedParam
+        ? Number(initialSelectedParam)
+        : null;
+
+      if (selectedListId !== null && Number.isFinite(selectedListId)) {
+        setActiveTab("my");
+        setSelectedId(selectedListId);
+      } else if (my.length > 0) {
         setSelectedId(my[0].id);
       }
 
@@ -281,6 +424,22 @@ function ListsPage() {
 
     void load();
   }, []);
+
+  /* =========================================================
+   * 리스트 선택 + 상세 영역으로 자동 스크롤
+   * ========================================================= */
+
+  const handleSelectList = (listId: number) => {
+    setSelectedId(listId);
+    setMapError("");
+
+    window.setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
 
   /* =========================================================
    * 선택한 리스트 상세 조회
@@ -295,7 +454,6 @@ function ListsPage() {
 
     const loadDetail = async () => {
       setSelectedDetail(null);
-
       setMapError("");
 
       try {
@@ -385,7 +543,6 @@ function ListsPage() {
       }
 
       const lat = Number(item.lat);
-
       const lng = Number(item.lng);
 
       return Number.isFinite(lat) && Number.isFinite(lng);
@@ -439,9 +596,7 @@ function ListsPage() {
 
         const bounds = new maps.LatLngBounds();
 
-        /* =====================================================
-         * 리스트 순서대로 선 연결
-         * ===================================================== */
+        /* 리스트 순서대로 선 연결 */
 
         if (itemsWithCoordinates.length > 1) {
           const linePath = itemsWithCoordinates.map(
@@ -460,9 +615,7 @@ function ListsPage() {
           });
         }
 
-        /* =====================================================
-         * 번호 마커 표시
-         * ===================================================== */
+        /* 번호 마커 */
 
         itemsWithCoordinates.forEach((item) => {
           const itemIndex = sortedItems.findIndex(
@@ -532,9 +685,7 @@ function ListsPage() {
    * 다른 사람 리스트
    * ========================================================= */
 
-  const otherLists = publicLists.filter(
-    (publicList) => !myLists.some((myList) => myList.id === publicList.id),
-  );
+  const otherLists = publicLists;
 
   /* =========================================================
    * 인기 맛집 리스트
@@ -554,7 +705,7 @@ function ListsPage() {
     .slice(0, 5);
 
   /* =========================================================
-   * 현재 선택한 리스트가 이미 저장됐는지 확인
+   * 현재 선택한 리스트 저장 여부
    * ========================================================= */
 
   const isSelectedListSaved =
@@ -587,6 +738,13 @@ function ListsPage() {
     setSelectedId(listId);
 
     setMapError("");
+
+    window.setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
   };
 
   /* =========================================================
@@ -682,6 +840,14 @@ function ListsPage() {
 
   /* =========================================================
    * 다른 사람 리스트 저장
+   *
+   * 핵심:
+   * loadLists()를 다시 호출하지 않고
+   * savedLists 상태를 바로 갱신한다.
+   *
+   * 그래서:
+   * - 더보기로 불러온 목록 유지
+   * - 저장 버튼 즉시 "저장 취소"로 변경
    * ========================================================= */
 
   const handleSave = async () => {
@@ -709,7 +875,28 @@ function ListsPage() {
         return;
       }
 
-      await loadLists();
+      const savedList: SavedListDetail = {
+        listId: selectedDetail.listId,
+        userId: selectedDetail.userId,
+        nickname: selectedDetail.nickname,
+        title: selectedDetail.title,
+        description: selectedDetail.description,
+        moodTag: selectedDetail.moodTag,
+        items: selectedDetail.items,
+        savedAt: new Date().toISOString(),
+      };
+
+      setSavedLists((prev) => {
+        const alreadySaved = prev.some(
+          (list) => list.listId === savedList.listId,
+        );
+
+        if (alreadySaved) {
+          return prev;
+        }
+
+        return [savedList, ...prev];
+      });
 
       showAlert("리스트를 저장했습니다.");
     } catch (error) {
@@ -737,6 +924,8 @@ function ListsPage() {
 
   /* =========================================================
    * 실제 저장 취소
+   *
+   * 서버 성공 후 savedLists에서 즉시 제거
    * ========================================================= */
 
   const executeUnsave = async () => {
@@ -744,11 +933,13 @@ function ListsPage() {
       return;
     }
 
+    const currentListId = selectedDetail.listId;
+
     setSaving(true);
 
     try {
       const res = await apiFetchJson(
-        `/api/v1/restaurant_lists/${selectedDetail.listId}/save`,
+        `/api/v1/restaurant_lists/${currentListId}/save`,
         {
           method: "DELETE",
         },
@@ -760,7 +951,9 @@ function ListsPage() {
         return;
       }
 
-      await loadLists();
+      setSavedLists((prev) =>
+        prev.filter((savedList) => savedList.listId !== currentListId),
+      );
 
       if (activeTab === "saved") {
         setSelectedId(null);
@@ -802,6 +995,12 @@ function ListsPage() {
 
         return;
       }
+
+      /*
+       * 복사 후에는 새 리스트가 최신 목록 첫 페이지에 생기므로
+       * 내 리스트 목록만 다시 조회해도 되지만,
+       * 기존 구조 유지 차원에서 loadLists 사용
+       */
 
       await loadLists();
 
@@ -871,7 +1070,7 @@ function ListsPage() {
     <button
       key={list.id}
       type="button"
-      onClick={() => setSelectedId(list.id)}
+      onClick={() => handleSelectList(list.id)}
       className={`w-full rounded-2xl border p-5 text-left transition-all ${
         selectedId === list.id
           ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
@@ -925,7 +1124,7 @@ function ListsPage() {
     <button
       key={list.listId}
       type="button"
-      onClick={() => setSelectedId(list.listId)}
+      onClick={() => handleSelectList(list.listId)}
       className={`w-full rounded-2xl border p-5 text-left transition-all ${
         selectedId === list.listId
           ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
@@ -1063,12 +1262,17 @@ function ListsPage() {
           {loading ? (
             <div className="space-y-4">
               <div className="h-24 animate-pulse rounded-2xl border border-hairline-soft bg-surface" />
+
               <div className="h-24 animate-pulse rounded-2xl border border-hairline-soft bg-surface" />
             </div>
           ) : error ? (
             <p className="text-center text-sm text-red-500">{error}</p>
           ) : (
             <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+              {/* =================================================
+               * 왼쪽 리스트 목록
+               * ================================================= */}
+
               <div className="min-w-0 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -1108,14 +1312,32 @@ function ListsPage() {
                   </button>
                 </div>
 
-                {activeTab === "my" &&
-                  (myLists.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted">
-                      등록된 리스트가 없습니다.
-                    </p>
-                  ) : (
-                    myLists.map(renderSummaryCard)
-                  ))}
+                {/* 내 리스트 */}
+
+                {activeTab === "my" && (
+                  <>
+                    {myLists.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted">
+                        등록된 리스트가 없습니다.
+                      </p>
+                    ) : (
+                      myLists.map(renderSummaryCard)
+                    )}
+
+                    {myPage + 1 < myTotalPages && (
+                      <button
+                        type="button"
+                        onClick={() => void loadMoreMyLists()}
+                        disabled={loadingMoreMyLists}
+                        className="w-full rounded-xl border border-hairline-soft bg-surface px-4 py-3 text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMoreMyLists ? "불러오는 중..." : "더보기"}
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* 저장한 리스트 */}
 
                 {activeTab === "saved" &&
                   (savedLists.length === 0 ? (
@@ -1126,17 +1348,40 @@ function ListsPage() {
                     savedLists.map(renderSavedCard)
                   ))}
 
-                {activeTab === "other" &&
-                  (otherLists.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted">
-                      다른 사람의 리스트가 없습니다.
-                    </p>
-                  ) : (
-                    otherLists.map(renderSummaryCard)
-                  ))}
+                {/* 다른 사람 리스트 */}
+
+                {activeTab === "other" && (
+                  <>
+                    {otherLists.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted">
+                        다른 사람의 리스트가 없습니다.
+                      </p>
+                    ) : (
+                      otherLists.map(renderSummaryCard)
+                    )}
+
+                    {publicPage + 1 < publicTotalPages && (
+                      <button
+                        type="button"
+                        onClick={() => void loadMorePublicLists()}
+                        disabled={loadingMorePublicLists}
+                        className="w-full rounded-xl border border-hairline-soft bg-surface px-4 py-3 text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMorePublicLists ? "불러오는 중..." : "더보기"}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
-              <div className="min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface">
+              {/* =================================================
+               * 오른쪽 상세 영역
+               * ================================================= */}
+
+              <div
+                ref={detailPanelRef}
+                className="scroll-mt-28 min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface"
+              >
                 {selectedDetail ? (
                   <>
                     <div className="flex flex-col gap-4 border-b border-hairline-soft p-6 sm:flex-row sm:items-start sm:justify-between">
@@ -1167,6 +1412,8 @@ function ListsPage() {
                           식당 {selectedItems.length}개
                         </span>
 
+                        {/* 내 리스트 수정 */}
+
                         {activeTab === "my" && (
                           <button
                             type="button"
@@ -1181,6 +1428,8 @@ function ListsPage() {
                             수정
                           </button>
                         )}
+
+                        {/* 저장한 리스트 */}
 
                         {activeTab === "saved" && (
                           <>
@@ -1205,6 +1454,8 @@ function ListsPage() {
                             </button>
                           </>
                         )}
+
+                        {/* 다른 사람 리스트 */}
 
                         {activeTab === "other" && (
                           <>
@@ -1251,6 +1502,8 @@ function ListsPage() {
                       </p>
                     ) : (
                       <div className="grid min-w-0 lg:grid-cols-[minmax(360px,2fr)_minmax(0,3fr)]">
+                        {/* 리스트 코스 */}
+
                         <div className="min-w-0 border-b border-hairline-soft p-6 lg:border-r lg:border-b-0">
                           <h4 className="mb-5 text-base font-bold text-ink">
                             리스트 코스
@@ -1317,6 +1570,8 @@ function ListsPage() {
                           </div>
                         </div>
 
+                        {/* 지도 */}
+
                         <div className="min-w-0 p-6">
                           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
                             <h4 className="text-base font-bold text-ink">
@@ -1357,6 +1612,10 @@ function ListsPage() {
         </div>
       </AppShell>
 
+      {/* =====================================================
+       * 알림창
+       * ===================================================== */}
+
       {alertOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/35 px-4">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -1376,6 +1635,10 @@ function ListsPage() {
           </div>
         </div>
       )}
+
+      {/* =====================================================
+       * 확인창
+       * ===================================================== */}
 
       {confirmAction !== null && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/35 px-4">

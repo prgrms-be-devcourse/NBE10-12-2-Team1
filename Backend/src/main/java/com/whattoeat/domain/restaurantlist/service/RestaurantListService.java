@@ -209,4 +209,12 @@ public class RestaurantListService {
 
         return restaurantList;
     }
+
+    @Transactional(readOnly = true)
+    public Page<RestaurantList> findAllExceptUser(
+            Long userId,
+            Pageable pageable
+    ) {
+        return restaurantListRepository.findByUserIdNot(userId, pageable);
+    }
 }
