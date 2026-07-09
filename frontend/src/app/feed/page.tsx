@@ -439,12 +439,14 @@ function FeedContent() {
 
                 {/* Feed image */}
                 {post.imageUrl && (
-                  <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
-                    <img
-                      src={getImageUrl(post.imageUrl) ?? undefined}
-                      alt="피드 이미지"
-                      className="w-full max-h-[1080px] object-cover"
-                    />
+                  <div className="mt-3 flex justify-center">
+                    <div className="w-full max-w-2xl aspect-[4/5] overflow-hidden rounded-xl border border-hairline-soft">
+                      <img
+                        src={getImageUrl(post.imageUrl) ?? undefined}
+                        alt="피드 이미지"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                   </div>
                 )}
 
