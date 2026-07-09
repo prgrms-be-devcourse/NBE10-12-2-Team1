@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Settings, Users, UserPlus, X, UserMinus } from "lucide-react";
 
 import AppShell from "@/components/AppShell";
@@ -95,6 +95,7 @@ interface SavedList {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
 
   const rawId = params.id;
 
@@ -755,19 +756,22 @@ export default function ProfilePage() {
                       {myPosts.map((post) => (
                         <article
                           key={post.feedId}
-                          className="rounded-2xl border border-hairline-soft bg-surface p-5"
+                          onClick={() => router.push("/feed")}
+                          className="rounded-2xl border border-hairline-soft bg-surface p-5 cursor-pointer hover:border-primary/30 transition-colors"
                         >
                           <p className="text-sm leading-6 text-body">
                             {post.content}
                           </p>
 
                           {post.imageUrl && (
-                            <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
-                              <img
-                                src={post.imageUrl}
-                                alt="피드 이미지"
-                                className="w-full max-h-80 object-cover"
-                              />
+                            <div className="mt-3 flex justify-center">
+                              <div className="w-full max-w-2xl aspect-[4/5] overflow-hidden rounded-xl border border-hairline-soft">
+                                <img
+                                  src={getImageUrl(post.imageUrl) ?? undefined}
+                                  alt="피드 이미지"
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
                             </div>
                           )}
 
