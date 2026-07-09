@@ -132,16 +132,20 @@ public class FeedService {
     public Page<FeedListResponse> getRandomRecommendedFeeds(Long userId, Pageable pageable) {
         if (userId == null) return Page.empty(pageable);
 
-        List<Long> followingUserIds = followRepository.findByFollower_Id(userId, Pageable.unpaged())
+        List<Long> followingUserIds = followRepository.findByFollower_Id(userId,
+                        Pageable.unpaged())
                 .stream()
                 .map(follow -> follow.getFollowing().getId())
                 .toList();
 
-        List<Long> excludedUserIds = new ArrayList<>(followingUserIds);
+        Page<Feed> feeds;
+        if (followingUserIds.isEmpty()) {
+            feeds = feedRepository.findAllByOrderByIdDesc(pageable);
+        } else {
+            feeds = feedRepository.findByUser_IdNotInOrderByIdDesc(followingUserIds, pageable);
+        }
 
-        Page<Feed> feeds = feedRepository.findByUser_IdNotInOrderByIdDesc(excludedUserIds, pageable);
         List<Feed> feedContents = feeds.getContent();
-
         Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);
         Set<Long> likedFeedIds = findLikedFeedIds(userId, feedContents);
 
@@ -149,6 +153,7 @@ public class FeedService {
                 .from(feed, commentCounts.getOrDefault(feed.getId(), 0L),
                         likedFeedIds.contains(feed.getId())));
     }
+
 
     @Transactional
     public FeedDetailResponse updateFeed(
