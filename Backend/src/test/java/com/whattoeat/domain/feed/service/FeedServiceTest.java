@@ -18,6 +18,7 @@ import com.whattoeat.global.exception.FeedNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.io.IOException;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,7 +158,7 @@ public class FeedServiceTest {
         given(feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(any(), any()))
                 .willReturn(List.of(feed1.getId()));
 
-        Page<FeedListResponse> result = feedService.getFeeds(1L,null, null, pageable);
+        Page<FeedListResponse> result = feedService.getFeeds(1L, null, null, pageable);
 
         assertThat(result.getContent().get(0).isLikedByMe()).isTrue();
         assertThat(result.getContent().get(1).isLikedByMe()).isFalse();
@@ -172,7 +173,7 @@ public class FeedServiceTest {
         given(feedRepository.findAllByOrderByIdDesc(pageable))
                 .willReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        Page<FeedListResponse> result = feedService.getFeeds(null,null, null, pageable);
+        Page<FeedListResponse> result = feedService.getFeeds(null, null, null, pageable);
         assertThat(result.getContent().isEmpty());
         assertThat(result.getTotalElements()).isZero();
     }
@@ -181,9 +182,9 @@ public class FeedServiceTest {
     @DisplayName("피드 수정 실패 - 작성자가 아닌 사람")
     public void updateFeed_notOwner() throws IOException {
         User owner = createTestUser(1L, "owner");
-        User other =  createTestUser(2L, "other");
+        User other = createTestUser(2L, "other");
         Feed feed = Feed.builder().user(owner).content("원본 내용").build();
-        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용",null);
+        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null, false);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
         MultipartFile image = null;
 
@@ -195,7 +196,7 @@ public class FeedServiceTest {
     @Test
     @DisplayName("피드 수정 실패 - 존재하지 않는 필드")
     public void updateFeed_notFound() throws IOException {
-        FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
+        FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null, false);
         MultipartFile image = null;
 
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
@@ -211,7 +212,7 @@ public class FeedServiceTest {
         Feed feed = Feed.builder().user(user).content("원본 내용").build();
         MultipartFile image = null;
 
-        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null);
+        FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null, false);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
         given(feedRepository.save(any())).willReturn(feed);
 
@@ -220,14 +221,30 @@ public class FeedServiceTest {
     }
 
     @Test
+    @DisplayName("피드 수정 시 이미지 삭제 반영")
+    public void updateFeed_deleteImage() throws IOException {
+        User user = createTestUser(1L, "testUser");
+        Feed feed = createTestFeed(1L, user, "내용");
+        ReflectionTestUtils.setField(feed, "imageUrl", "/uploads/old.jpg");
+
+        given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+        given(feedRepository.save(any(Feed.class))).willReturn(feed);
+
+        FeedUpdateRequest request = new FeedUpdateRequest("수정할 내용", null, true);
+        FeedDetailResponse result = feedService.updateFeed(1L, 1L, request, null);
+
+        assertThat(result.imageUrl()).isNull();
+    }
+
+    @Test
     @DisplayName("피드 삭제 실패 - 작성자가 아닌 사람")
     public void deleteFeed_notOwner() {
         User owner = createTestUser(1L, "owner");
-        User other =  createTestUser(2L, "other");
+        User other = createTestUser(2L, "other");
         Feed feed = Feed.builder().user(owner).content("맛집이네요").build();
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
 
-        assertThatThrownBy(()-> feedService.deleteFeed(1L, 2L))
+        assertThatThrownBy(() -> feedService.deleteFeed(1L, 2L))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("본인 피드만 삭제할 수 있습니다.");
     }
