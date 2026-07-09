@@ -33,6 +33,10 @@ interface Feed {
 
 interface FeedListPageResponse {
   feeds: Feed[];
+  totalPages: number;
+  totalElements: number;
+  page: number;
+  size: number;
 }
 
 interface RecommendFoodie {
@@ -49,7 +53,10 @@ function FeedContent() {
 
   const [posts, setPosts] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>(
     [],
   );
@@ -105,27 +112,39 @@ function FeedContent() {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (page === 0) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError("");
 
       const endpoint =
         activeTab === "following"
           ? "/api/v1/feeds/following"
           : "/api/v1/feeds/recommend";
-      const res = await apiFetchJson<FeedListPageResponse>(endpoint);
+      const res = await apiFetchJson<FeedListPageResponse>(
+        `${endpoint}?page=${page}&size=20`,
+      );
 
       if (res.ok && res.data) {
-        setPosts(res.data.feeds ?? []);
+        const { feeds, totalPages, size } = res.data;
+        setPosts((prev) => (page === 0 ? feeds : [...prev, ...feeds]));
+        setHasMore(feeds.length === size && page < totalPages - 1);
       } else {
         setError(res.message || "피드를 불러오지 못했습니다.");
-        setPosts([]);
+        if (page === 0) setPosts([]);
       }
 
-      setLoading(false);
+      if (page === 0) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     };
 
     load();
-  }, [activeTab]);
+  }, [activeTab, page]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -230,8 +249,27 @@ function FeedContent() {
   };
 
   const handleTabChange = (tab: "following" | "recommended") => {
+    setPage(0);
+    setPosts([]);
     router.replace(`/feed?tab=${tab}`, { scroll: false });
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 200 &&
+        hasMore &&
+        !loading &&
+        !loadingMore
+      ) {
+        setPage((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore, loading, loadingMore]);
 
   return (
     <AppShell
@@ -448,6 +486,11 @@ function FeedContent() {
                 </div>
               </article>
             ))}
+            {loadingMore && (
+              <div className="py-4 text-center text-sm text-muted">
+                불러오는 중...
+              </div>
+            )}
           </div>
         )}
       </div>
