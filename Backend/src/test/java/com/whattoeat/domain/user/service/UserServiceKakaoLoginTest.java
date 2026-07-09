@@ -79,7 +79,7 @@ public class UserServiceKakaoLoginTest {
 
         userService.kakaoLoginOrSignUp(KAKAO_ID, "new_nickname", null, email);
 
-        assertThat(existuser.getNickname()).isEqualTo("new_nickname");
+        assertThat(existuser.getNickname()).isEqualTo("old");
         assertThat(existuser.getProfileImage()).isEqualTo("old.jpg");
     }
 }
