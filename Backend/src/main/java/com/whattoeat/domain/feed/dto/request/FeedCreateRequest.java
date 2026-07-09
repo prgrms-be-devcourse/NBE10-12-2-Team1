@@ -18,6 +18,7 @@ public record FeedCreateRequest(
                         .user(user)
                         .restaurant(restaurant)
                         .content(content)
+                        .imageUrl(imageUrl)
                         .build();
         }
 }

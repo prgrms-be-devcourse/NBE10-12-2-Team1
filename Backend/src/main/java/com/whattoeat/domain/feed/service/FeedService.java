@@ -138,7 +138,6 @@ public class FeedService {
                 .toList();
 
         List<Long> excludedUserIds = new ArrayList<>(followingUserIds);
-        excludedUserIds.add(userId);
 
         Page<Feed> feeds = feedRepository.findByUser_IdNotInOrderByIdDesc(excludedUserIds, pageable);
         List<Feed> feedContents = feeds.getContent();
