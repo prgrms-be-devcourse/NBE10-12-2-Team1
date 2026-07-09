@@ -173,7 +173,7 @@ export default function EditProfilePage() {
                 <Camera className="h-4 w-4" />
                 <input
                   type="file"
-                  accept=".jpg,.jpeg,.png,.heif"
+                  accept=".jpg,.jpeg,.png"
                   className="hidden"
                   onChange={handleImageChange}
                 />
