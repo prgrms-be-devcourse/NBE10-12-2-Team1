@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell, { SidebarProfile, SidebarCard } from "@/components/AppShell";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, API_BASE } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/user";
 import CommentModal from "@/components/CommentModal";
 
@@ -43,6 +43,12 @@ interface RecommendFoodie {
   userId: number;
   nickname: string;
   profileImage: string | null;
+}
+
+function getImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url}`;
 }
 
 function FeedContent() {
@@ -440,7 +446,7 @@ function FeedContent() {
                 {post.imageUrl && (
                   <div className="mt-3 rounded-xl overflow-hidden border border-hairline-soft">
                     <img
-                      src={post.imageUrl}
+                      src={getImageUrl(post.imageUrl) ?? undefined}
                       alt="피드 이미지"
                       className="w-full max-h-96 object-cover"
                     />
