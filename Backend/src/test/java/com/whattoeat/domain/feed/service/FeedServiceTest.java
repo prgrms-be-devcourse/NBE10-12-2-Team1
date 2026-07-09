@@ -268,7 +268,7 @@ public class FeedServiceTest {
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
-        given(feedRepository.findByUser_IdIn(List.of(2L), pageable))
+        given(feedRepository.findByUser_IdInOrderByIdDesc(List.of(2L), pageable))
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
