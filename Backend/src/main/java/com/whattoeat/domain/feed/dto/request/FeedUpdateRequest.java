@@ -8,7 +8,9 @@ public record FeedUpdateRequest(
         String content,
 
         @Positive(message = "음수 Id는 올 수 없습니다.")
-        Long restaurantId
+        Long restaurantId,
+
+        boolean deleteImage
 
 ) {
 }

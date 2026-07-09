@@ -170,7 +170,10 @@ public class FeedService {
                 : null;
 
         String imageUrl = feed.getImageUrl();
-        if(image!=null&&!image.isEmpty()) imageUrl = imageUploadService.upload(image);
+        if (request.deleteImage()) {
+            imageUrl = null;
+        }
+        if (image != null && !image.isEmpty()) imageUrl = imageUploadService.upload(image);
 
         feed.update(request.content(), restaurant, imageUrl);
 

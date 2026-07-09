@@ -69,9 +69,13 @@ public class FeedController {
     public RsData<FeedDetailResponse> updateFeed(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
-            @RequestPart("feed") @Valid FeedUpdateRequest feedUpdateRequest,
-            @RequestPart(value="image",required = false) MultipartFile image
+            @RequestParam("content") String content,
+            @RequestParam(value = "restaurantId", required = false) Long restaurantId,
+            @RequestParam(value = "deleteImage", required = false, defaultValue = "false")  Boolean deleteImage,
+            @RequestPart(value = "image", required = false) MultipartFile image
     ) throws IOException {
+        FeedUpdateRequest feedUpdateRequest = new FeedUpdateRequest(content, restaurantId,
+                deleteImage);
         FeedDetailResponse response = feedService.updateFeed(
                 id, userDetails.getUserId(), feedUpdateRequest, image);
         return RsData.success(response, "피드가 수정되었습니다.");

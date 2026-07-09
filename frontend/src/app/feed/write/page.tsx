@@ -343,15 +343,29 @@ function WritePostContent() {
     }
 
     const formData = new FormData();
-    formData.append(
-      "feed",
-      new Blob(
-        [JSON.stringify({ content: content.trim(), restaurantId })],
-        { type: "application/json" },
-      ),
-    );
-    if (feedImageFile) {
-      formData.append("image", feedImageFile);
+
+    if (isEditMode) {
+      formData.append("content", content.trim());
+      if (restaurantId !== null) {
+        formData.append("restaurantId", String(restaurantId));
+      }
+      if (!feedImagePreview) {
+        formData.append("deleteImage", "true");
+      }
+      if (feedImageFile) {
+        formData.append("image", feedImageFile);
+      }
+    } else {
+      formData.append(
+        "feed",
+        new Blob(
+          [JSON.stringify({ content: content.trim(), restaurantId })],
+          { type: "application/json" },
+        ),
+      );
+      if (feedImageFile) {
+        formData.append("image", feedImageFile);
+      }
     }
 
     const feedRes = await apiFetch(
