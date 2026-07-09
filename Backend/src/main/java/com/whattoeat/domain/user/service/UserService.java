@@ -68,10 +68,6 @@ public class UserService {
     @Transactional
     public User kakaoLoginOrSignUp(String kakaoId, String nickname, String profileImg, String email) {
         return userRepository.findByKakaoId(kakaoId)
-                .map(existingUser -> {
-                    existingUser.updateProfile(nickname, profileImg);
-                    return existingUser;
-                })
                 .orElseGet(() -> userRepository.save(
                         User.builder()
                                 .kakaoId(kakaoId)
