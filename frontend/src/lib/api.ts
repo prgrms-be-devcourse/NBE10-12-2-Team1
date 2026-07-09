@@ -21,11 +21,13 @@ function shouldRedirectToLogin(status: number) {
 }
 
 export async function apiFetch(path: string, options?: RequestInit) {
+  const isFormData = options?.body instanceof FormData;
+
   return fetch(`${API_BASE}${path}`, {
     credentials: "include",
     ...options,
     headers: {
-      ...(options?.body ? { "Content-Type": "application/json" } : {}),
+      ...(options?.body && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...options?.headers,
     },
   });
