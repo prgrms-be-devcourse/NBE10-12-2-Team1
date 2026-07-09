@@ -116,7 +116,7 @@ public class FeedService {
             return Page.empty(pageable);
         }
 
-        Page<Feed> feeds = feedRepository.findByUser_IdInOrderByIdDesc(followingUserIds, pageable);
+        Page<Feed> feeds = feedRepository.findByUser_IdIn(followingUserIds, pageable);
         List<Feed> feedContents = feeds.getContent();
 
         Map<Long, Long> commentCounts = countCommentByFeedIds(feedContents);

@@ -18,7 +18,6 @@ import com.whattoeat.global.exception.FeedNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -269,7 +268,7 @@ public class FeedServiceTest {
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
-        given(feedRepository.findByUser_IdInOrderByIdDesc(List.of(2L), pageable))
+        given(feedRepository.findByUser_IdIn(List.of(2L), pageable))
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
@@ -308,8 +307,8 @@ public class FeedServiceTest {
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
-        given(feedRepository.findByUser_IdNotIn(List.of(2L)))
-                .willReturn(new ArrayList<>(List.of(user1Feed, user3Feed)));
+        given(feedRepository.findByUser_IdNotInOrderByIdDesc(List.of(2L, 1L), pageable))
+                .willReturn(new PageImpl<>(List.of(user1Feed, user3Feed), pageable, 2));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());
         given(feedLikeRepository.findLikedFeedIdsByUserIdAndFeedIds(any(), any()))
