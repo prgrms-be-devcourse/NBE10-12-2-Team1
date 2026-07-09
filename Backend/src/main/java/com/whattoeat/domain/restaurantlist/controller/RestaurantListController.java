@@ -10,8 +10,10 @@ import com.whattoeat.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +51,7 @@ public class RestaurantListController {
     // 맛집 리스트 다건 조회
     @GetMapping
     @Operation(summary = "맛집 리스트 다건 조회")
-    public RsData<List<RestaurantListResponse.RestaurantLists>> getRestaurantLists(
+    public RsData<RestaurantListResponse.RestaurantListsResponse> getRestaurantLists(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -58,13 +60,19 @@ public class RestaurantListController {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAllByUserId(userId, pageable)
+        Page<RestaurantList> result = restaurantListService.findAllByUserId(userId, pageable);
+
+        List<RestaurantListResponse.RestaurantLists> lists = result.getContent()
                 .stream()
                 .map(RestaurantListResponse.RestaurantLists::new)
                 .toList();
 
         return RsData.success(
-                restaurantLists,
+                new RestaurantListResponse.RestaurantListsResponse(
+                        lists,
+                        result.getTotalPages(),
+                        result.getTotalElements()
+                ),
                 "맛집 리스트 목록 조회가 완료되었습니다."
         );
     }
@@ -184,20 +192,60 @@ public class RestaurantListController {
     // 전체 맛집 리스트 다건 조회
     @GetMapping("/all")
     @Operation(summary = "전체 맛집 리스트 다건 조회")
-    public RsData<List<RestaurantListResponse.RestaurantLists>> getAllRestaurantLists(
+    public RsData<RestaurantListResponse.RestaurantListsResponse> getAllRestaurantLists(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<RestaurantListResponse.RestaurantLists> restaurantLists = restaurantListService.findAll(pageable)
+        Page<RestaurantList> result = restaurantListService.findAll(pageable);
+
+        List<RestaurantListResponse.RestaurantLists> lists = result.getContent()
                         .stream()
                 .map(RestaurantListResponse.RestaurantLists::new)
                 .toList();
 
         return RsData.success(
-                restaurantLists,
+                new RestaurantListResponse.RestaurantListsResponse(
+                        lists,
+                        result.getTotalPages(),
+                        result.getTotalElements()
+                ),
                 "전체 맛집 리스트 목록 조회가 완료되었습니다."
+        );
+    }
+
+    @GetMapping("/others")
+    @Operation(summary = "다른 사용자의 맛집 리스트 다건 조회")
+    public RsData<RestaurantListResponse.RestaurantListsResponse> getOtherRestaurantLists(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Long userId = userDetails.getUserId();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<RestaurantList> result =
+                restaurantListService.findAllExceptUser(userId, pageable);
+
+        List<RestaurantListResponse.RestaurantLists> lists =
+                result.getContent()
+                        .stream()
+                        .map(RestaurantListResponse.RestaurantLists::new)
+                        .toList();
+
+        return RsData.success(
+                new RestaurantListResponse.RestaurantListsResponse(
+                        lists,
+                        result.getTotalPages(),
+                        result.getTotalElements()
+                ),
+                "다른 사용자의 맛집 리스트 목록 조회가 완료되었습니다."
         );
     }
 
