@@ -16,6 +16,8 @@ import com.whattoeat.domain.user.entity.Provider;
 import com.whattoeat.domain.user.entity.User;
 import com.whattoeat.global.exception.FeedNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -92,6 +95,7 @@ public class FeedServiceTest {
         Feed feed = Feed.builder()
                 .user(user)
                 .content(content)
+                .likeCount(0)
                 .build();
 
         ReflectionTestUtils.setField(feed, "id", id);
@@ -101,9 +105,10 @@ public class FeedServiceTest {
 
     @Test
     @DisplayName("피드 생성 성공")
-    public void createFeed_success() {
+    public void createFeed_success() throws IOException {
         User user = User.builder().nickname("test").build();
         FeedCreateRequest feedCreateRequest = new FeedCreateRequest("맛집이네요", null);
+        MultipartFile image = null;
 
         Feed savedFeed = Feed.builder()
                 .user(user)
@@ -112,17 +117,18 @@ public class FeedServiceTest {
 
         given(feedRepository.save(any())).willReturn(savedFeed);
 
-        FeedDetailResponse result = feedService.createFeed(user, feedCreateRequest);
+        FeedDetailResponse result = feedService.createFeed(user, feedCreateRequest, image);
 
         assertThat(result.content()).isEqualTo("맛집이네요");
     }
 
     @Test
     @DisplayName("피드 생성 시 FeedCreatedEvent가 발행된다")
-    public void createFeed_publishesFeedCreatedEvent() {
+    public void createFeed_publishesFeedCreatedEvent() throws IOException {
         User user = User.builder().nickname("test").build();
         ReflectionTestUtils.setField(user, "id", 1L);
         FeedCreateRequest feedCreateRequest = new FeedCreateRequest("맛집이네요", null);
+        MultipartFile image = null;
 
         Feed savedFeed = Feed.builder()
                 .user(user)
@@ -132,7 +138,7 @@ public class FeedServiceTest {
 
         given(feedRepository.save(any())).willReturn(savedFeed);
 
-        feedService.createFeed(user, feedCreateRequest);
+        feedService.createFeed(user, feedCreateRequest, image);
 
         assertThat(applicationEvents.stream(FeedCreatedEvent.class))
                 .anyMatch(event -> event.feedId().equals(10L) && event.authorId().equals(1L));
@@ -174,38 +180,43 @@ public class FeedServiceTest {
 
     @Test
     @DisplayName("피드 수정 실패 - 작성자가 아닌 사람")
-    public void updateFeed_notOwner() {
+    public void updateFeed_notOwner() throws IOException {
         User owner = createTestUser(1L, "owner");
         User other =  createTestUser(2L, "other");
         Feed feed = Feed.builder().user(owner).content("원본 내용").build();
         FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용",null);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
+        MultipartFile image = null;
 
-        assertThatThrownBy(() -> feedService.updateFeed(1L, 2L, request))
+        assertThatThrownBy(() -> feedService.updateFeed(1L, 2L, request, image))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("본인 피드만 수정할 수 있습니다.");
     }
 
     @Test
     @DisplayName("피드 수정 실패 - 존재하지 않는 필드")
-    public void updateFeed_notFound() {
+    public void updateFeed_notFound() throws IOException {
         FeedUpdateRequest req = new FeedUpdateRequest("수정된 내용", null);
+        MultipartFile image = null;
+
         given(feedRepository.findById(999L)).willReturn(Optional.empty());
-        assertThatThrownBy(() -> feedService.updateFeed(999L, 1L, req))
+        assertThatThrownBy(() -> feedService.updateFeed(999L, 1L, req, image))
                 .isInstanceOf(FeedNotFoundException.class)
                 .hasMessageContaining("Feed not found");
     }
 
     @Test
     @DisplayName("피드 수정 성공")
-    public void updateFeed_success() {
+    public void updateFeed_success() throws IOException {
         User user = createTestUser(1L, "testUser");
         Feed feed = Feed.builder().user(user).content("원본 내용").build();
+        MultipartFile image = null;
+
         FeedUpdateRequest request = new FeedUpdateRequest("수정된 내용", null);
         given(feedRepository.findById(1L)).willReturn(Optional.of(feed));
         given(feedRepository.save(any())).willReturn(feed);
 
-        FeedDetailResponse result = feedService.updateFeed(1L, 1L, request);
+        FeedDetailResponse result = feedService.updateFeed(1L, 1L, request, image);
         assertThat(result.content()).isEqualTo("수정된 내용");
     }
 
@@ -258,7 +269,7 @@ public class FeedServiceTest {
         given(followRepository.findByFollower_Id(1L, Pageable.unpaged()))
                 .willReturn(new PageImpl<>(List.of(follow)));
 
-        given(feedRepository.findByUser_IdIn(List.of(2L), pageable))
+        given(feedRepository.findByUser_IdInOrderByIdDesc(List.of(2L), pageable))
                 .willReturn(new PageImpl<>(List.of(user2Feed), pageable, 1));
 
         given(commentRepository.countByFeedIds(any())).willReturn(List.of());

@@ -35,11 +35,22 @@ public class Feed extends BaseEntity {
     @Column(nullable = false)
     private Integer likeCount = 0;
 
+    @Setter(AccessLevel.PUBLIC)
+    private String imageUrl;
+
     @Builder
-    public Feed(User user, Restaurant restaurant, String content){
+    public Feed(User user, Restaurant restaurant, String content, String imageUrl, Integer likeCount) {
         this.user = user;
         this.restaurant = restaurant;
         this.content = content;
+        this.imageUrl = imageUrl;
+        this.likeCount = likeCount!=null?likeCount:0;
+    }
+
+    public void update(String content, Restaurant restaurant, String imageUrl) {
+        this.content = content;
+        this.restaurant = restaurant;
+        this.imageUrl = imageUrl;
     }
 
     public void increaseLikeCount() {
