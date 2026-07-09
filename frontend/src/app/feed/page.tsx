@@ -52,7 +52,10 @@ function FeedContent() {
   const [recommendFoodies, setRecommendFoodies] = useState<RecommendFoodie[]>(
     [],
   );
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(() => {
+    const stored = getStoredUser();
+    return stored?.userId ?? null;
+  });
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [activeCommentFeedId, setActiveCommentFeedId] = useState<number | null>(
     null,
@@ -78,12 +81,6 @@ function FeedContent() {
   };
 
   useEffect(() => {
-    const stored = getStoredUser();
-
-    if (stored?.userId) {
-      setCurrentUserId(stored.userId);
-    }
-
     apiFetchJson<{
       id: number;
       nickname: string;
@@ -209,6 +206,7 @@ function FeedContent() {
       }),
     );
 
+    setOpenMenuFeedId(null);
     router.push(`/feed/write?edit=${post.feedId}`);
   };
 

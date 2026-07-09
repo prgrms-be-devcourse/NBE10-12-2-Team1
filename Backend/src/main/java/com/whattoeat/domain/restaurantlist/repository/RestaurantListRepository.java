@@ -25,4 +25,5 @@ public interface RestaurantListRepository extends JpaRepository<RestaurantList, 
     Optional<RestaurantList> findByIdWithItems(@Param("id") Long id);
 
 
+    Page<RestaurantList> findByUserIdNot(Long userId, Pageable pageable);
 }

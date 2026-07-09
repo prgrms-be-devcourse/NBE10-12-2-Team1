@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Bookmark, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
@@ -20,6 +20,16 @@ interface ListSummary {
   moodTag: string;
   itemCount: number;
   createdAt: string;
+}
+
+/* =========================================================
+ * 리스트 목록 페이징 응답
+ * ========================================================= */
+
+interface RestaurantListsResponse {
+  lists: ListSummary[];
+  totalPages: number;
+  totalElements: number;
 }
 
 /* =========================================================
@@ -75,6 +85,23 @@ interface SavedListDetail {
 }
 
 /* =========================================================
+ * Polyline 타입
+ * ========================================================= */
+
+interface KakaoPolylineOptions {
+  map: unknown;
+  path: unknown[];
+  strokeWeight?: number;
+  strokeColor?: string;
+  strokeOpacity?: number;
+  strokeStyle?: string;
+}
+
+interface KakaoMapsWithPolyline {
+  Polyline: new (options: KakaoPolylineOptions) => unknown;
+}
+
+/* =========================================================
  * 탭
  * ========================================================= */
 
@@ -98,8 +125,9 @@ type ConfirmAction =
  * 페이지
  * ========================================================= */
 
-export default function ListsPage() {
+function ListsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   /* ---------------------------------------------------------
    * 리스트 목록
@@ -112,6 +140,26 @@ export default function ListsPage() {
   const [savedLists, setSavedLists] = useState<SavedListDetail[]>([]);
 
   /* ---------------------------------------------------------
+   * 내 리스트 페이징
+   * --------------------------------------------------------- */
+
+  const [myPage, setMyPage] = useState(0);
+
+  const [myTotalPages, setMyTotalPages] = useState(0);
+
+  const [loadingMoreMyLists, setLoadingMoreMyLists] = useState(false);
+
+  /* ---------------------------------------------------------
+   * 다른 사람 리스트 페이징
+   * --------------------------------------------------------- */
+
+  const [publicPage, setPublicPage] = useState(0);
+
+  const [publicTotalPages, setPublicTotalPages] = useState(0);
+
+  const [loadingMorePublicLists, setLoadingMorePublicLists] = useState(false);
+
+  /* ---------------------------------------------------------
    * 현재 탭
    * --------------------------------------------------------- */
 
@@ -121,7 +169,11 @@ export default function ListsPage() {
    * 선택한 리스트
    * --------------------------------------------------------- */
 
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const initialSelectedParam = searchParams.get("selected");
+
+  const [selectedId, setSelectedId] = useState<number | null>(
+    initialSelectedParam ? Number(initialSelectedParam) : null,
+  );
 
   const [selectedDetail, setSelectedDetail] = useState<
     ListDetail | SavedListDetail | null
@@ -165,13 +217,14 @@ export default function ListsPage() {
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const detailPanelRef = useRef<HTMLDivElement | null>(null);
+
   /* =========================================================
    * 알림창 열기
    * ========================================================= */
 
   const showAlert = (message: string) => {
     setAlertMessage(message);
-
     setAlertOpen(true);
   };
 
@@ -184,9 +237,11 @@ export default function ListsPage() {
       setError("");
 
       const [myRes, publicRes, savedRes] = await Promise.all([
-        apiFetchJson<ListSummary[]>("/api/v1/lists"),
+        apiFetchJson<RestaurantListsResponse>("/api/v1/lists?page=0&size=10"),
 
-        apiFetchJson<ListSummary[]>("/api/v1/lists/all"),
+        apiFetchJson<RestaurantListsResponse>(
+          "/api/v1/lists/others?page=0&size=10",
+        ),
 
         apiFetchJson<{
           content: SavedListDetail[];
@@ -198,21 +253,29 @@ export default function ListsPage() {
       /* 내 리스트 */
 
       if (myRes.ok && myRes.data) {
-        my = myRes.data;
+        my = myRes.data.lists;
 
         setMyLists(my);
+        setMyPage(0);
+        setMyTotalPages(myRes.data.totalPages);
       } else {
         setMyLists([]);
+        setMyPage(0);
+        setMyTotalPages(0);
 
         setError(myRes.message || "내 리스트를 불러오지 못했습니다.");
       }
 
-      /* 공개 리스트 */
+      /* 다른 사람 리스트 */
 
       if (publicRes.ok && publicRes.data) {
-        setPublicLists(publicRes.data);
+        setPublicLists(publicRes.data.lists);
+        setPublicPage(0);
+        setPublicTotalPages(publicRes.data.totalPages);
       } else {
         setPublicLists([]);
+        setPublicPage(0);
+        setPublicTotalPages(0);
       }
 
       /* 저장한 리스트 */
@@ -234,6 +297,104 @@ export default function ListsPage() {
   };
 
   /* =========================================================
+   * 내 리스트 더보기
+   * ========================================================= */
+
+  const loadMoreMyLists = async () => {
+    if (loadingMoreMyLists) {
+      return;
+    }
+
+    const nextPage = myPage + 1;
+
+    if (nextPage >= myTotalPages) {
+      return;
+    }
+
+    setLoadingMoreMyLists(true);
+
+    try {
+      const res = await apiFetchJson<RestaurantListsResponse>(
+        `/api/v1/lists?page=${nextPage}&size=10`,
+      );
+
+      if (!res.ok || !res.data) {
+        showAlert(res.message || "다음 리스트를 불러오지 못했습니다.");
+
+        return;
+      }
+
+      const data = res.data;
+
+      setMyLists((prev) => {
+        const existingIds = new Set(prev.map((list) => list.id));
+
+        const newLists = data.lists.filter((list) => !existingIds.has(list.id));
+
+        return [...prev, ...newLists];
+      });
+
+      setMyPage(nextPage);
+      setMyTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("내 리스트 추가 조회 실패:", error);
+
+      showAlert("다음 리스트를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoadingMoreMyLists(false);
+    }
+  };
+
+  /* =========================================================
+   * 다른 사람 리스트 더보기
+   * ========================================================= */
+
+  const loadMorePublicLists = async () => {
+    if (loadingMorePublicLists) {
+      return;
+    }
+
+    const nextPage = publicPage + 1;
+
+    if (nextPage >= publicTotalPages) {
+      return;
+    }
+
+    setLoadingMorePublicLists(true);
+
+    try {
+      const res = await apiFetchJson<RestaurantListsResponse>(
+        `/api/v1/lists/others?page=${nextPage}&size=10`,
+      );
+
+      if (!res.ok || !res.data) {
+        showAlert(res.message || "다음 리스트를 불러오지 못했습니다.");
+
+        return;
+      }
+
+      const data = res.data;
+
+      setPublicLists((prev) => {
+        const existingIds = new Set(prev.map((list) => list.id));
+
+        const newLists = data.lists.filter((list) => !existingIds.has(list.id));
+
+        return [...prev, ...newLists];
+      });
+
+      setPublicPage(nextPage);
+      setPublicTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("다른 사람 리스트 추가 조회 실패:", error);
+
+      showAlert("다음 리스트를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoadingMorePublicLists(false);
+    }
+  };
+
+  /* =========================================================
    * 최초 로딩
    * ========================================================= */
 
@@ -247,7 +408,14 @@ export default function ListsPage() {
     const load = async () => {
       const my = await loadLists();
 
-      if (my.length > 0) {
+      const selectedListId = initialSelectedParam
+        ? Number(initialSelectedParam)
+        : null;
+
+      if (selectedListId !== null && Number.isFinite(selectedListId)) {
+        setActiveTab("my");
+        setSelectedId(selectedListId);
+      } else if (my.length > 0) {
         setSelectedId(my[0].id);
       }
 
@@ -256,6 +424,22 @@ export default function ListsPage() {
 
     void load();
   }, []);
+
+  /* =========================================================
+   * 리스트 선택 + 상세 영역으로 자동 스크롤
+   * ========================================================= */
+
+  const handleSelectList = (listId: number) => {
+    setSelectedId(listId);
+    setMapError("");
+
+    window.setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
 
   /* =========================================================
    * 선택한 리스트 상세 조회
@@ -270,7 +454,6 @@ export default function ListsPage() {
 
     const loadDetail = async () => {
       setSelectedDetail(null);
-
       setMapError("");
 
       try {
@@ -360,7 +543,6 @@ export default function ListsPage() {
       }
 
       const lat = Number(item.lat);
-
       const lng = Number(item.lng);
 
       return Number.isFinite(lat) && Number.isFinite(lng);
@@ -414,6 +596,27 @@ export default function ListsPage() {
 
         const bounds = new maps.LatLngBounds();
 
+        /* 리스트 순서대로 선 연결 */
+
+        if (itemsWithCoordinates.length > 1) {
+          const linePath = itemsWithCoordinates.map(
+            (item) => new maps.LatLng(Number(item.lat), Number(item.lng)),
+          );
+
+          const mapsWithPolyline = maps as typeof maps & KakaoMapsWithPolyline;
+
+          new mapsWithPolyline.Polyline({
+            map,
+            path: linePath,
+            strokeWeight: 4,
+            strokeColor: "#ff6b00",
+            strokeOpacity: 0.7,
+            strokeStyle: "solid",
+          });
+        }
+
+        /* 번호 마커 */
+
         itemsWithCoordinates.forEach((item) => {
           const itemIndex = sortedItems.findIndex(
             (sortedItem) => sortedItem.id === item.id,
@@ -450,7 +653,8 @@ export default function ListsPage() {
             map,
             position,
             content,
-            yAnchor: 1.2,
+            xAnchor: 0.5,
+            yAnchor: 0.5,
           });
         });
 
@@ -481,9 +685,7 @@ export default function ListsPage() {
    * 다른 사람 리스트
    * ========================================================= */
 
-  const otherLists = publicLists.filter(
-    (publicList) => !myLists.some((myList) => myList.id === publicList.id),
-  );
+  const otherLists = publicLists;
 
   /* =========================================================
    * 인기 맛집 리스트
@@ -503,7 +705,7 @@ export default function ListsPage() {
     .slice(0, 5);
 
   /* =========================================================
-   * 현재 선택한 리스트가 이미 저장됐는지 확인
+   * 현재 선택한 리스트 저장 여부
    * ========================================================= */
 
   const isSelectedListSaved =
@@ -536,6 +738,13 @@ export default function ListsPage() {
     setSelectedId(listId);
 
     setMapError("");
+
+    window.setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
   };
 
   /* =========================================================
@@ -631,6 +840,14 @@ export default function ListsPage() {
 
   /* =========================================================
    * 다른 사람 리스트 저장
+   *
+   * 핵심:
+   * loadLists()를 다시 호출하지 않고
+   * savedLists 상태를 바로 갱신한다.
+   *
+   * 그래서:
+   * - 더보기로 불러온 목록 유지
+   * - 저장 버튼 즉시 "저장 취소"로 변경
    * ========================================================= */
 
   const handleSave = async () => {
@@ -658,7 +875,28 @@ export default function ListsPage() {
         return;
       }
 
-      await loadLists();
+      const savedList: SavedListDetail = {
+        listId: selectedDetail.listId,
+        userId: selectedDetail.userId,
+        nickname: selectedDetail.nickname,
+        title: selectedDetail.title,
+        description: selectedDetail.description,
+        moodTag: selectedDetail.moodTag,
+        items: selectedDetail.items,
+        savedAt: new Date().toISOString(),
+      };
+
+      setSavedLists((prev) => {
+        const alreadySaved = prev.some(
+          (list) => list.listId === savedList.listId,
+        );
+
+        if (alreadySaved) {
+          return prev;
+        }
+
+        return [savedList, ...prev];
+      });
 
       showAlert("리스트를 저장했습니다.");
     } catch (error) {
@@ -672,8 +910,6 @@ export default function ListsPage() {
 
   /* =========================================================
    * 저장 취소 확인창 열기
-   *
-   * 저장한 리스트 탭 / 다른 사람 리스트 탭 모두 사용
    * ========================================================= */
 
   const handleUnsave = () => {
@@ -689,11 +925,7 @@ export default function ListsPage() {
   /* =========================================================
    * 실제 저장 취소
    *
-   * 저장한 리스트 탭:
-   * 저장 취소 후 목록에서 사라지므로 상세 화면 비움
-   *
-   * 다른 사람 리스트 탭:
-   * 공개 리스트 자체는 남아 있으므로 상세 화면 유지
+   * 서버 성공 후 savedLists에서 즉시 제거
    * ========================================================= */
 
   const executeUnsave = async () => {
@@ -701,11 +933,13 @@ export default function ListsPage() {
       return;
     }
 
+    const currentListId = selectedDetail.listId;
+
     setSaving(true);
 
     try {
       const res = await apiFetchJson(
-        `/api/v1/restaurant_lists/${selectedDetail.listId}/save`,
+        `/api/v1/restaurant_lists/${currentListId}/save`,
         {
           method: "DELETE",
         },
@@ -717,7 +951,9 @@ export default function ListsPage() {
         return;
       }
 
-      await loadLists();
+      setSavedLists((prev) =>
+        prev.filter((savedList) => savedList.listId !== currentListId),
+      );
 
       if (activeTab === "saved") {
         setSelectedId(null);
@@ -759,6 +995,12 @@ export default function ListsPage() {
 
         return;
       }
+
+      /*
+       * 복사 후에는 새 리스트가 최신 목록 첫 페이지에 생기므로
+       * 내 리스트 목록만 다시 조회해도 되지만,
+       * 기존 구조 유지 차원에서 loadLists 사용
+       */
 
       await loadLists();
 
@@ -828,7 +1070,7 @@ export default function ListsPage() {
     <button
       key={list.id}
       type="button"
-      onClick={() => setSelectedId(list.id)}
+      onClick={() => handleSelectList(list.id)}
       className={`w-full rounded-2xl border p-5 text-left transition-all ${
         selectedId === list.id
           ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
@@ -863,7 +1105,6 @@ export default function ListsPage() {
             {activeTab === "other" && (
               <>
                 <span>by {list.nickname}</span>
-
                 <span>·</span>
               </>
             )}
@@ -883,7 +1124,7 @@ export default function ListsPage() {
     <button
       key={list.listId}
       type="button"
-      onClick={() => setSelectedId(list.listId)}
+      onClick={() => handleSelectList(list.listId)}
       className={`w-full rounded-2xl border p-5 text-left transition-all ${
         selectedId === list.listId
           ? "border-primary bg-primary-soft/40 ring-1 ring-primary"
@@ -916,9 +1157,7 @@ export default function ListsPage() {
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm text-muted-soft">
             <span>by {list.nickname}</span>
-
             <span>·</span>
-
             <span>식당 {list.items.length}개</span>
           </div>
         </div>
@@ -937,8 +1176,6 @@ export default function ListsPage() {
         leftSidebar={
           <div className="sticky top-28 space-y-5">
             <SidebarProfile />
-
-            {/* 인기 맛집 리스트 */}
 
             <SidebarCard title="인기 맛집 리스트">
               <div className="space-y-4">
@@ -972,8 +1209,6 @@ export default function ListsPage() {
                 )}
               </div>
             </SidebarCard>
-
-            {/* 최근 생성된 리스트 */}
 
             <SidebarCard title="최근 생성된 리스트">
               <div className="space-y-4">
@@ -1011,8 +1246,6 @@ export default function ListsPage() {
         }
       >
         <div className="w-full min-w-0 space-y-5">
-          {/* 페이지 상단 */}
-
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-ink">맛집 리스트</h2>
 
@@ -1026,8 +1259,6 @@ export default function ListsPage() {
             </button>
           </div>
 
-          {/* 로딩 / 에러 */}
-
           {loading ? (
             <div className="space-y-4">
               <div className="h-24 animate-pulse rounded-2xl border border-hairline-soft bg-surface" />
@@ -1038,11 +1269,11 @@ export default function ListsPage() {
             <p className="text-center text-sm text-red-500">{error}</p>
           ) : (
             <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-              {/* 리스트 목록 */}
+              {/* =================================================
+               * 왼쪽 리스트 목록
+               * ================================================= */}
 
               <div className="min-w-0 space-y-3">
-                {/* 탭 */}
-
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -1083,14 +1314,28 @@ export default function ListsPage() {
 
                 {/* 내 리스트 */}
 
-                {activeTab === "my" &&
-                  (myLists.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted">
-                      등록된 리스트가 없습니다.
-                    </p>
-                  ) : (
-                    myLists.map(renderSummaryCard)
-                  ))}
+                {activeTab === "my" && (
+                  <>
+                    {myLists.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted">
+                        등록된 리스트가 없습니다.
+                      </p>
+                    ) : (
+                      myLists.map(renderSummaryCard)
+                    )}
+
+                    {myPage + 1 < myTotalPages && (
+                      <button
+                        type="button"
+                        onClick={() => void loadMoreMyLists()}
+                        disabled={loadingMoreMyLists}
+                        className="w-full rounded-xl border border-hairline-soft bg-surface px-4 py-3 text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMoreMyLists ? "불러오는 중..." : "더보기"}
+                      </button>
+                    )}
+                  </>
+                )}
 
                 {/* 저장한 리스트 */}
 
@@ -1105,23 +1350,40 @@ export default function ListsPage() {
 
                 {/* 다른 사람 리스트 */}
 
-                {activeTab === "other" &&
-                  (otherLists.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted">
-                      다른 사람의 리스트가 없습니다.
-                    </p>
-                  ) : (
-                    otherLists.map(renderSummaryCard)
-                  ))}
+                {activeTab === "other" && (
+                  <>
+                    {otherLists.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted">
+                        다른 사람의 리스트가 없습니다.
+                      </p>
+                    ) : (
+                      otherLists.map(renderSummaryCard)
+                    )}
+
+                    {publicPage + 1 < publicTotalPages && (
+                      <button
+                        type="button"
+                        onClick={() => void loadMorePublicLists()}
+                        disabled={loadingMorePublicLists}
+                        className="w-full rounded-xl border border-hairline-soft bg-surface px-4 py-3 text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMorePublicLists ? "불러오는 중..." : "더보기"}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
-              {/* 오른쪽 상세 */}
+              {/* =================================================
+               * 오른쪽 상세 영역
+               * ================================================= */}
 
-              <div className="min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface">
+              <div
+                ref={detailPanelRef}
+                className="scroll-mt-28 min-h-[680px] min-w-0 overflow-hidden rounded-2xl border border-hairline-soft bg-surface"
+              >
                 {selectedDetail ? (
                   <>
-                    {/* 상세 상단 */}
-
                     <div className="flex flex-col gap-4 border-b border-hairline-soft p-6 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1145,14 +1407,12 @@ export default function ListsPage() {
                         )}
                       </div>
 
-                      {/* 식당 개수 + 버튼 */}
-
                       <div className="flex shrink-0 flex-wrap items-center gap-3">
                         <span className="text-sm text-muted">
                           식당 {selectedItems.length}개
                         </span>
 
-                        {/* 내 리스트 */}
+                        {/* 내 리스트 수정 */}
 
                         {activeTab === "my" && (
                           <button
@@ -1236,15 +1496,11 @@ export default function ListsPage() {
                       </div>
                     </div>
 
-                    {/* 식당 없음 */}
-
                     {selectedItems.length === 0 ? (
                       <p className="py-24 text-center text-sm text-muted">
                         등록된 식당이 없습니다.
                       </p>
                     ) : (
-                      /* 식당 목록 + 지도 */
-
                       <div className="grid min-w-0 lg:grid-cols-[minmax(360px,2fr)_minmax(0,3fr)]">
                         {/* 리스트 코스 */}
 
@@ -1259,17 +1515,11 @@ export default function ListsPage() {
                                 key={item.id}
                                 className="flex min-w-0 gap-4 rounded-2xl bg-surface-soft p-4"
                               >
-                                {/* 번호 */}
-
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                                   {index + 1}
                                 </div>
 
-                                {/* 식당 정보 */}
-
                                 <div className="min-w-0 flex-1">
-                                  {/* 식당명 + 카테고리 + 삭제 */}
-
                                   <div className="flex min-w-0 items-center gap-2">
                                     <p className="min-w-0 truncate text-lg font-bold text-ink">
                                       {item.restaurantName}
@@ -1294,8 +1544,6 @@ export default function ListsPage() {
                                     )}
                                   </div>
 
-                                  {/* 주소 */}
-
                                   {(item.roadAddress || item.address) && (
                                     <div className="mt-2 flex min-w-0 items-center gap-1.5 text-sm text-muted">
                                       <MapPin className="h-4 w-4 shrink-0" />
@@ -1310,8 +1558,6 @@ export default function ListsPage() {
                                       </span>
                                     </div>
                                   )}
-
-                                  {/* 한줄평 */}
 
                                   {item.memo && (
                                     <p className="mt-2 break-words text-sm leading-6 text-body">
@@ -1367,7 +1613,7 @@ export default function ListsPage() {
       </AppShell>
 
       {/* =====================================================
-       * 일반 알림창
+       * 알림창
        * ===================================================== */}
 
       {alertOpen && (
@@ -1391,7 +1637,7 @@ export default function ListsPage() {
       )}
 
       {/* =====================================================
-       * 삭제 / 저장 취소 확인창
+       * 확인창
        * ===================================================== */}
 
       {confirmAction !== null && (
@@ -1428,5 +1674,13 @@ export default function ListsPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function ListsPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ListsPage />
+    </Suspense>
   );
 }
