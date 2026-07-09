@@ -2,6 +2,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: whattoeat-mysql
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: whattoeat
@@ -15,6 +16,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: whattoeat-redis
+    restart: unless-stopped
     ports:
       - "6380:6379"
     volumes:
