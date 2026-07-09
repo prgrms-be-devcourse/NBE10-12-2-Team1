@@ -111,7 +111,7 @@ export default function EditProfilePage() {
       }
     }
 
-    const res = await apiFetchJson<UserProfile>(`/api/v1/users/${user.id}`, {
+    const res = await apiFetchJson<UserProfile>("/api/v1/users/me", {
       method: "PATCH",
       body: JSON.stringify(body),
     });
