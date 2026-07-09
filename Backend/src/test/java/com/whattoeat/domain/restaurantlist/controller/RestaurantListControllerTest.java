@@ -228,8 +228,16 @@ class RestaurantListControllerTest {
                 MoodTag.SOLO
         );
 
-        given(restaurantListService.findAllByUserId(eq(1L), any(Pageable.class)))
-                .willReturn(new PageImpl<>(List.of(list2, list1)));
+        given(restaurantListService.findAllByUserId(
+                eq(1L),
+                any(Pageable.class)
+        )).willReturn(
+                new PageImpl<>(
+                        List.of(list2, list1),
+                        PageRequest.of(0, 10),
+                        2
+                )
+        );
 
         mockMvc.perform(get("/api/v1/lists")
                         .param("page", "0")
@@ -237,24 +245,30 @@ class RestaurantListControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
 
-                .andExpect(jsonPath("$.data.length()").value(2))
+                // 페이징 응답 구조
+                .andExpect(jsonPath("$.data.lists.length()").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
 
-                .andExpect(jsonPath("$.data[0].id").value(2))
-                .andExpect(jsonPath("$.data[0].userId").value(1))
-                .andExpect(jsonPath("$.data[0].nickname").value("user1"))
-                .andExpect(jsonPath("$.data[0].title").value("혼밥 맛집"))
-                .andExpect(jsonPath("$.data[0].description").value("혼자 먹기 좋은 곳"))
-                .andExpect(jsonPath("$.data[0].moodTag").value("SOLO"))
-                .andExpect(jsonPath("$.data[0].itemCount").value(0))
-                .andExpect(jsonPath("$.data[0].createdAt").exists())
+                // 첫 번째 리스트
+                .andExpect(jsonPath("$.data.lists[0].id").value(2))
+                .andExpect(jsonPath("$.data.lists[0].userId").value(1))
+                .andExpect(jsonPath("$.data.lists[0].nickname").value("user1"))
+                .andExpect(jsonPath("$.data.lists[0].title").value("혼밥 맛집"))
+                .andExpect(jsonPath("$.data.lists[0].description").value("혼자 먹기 좋은 곳"))
+                .andExpect(jsonPath("$.data.lists[0].moodTag").value("SOLO"))
+                .andExpect(jsonPath("$.data.lists[0].itemCount").value(0))
+                .andExpect(jsonPath("$.data.lists[0].createdAt").exists())
 
-                .andExpect(jsonPath("$.data[1].id").value(1))
-                .andExpect(jsonPath("$.data[1].title").value("데이트 맛집"))
-                .andExpect(jsonPath("$.data[1].moodTag").value("DATE"))
-                .andExpect(jsonPath("$.data[1].itemCount").value(0))
-                .andExpect(jsonPath("$.data[1].createdAt").exists())
+                // 두 번째 리스트
+                .andExpect(jsonPath("$.data.lists[1].id").value(1))
+                .andExpect(jsonPath("$.data.lists[1].title").value("데이트 맛집"))
+                .andExpect(jsonPath("$.data.lists[1].moodTag").value("DATE"))
+                .andExpect(jsonPath("$.data.lists[1].itemCount").value(0))
+                .andExpect(jsonPath("$.data.lists[1].createdAt").exists())
 
-                .andExpect(jsonPath("$.message").value("맛집 리스트 목록 조회가 완료되었습니다."));
+                .andExpect(jsonPath("$.message")
+                        .value("맛집 리스트 목록 조회가 완료되었습니다."));
     }
 
     @Test
@@ -333,7 +347,13 @@ class RestaurantListControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         given(restaurantListService.findAll(any(Pageable.class)))
-                .willReturn(new PageImpl<>(List.of(list2, list1), pageable, 2));
+                .willReturn(
+                        new PageImpl<>(
+                                List.of(list2, list1),
+                                pageable,
+                                2
+                        )
+                );
 
         mockMvc.perform(get("/api/v1/lists/all")
                         .param("page", "0")
@@ -341,27 +361,33 @@ class RestaurantListControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
 
-                .andExpect(jsonPath("$.data.length()").value(2))
+                // 페이징 응답
+                .andExpect(jsonPath("$.data.lists.length()").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
 
-                .andExpect(jsonPath("$.data[0].id").value(2))
-                .andExpect(jsonPath("$.data[0].userId").value(1))
-                .andExpect(jsonPath("$.data[0].nickname").value("user1"))
-                .andExpect(jsonPath("$.data[0].title").value("혼밥 맛집"))
-                .andExpect(jsonPath("$.data[0].description").value("혼자 먹기 좋은 곳"))
-                .andExpect(jsonPath("$.data[0].moodTag").value("SOLO"))
-                .andExpect(jsonPath("$.data[0].itemCount").value(0))
-                .andExpect(jsonPath("$.data[0].createdAt").exists())
+                // 첫 번째 리스트
+                .andExpect(jsonPath("$.data.lists[0].id").value(2))
+                .andExpect(jsonPath("$.data.lists[0].userId").value(1))
+                .andExpect(jsonPath("$.data.lists[0].nickname").value("user1"))
+                .andExpect(jsonPath("$.data.lists[0].title").value("혼밥 맛집"))
+                .andExpect(jsonPath("$.data.lists[0].description").value("혼자 먹기 좋은 곳"))
+                .andExpect(jsonPath("$.data.lists[0].moodTag").value("SOLO"))
+                .andExpect(jsonPath("$.data.lists[0].itemCount").value(0))
+                .andExpect(jsonPath("$.data.lists[0].createdAt").exists())
 
-                .andExpect(jsonPath("$.data[1].id").value(1))
-                .andExpect(jsonPath("$.data[1].userId").value(1))
-                .andExpect(jsonPath("$.data[1].nickname").value("user1"))
-                .andExpect(jsonPath("$.data[1].title").value("데이트 맛집"))
-                .andExpect(jsonPath("$.data[1].description").value("분위기 좋은 곳"))
-                .andExpect(jsonPath("$.data[1].moodTag").value("DATE"))
-                .andExpect(jsonPath("$.data[1].itemCount").value(0))
-                .andExpect(jsonPath("$.data[1].createdAt").exists())
+                // 두 번째 리스트
+                .andExpect(jsonPath("$.data.lists[1].id").value(1))
+                .andExpect(jsonPath("$.data.lists[1].userId").value(1))
+                .andExpect(jsonPath("$.data.lists[1].nickname").value("user1"))
+                .andExpect(jsonPath("$.data.lists[1].title").value("데이트 맛집"))
+                .andExpect(jsonPath("$.data.lists[1].description").value("분위기 좋은 곳"))
+                .andExpect(jsonPath("$.data.lists[1].moodTag").value("DATE"))
+                .andExpect(jsonPath("$.data.lists[1].itemCount").value(0))
+                .andExpect(jsonPath("$.data.lists[1].createdAt").exists())
 
-                .andExpect(jsonPath("$.message").value("전체 맛집 리스트 목록 조회가 완료되었습니다."));
+                .andExpect(jsonPath("$.message")
+                        .value("전체 맛집 리스트 목록 조회가 완료되었습니다."));
     }
 
     @Test
