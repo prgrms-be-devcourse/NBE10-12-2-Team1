@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -24,7 +25,9 @@ public class NotificationService {
     private final FeedRepository feedRepository;
     private final FollowRepository followRepository;
 
-    @Transactional
+    // REQUIRES_NEW: AFTER_COMMIT 콜백에서 호출되면 스레드에 남아있는 종료된 트랜잭션에
+    // 편승해 flush가 조용히 사라지므로, 항상 새 트랜잭션을 시작해야 한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createFeedNotifications(Long feedId, Long authorId) {
         Feed feed = feedRepository.findById(feedId).orElse(null);
         if (feed == null) {
