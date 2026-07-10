@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bookmark, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bookmark, MapPin, Pencil, Plus, Trash2, UserPlus, UserCheck } from "lucide-react";
 
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
 import { apiFetchJson } from "@/lib/api";
@@ -192,6 +192,10 @@ function ListsPage() {
   const [saving, setSaving] = useState(false);
 
   const [copying, setCopying] = useState(false);
+
+  const [following, setFollowing] = useState(false);
+
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
 
@@ -681,6 +685,28 @@ function ListsPage() {
     };
   }, [selectedDetail]);
 
+  /* ---------------------------------------------------------
+   * 선택한 리스트 작성자 팔로우 상태 확인
+   * --------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!selectedDetail || activeTab === "my") {
+      return;
+    }
+
+    const checkFollowing = async () => {
+      setIsFollowing(false);
+      const res = await apiFetchJson<{ isFollowing: boolean }>(
+        `/api/v1/users/${selectedDetail.userId}`,
+      );
+      if (res.ok && res.data) {
+        setIsFollowing(res.data.isFollowing);
+      }
+    };
+
+    void checkFollowing();
+  }, [selectedDetail, activeTab]);
+
   /* =========================================================
    * 다른 사람 리스트
    * ========================================================= */
@@ -1019,6 +1045,49 @@ function ListsPage() {
       showAlert("리스트 복사 중 오류가 발생했습니다.");
     } finally {
       setCopying(false);
+    }
+  };
+
+  /* =========================================================
+   * 작성자 팔로우
+   * ========================================================= */
+
+  const handleFollow = async () => {
+    if (!selectedDetail || following) {
+      return;
+    }
+
+    const nextFollowing = !isFollowing;
+
+    if (!nextFollowing) {
+      const confirmed = window.confirm("언팔로우 하시겠습니까?");
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setFollowing(true);
+
+    try {
+      const res = await apiFetchJson(
+        `/api/v1/follows/${selectedDetail.userId}`,
+        {
+          method: nextFollowing ? "POST" : "DELETE",
+        },
+      );
+
+      if (!res.ok) {
+        showAlert(res.message || "팔로우 처리에 실패했습니다.");
+        return;
+      }
+
+      setIsFollowing(nextFollowing);
+      window.dispatchEvent(new Event("follow-state-change"));
+    } catch (error) {
+      console.error("팔로우 오류:", error);
+      showAlert("팔로우 처리 중 오류가 발생했습니다.");
+    } finally {
+      setFollowing(false);
     }
   };
 
@@ -1452,6 +1521,29 @@ function ListsPage() {
                             >
                               {copying ? "복사 중..." : "내 리스트로 복사"}
                             </button>
+
+                            <button
+                              type="button"
+                              onClick={handleFollow}
+                              disabled={following}
+                              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors disabled:opacity-70 ${
+                                isFollowing
+                                  ? "bg-surface-soft text-muted hover:text-ink"
+                                  : "bg-primary text-white hover:bg-primary-active"
+                              }`}
+                            >
+                              {isFollowing ? (
+                                <>
+                                  <UserCheck className="h-4 w-4" />
+                                  팔로잉
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="h-4 w-4" />
+                                  팔로우
+                                </>
+                              )}
+                            </button>
                           </>
                         )}
 
@@ -1490,6 +1582,29 @@ function ListsPage() {
                               className="flex shrink-0 items-center gap-1.5 rounded-lg bg-surface-soft px-4 py-2 text-sm font-bold text-muted transition-colors hover:text-ink disabled:opacity-70"
                             >
                               {copying ? "복사 중..." : "내 리스트로 복사"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleFollow}
+                              disabled={following}
+                              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors disabled:opacity-70 ${
+                                isFollowing
+                                  ? "bg-surface-soft text-muted hover:text-ink"
+                                  : "bg-primary text-white hover:bg-primary-active"
+                              }`}
+                            >
+                              {isFollowing ? (
+                                <>
+                                  <UserCheck className="h-4 w-4" />
+                                  팔로잉
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="h-4 w-4" />
+                                  팔로우
+                                </>
+                              )}
                             </button>
                           </>
                         )}
