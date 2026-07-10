@@ -51,7 +51,7 @@ public class UserService {
             }
         }
 
-        user.updateProfile(request.nickname(),null);
+        user.updateProfile(request.nickname(),user.getProfileImage());
 
         if (request.email() != null && !request.email().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.email())) {
