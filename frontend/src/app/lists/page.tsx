@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Bookmark, MapPin, Pencil, Plus, Trash2, UserPlus, UserCheck } from "lucide-react";
 
 import AppShell, { SidebarCard, SidebarProfile } from "@/components/AppShell";
@@ -427,7 +428,7 @@ function ListsPage() {
     };
 
     void load();
-  }, []);
+  }, [initialSelectedParam]);
 
   /* =========================================================
    * 리스트 선택 + 상세 영역으로 자동 스크롤
@@ -1634,52 +1635,57 @@ function ListsPage() {
                                   {index + 1}
                                 </div>
 
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex min-w-0 items-center gap-2">
-                                    <p className="min-w-0 truncate text-lg font-bold text-ink">
-                                      {item.restaurantName}
-                                    </p>
+                                <Link
+                                  href={`/restaurant/${item.restaurantId}`}
+                                  className="min-w-0 flex-1"
+                                >
+                                  <div className="flex min-w-0 flex-col">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <p className="min-w-0 truncate text-lg font-bold text-ink hover:underline">
+                                        {item.restaurantName}
+                                      </p>
 
-                                    {item.category && (
-                                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-muted">
-                                        {item.category}
-                                      </span>
+                                      {item.category && (
+                                        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-muted">
+                                          {item.category}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {(item.roadAddress || item.address) && (
+                                      <div className="mt-2 flex min-w-0 items-center gap-1.5 text-sm text-muted">
+                                        <MapPin className="h-4 w-4 shrink-0" />
+
+                                        <span
+                                          className="min-w-0 truncate"
+                                          title={
+                                            item.roadAddress || item.address || ""
+                                          }
+                                        >
+                                          {item.roadAddress || item.address}
+                                        </span>
+                                      </div>
                                     )}
 
-                                    {activeTab === "my" && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteItem(item)}
-                                        disabled={deletingItemId === item.id}
-                                        aria-label={`${item.restaurantName} 삭제`}
-                                        className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
+                                    {item.memo && (
+                                      <p className="mt-2 break-words text-sm leading-6 text-body">
+                                        {item.memo}
+                                      </p>
                                     )}
                                   </div>
+                                </Link>
 
-                                  {(item.roadAddress || item.address) && (
-                                    <div className="mt-2 flex min-w-0 items-center gap-1.5 text-sm text-muted">
-                                      <MapPin className="h-4 w-4 shrink-0" />
-
-                                      <span
-                                        className="min-w-0 truncate"
-                                        title={
-                                          item.roadAddress || item.address || ""
-                                        }
-                                      >
-                                        {item.roadAddress || item.address}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {item.memo && (
-                                    <p className="mt-2 break-words text-sm leading-6 text-body">
-                                      {item.memo}
-                                    </p>
-                                  )}
-                                </div>
+                                {activeTab === "my" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteItem(item)}
+                                    disabled={deletingItemId === item.id}
+                                    aria-label={`${item.restaurantName} 삭제`}
+                                    className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>
